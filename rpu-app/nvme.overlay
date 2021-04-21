@@ -1,0 +1,19 @@
+/ {
+	soc {
+		nvme_tc: nvme-tc@a0010000 {
+			compatible = "nvme-tc";
+			reg = <0xa0010000 0x10000>;
+			status = "okay";
+			interrupts = <90 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
+			interrupt-names = "host_write";
+		};
+
+		nvme_dma: nvme-dma@a0000000 {
+			compatible = "nvme-dma";
+			reg = <0xa0000000 0x1000>;
+			status = "okay";
+			interrupts = <89 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
+			interrupt-names = "dma_done";
+		};
+	};
+};
