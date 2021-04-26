@@ -1,5 +1,5 @@
-#ifndef NVME_H
-#define NVME_H
+#ifndef NVME_TC_H
+#define NVME_TC_H
 
 #include "nvme_reg_map.h"
 #include "nvme_reg_fields.h"
@@ -22,13 +22,19 @@
 #define NVME_TC_REG_IRQ_STA	(DOORBELL_TAIL(DOORBELLS))
 #define NVME_TC_REG_IRQ_DAT	(DOORBELL_HEAD(DOORBELLS))
 
-#define NVME_GET_FIELD(reg,name)	(((reg) >> NVME_TC_REG_##name##_SHIFT) & NVME_TC_REG_##name##_MASK)
+#define NVME_TC_GET_FIELD(reg,name)	(((reg) >> NVME_TC_REG_##name##_SHIFT) & NVME_TC_REG_##name##_MASK)
 
-#define NVME_SET_FIELD(reg, val, name)	(reg) |= (((val) & NVME_TC_REG_##name##_MASK) << NVME_TC_REG_##name##_SHIFT)
+#define NVME_TC_SET_FIELD(reg, val, name)	(reg) |= (((val) & NVME_TC_REG_##name##_MASK) << NVME_TC_REG_##name##_SHIFT)
 
-#define NVME_CLR_FIELD(reg, name)	NVME_SET_FIELD(reg, 0, name)
+#define NVME_TC_CLR_FIELD(reg, name)	NVME_TC_SET_FIELD(reg, 0, name)
 
-#define NVME_SHUTDOWN_PROCESSING	0x1
-#define NVME_SHUTDOWN_COMPLETE		0x2
+#define NVME_TC_SHUTDOWN_PROCESSING	0x1
+#define NVME_TC_SHUTDOWN_COMPLETE	0x2
+
+#define NVME_TC_ADM_SQ_ENTRY_SIZE	64
+#define NVME_TC_ADM_SQ_SLAB_SIZE	256
+
+void nvme_tc_irq_init(void);
+void *nvme_tc_init(void *dma_priv);
 
 #endif
