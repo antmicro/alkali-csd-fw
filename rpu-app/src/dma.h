@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 
-typedef void (nvme_dma_xfer_cb)(void *arg);
+typedef void (nvme_dma_xfer_cb)(void *arg, void *buf);
 
 void nvme_dma_irq_init(void);
 void *nvme_dma_init(void);

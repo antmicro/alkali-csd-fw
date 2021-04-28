@@ -9,3 +9,6 @@ project(tc_sw)
 target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/dma.c)
 target_sources(app PRIVATE src/tc.c)
+
+target_sources(app PRIVATE src/cmd.c)
+target_sources(app PRIVATE src/cmds/identify.c)

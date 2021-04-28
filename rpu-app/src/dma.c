@@ -25,7 +25,7 @@ typedef struct nvme_dma_xfer_def {
 	uint32_t tag;
 } nvme_dma_xfer_def_t;
 
-nvme_dma_priv_t p_dma;
+nvme_dma_priv_t p_dma = {0};
 
 char __aligned(16) desc_slab_buffer[sizeof(nvme_dma_xfer_def_t)*NVME_DMA_SLAB_ENTRIES];
 
@@ -39,7 +39,8 @@ void nvme_dma_irq_handler(void *arg)
 	if(read_status & NVME_DMA_REG_STATUS_VALID) {
 		nvme_dma_xfer_def_t *desc = k_fifo_get(&priv->rx_fifo, K_NO_WAIT);
 		if(desc) {
-			desc->cb(desc->cb_arg);
+			if(desc->cb)
+				desc->cb(desc->cb_arg, (void*)desc->local_addr);
 			k_mem_slab_free(&priv->desc_slab, (void**)&desc);
 		} else {
 			printk("Spurious DMA RX interrupt!\n");
@@ -49,7 +50,8 @@ void nvme_dma_irq_handler(void *arg)
 	if(write_status & NVME_DMA_REG_STATUS_VALID) {
 		nvme_dma_xfer_def_t *desc = k_fifo_get(&priv->tx_fifo, K_NO_WAIT);
 		if(desc) {
-			desc->cb(desc->cb_arg);
+			if(desc->cb)
+				desc->cb(desc->cb_arg, (void*)desc->local_addr);
 			k_mem_slab_free(&priv->desc_slab, (void**)&desc);
 		} else {
 			printk("Spurious DMA TX interrupt!\n");

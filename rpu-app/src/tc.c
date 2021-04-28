@@ -1,38 +1,16 @@
 #include "tc.h"
 #include "dma.h"
+#include "cmd.h"
 
-#include <zephyr.h>
 #include <sys/printk.h>
 
 #include <string.h>
-#include <stdint.h>
 #include <math.h>
 
-typedef struct nvme_tc_priv {
-	mem_addr_t base;
-	bool enabled;
-
-	void *dma_priv;
-
-	int io_cq_entry_size;
-	int io_sq_entry_size;
-	int memory_page_size;
-
-	int adm_cq_size;
-	int adm_sq_size;
-
-	uint64_t adm_sq_base;
-	uint64_t adm_cq_base;
-
-	uint32_t adm_sq_tail;
-
-	struct k_mem_slab adm_sq_slab;
-
-} nvme_tc_priv_t;
-
-nvme_tc_priv_t p_tc;
+nvme_tc_priv_t p_tc = {0};
 
 char __aligned(16) adm_sq_slab_buffer[NVME_TC_ADM_SQ_ENTRY_SIZE*NVME_TC_ADM_SQ_SLAB_SIZE];
+char __aligned(16) adm_cq_slab_buffer[NVME_TC_ADM_CQ_ENTRY_SIZE*NVME_TC_ADM_CQ_SLAB_SIZE];
 
 static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 {
@@ -92,33 +70,65 @@ static void nvme_tc_acq_handler(nvme_tc_priv_t *priv)
 	priv->adm_cq_base = ((uint64_t)acq1 << 32) | acq0;
 }
 
-static void nvme_tc_adm_dma_handler(void *arg)
+uint64_t nvme_tc_get_sq_addr(nvme_tc_priv_t *priv)
 {
-	nvme_tc_priv_t *priv = (nvme_tc_priv_t*)priv;
+	uint64_t addr = priv->adm_sq_base + priv->adm_sq_head * NVME_TC_ADM_SQ_ENTRY_SIZE;
+	uint32_t next_head = (priv->adm_sq_head + 1) % priv->adm_sq_size;
 
-	printk("ADM Queue DMA handler\n");
+	priv->adm_sq_head = next_head;
+	return addr;
+}
+
+void nvme_tc_cq_notify(nvme_tc_priv_t *priv, int queue_id)
+{
+	if(queue_id >= DOORBELLS) {
+		printk("Invalid Queue ID!\n");
+		return;
+	}
+	sys_write32(1<<queue_id,priv->base + NVME_TC_REG_IRQ_HOST);
+}
+
+uint64_t nvme_tc_get_cq_addr(nvme_tc_priv_t *priv)
+{
+	uint64_t addr;
+	uint32_t next_tail = (priv->adm_cq_tail + 1) % priv->adm_cq_size;
+
+	if(priv->adm_cq_head != next_tail) {
+		if(priv->adm_cq_tail == 0) // We need to use flip the phase bit after each pass
+			priv->adm_cq_phase = !priv->adm_cq_phase;
+
+		addr = priv->adm_cq_base + priv->adm_cq_tail * NVME_TC_ADM_CQ_ENTRY_SIZE;
+		priv->adm_cq_tail = next_tail;
+	} else {
+		addr = 0;
+	}
+
+	return addr;
 }
 
 static void nvme_tc_adm_tail_handler(nvme_tc_priv_t *priv)
 {
 	uint32_t tail = sys_read32(priv->base + NVME_TC_REG_ADM_TAIL);
 
-	int diff = tail - priv->adm_sq_tail;
+	priv->adm_sq_tail = tail;
 
-	if(diff > 0) {
-		for(int i = 0; i < diff; i++) {
-			void *dst;
-			uint64_t host_addr = priv->adm_sq_base + ((i + priv->adm_sq_tail) % priv->adm_sq_size) * NVME_TC_ADM_SQ_ENTRY_SIZE;
-			if(k_mem_slab_alloc(&priv->adm_sq_slab, &dst, K_NO_WAIT) == 0) {
-				memset(dst, 0x5A, NVME_TC_ADM_SQ_ENTRY_SIZE);
-				nvme_dma_xfer_host_to_mem(priv->dma_priv, host_addr, (uint32_t)dst, NVME_TC_ADM_SQ_ENTRY_SIZE, nvme_tc_adm_dma_handler, priv);
-			} else {
-				printk("Failed to allocate memory for Admin Queue entry");
-			}
+	while(priv->adm_sq_tail != priv->adm_sq_head) {
+		void *dst;
+		uint64_t host_addr = nvme_tc_get_sq_addr(priv);
+		if(k_mem_slab_alloc(&priv->adm_sq_slab, &dst, K_NO_WAIT) == 0) {
+			memset(dst, 0x5A, NVME_TC_ADM_SQ_ENTRY_SIZE);
+			nvme_dma_xfer_host_to_mem(priv->dma_priv, host_addr, (uint32_t)dst, NVME_TC_ADM_SQ_ENTRY_SIZE, nvme_cmd_handle_adm, priv);
+		} else {
+			printk("Failed to allocate memory for Admin Queue entry");
 		}
-
-		priv->adm_sq_tail = (priv->adm_sq_tail + diff) % priv->adm_sq_size;
 	}
+}
+
+static void nvme_tc_adm_head_handler(nvme_tc_priv_t *priv)
+{
+	uint32_t head = sys_read32(priv->base + NVME_TC_REG_ADM_HEAD);
+
+	priv->adm_cq_head = head;
 }
 
 static void nvme_tc_irq_handler(void *arg)
@@ -152,9 +162,22 @@ static void nvme_tc_irq_handler(void *arg)
 			case NVME_TC_REG_ADM_TAIL:
 				nvme_tc_adm_tail_handler(priv);
 				break;
+			case NVME_TC_REG_ADM_HEAD:
+				nvme_tc_adm_head_handler(priv);
+				break;
 			default:
 				printk("Register 0x%04x write not handled!\n", reg);
 		}
+	}
+}
+
+void nvme_tc_cq_update(void *arg, int queue_id, int cnt)
+{
+	nvme_tc_priv_t *priv = (nvme_tc_priv_t*)arg;	
+
+	if(queue_id == 0) {
+		priv->adm_cq_head = (priv->adm_cq_tail + 1) % priv->adm_cq_size;
+		//sys_write32(priv->base + );
 	}
 }
 
@@ -175,6 +198,7 @@ void *nvme_tc_init(void *dma_priv)
 	priv->dma_priv = dma_priv;
 
 	k_mem_slab_init(&priv->adm_sq_slab, adm_sq_slab_buffer, NVME_TC_ADM_SQ_ENTRY_SIZE, NVME_TC_ADM_SQ_SLAB_SIZE);
+	k_mem_slab_init(&priv->adm_cq_slab, adm_cq_slab_buffer, NVME_TC_ADM_CQ_ENTRY_SIZE, NVME_TC_ADM_CQ_SLAB_SIZE);
 
 	printk("Clearing registers\n");
 	for(int i = 0; i < NVME_TC_REG_IRQ_STA; i+=4)
