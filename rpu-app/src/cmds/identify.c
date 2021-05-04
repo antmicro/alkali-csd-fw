@@ -33,29 +33,47 @@ typedef struct cmd_sq {
 
 #define CNS_IDENTIFY_CONTROLLER		0x01
 
+static inline void clear_buf(volatile uint8_t *buf, int len)
+{
+	for(int i = 0; i < len; i++)
+		buf[i] = 0;
+}
+
+static void fill_identify_struct(volatile uint8_t *buf)
+{
+	clear_buf(buf, NVME_CMD_IDENTIFY_RESP_SIZE);
+
+	__DMB();
+}
+
+static void fill_cq_resp(volatile nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint16_t cmd_id)
+{
+	clear_buf((volatile uint8_t*)cq_buf, NVME_TC_ADM_CQ_ENTRY_SIZE);
+
+	cq_buf->sq_head = sq_head;
+	cq_buf->sq_id = 0;
+
+	cq_buf->cid = cmd_id;
+
+	cq_buf->sc = 0;
+	cq_buf->sct = 0;
+
+	cq_buf->crd = 0;
+	cq_buf->m = 0;
+	cq_buf->dnr = 0;
+
+	__DMB();
+}
+
 static void identify_controller(nvme_tc_priv_t *tc, cmd_sq_t *cmd)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
 	volatile nvme_cq_entry_t *cq_buf;
 
 	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq_buf, K_NO_WAIT) == 0) {
-		memset(resp_buf, 0, NVME_CMD_IDENTIFY_RESP_SIZE);
-		memset((void*)cq_buf, 0, NVME_TC_ADM_CQ_ENTRY_SIZE);
 
-
-		cq_buf->sq_head = tc->adm_sq_head;
-		cq_buf->sq_id = 0;
-
-		cq_buf->cid = cmd->base.cdw0.cid;
-
-		cq_buf->sc = 0;
-		cq_buf->sct = 0;
-
-		cq_buf->crd = 0;
-		cq_buf->m = 0;
-		cq_buf->dnr = 0;
-
-		__DMB();
+		fill_identify_struct(resp_buf);
+		fill_cq_resp(cq_buf, tc->adm_sq_head, cmd->base.cdw0.cid);
 
 		nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
 	}
