@@ -62,6 +62,6 @@ typedef struct nvme_cq_entry {
 
 void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf);
 
-void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, void *cq_buf);
+void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, volatile nvme_cq_entry_t *cq_buf);
 
 #endif
