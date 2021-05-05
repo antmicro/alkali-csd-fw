@@ -83,7 +83,9 @@ static inline void fill_cq_resp(nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint1
 
 void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf);
 void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf);
+void nvme_cmd_adm_set_features(nvme_tc_priv_t *tc, void *buf);
 
+void nvme_cmd_return(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, nvme_cq_entry_t *cq_buf);
 void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, nvme_cq_entry_t *cq_buf);
 
 #endif
