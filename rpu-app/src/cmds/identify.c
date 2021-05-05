@@ -1,4 +1,5 @@
 #include "../cmd.h"
+#include "../nvme_ident_fields.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
@@ -33,22 +34,115 @@ typedef struct cmd_sq {
 
 #define CNS_IDENTIFY_CONTROLLER		0x01
 
-static inline void clear_buf(volatile uint8_t *buf, int len)
+#define VID 0x1b96
+#define SSVID VID
+#define SN "0123456789"
+#define MN "DEADBEEF"
+#define FR "12.34"
+
+#define OUI0 0x00
+#define OUI1 0x90
+#define OUI2 0xA9
+
+#define VER 0x00010304
+
+#define IO_CNTRL 1
+
+#define SUBNQN "NVMe Open Source Controller"
+
+static inline void clear_buf(uint8_t *buf, int len)
 {
 	for(int i = 0; i < len; i++)
 		buf[i] = 0;
 }
 
-static void fill_identify_struct(volatile uint8_t *buf)
+static void fill_identify_struct(uint8_t *ptr)
 {
-	clear_buf(buf, NVME_CMD_IDENTIFY_RESP_SIZE);
+	mem_addr_t buf = (mem_addr_t)ptr;
+	clear_buf(ptr, NVME_CMD_IDENTIFY_RESP_SIZE);
+
+	sys_write16(VID, buf + NVME_ID_FIELD_VID);
+	sys_write16(SSVID, buf + NVME_ID_FIELD_SSVID);
+
+	strncat(ptr + NVME_ID_FIELD_SN, SN, NVME_ID_FIELD_SN_SIZE-1);
+	strncat(ptr + NVME_ID_FIELD_MN, MN, NVME_ID_FIELD_MN_SIZE-1);
+	strncat(ptr + NVME_ID_FIELD_FR, FR, NVME_ID_FIELD_FR_SIZE-1);
+
+	sys_write8(0, buf + NVME_ID_FIELD_RAB);	
+
+	sys_write16(OUI0, buf + NVME_ID_FIELD_IEEE);
+	sys_write16(OUI1, buf + NVME_ID_FIELD_IEEE + 2);
+	sys_write16(OUI2, buf + NVME_ID_FIELD_IEEE + 4);
+
+	sys_write8(0, buf + NVME_ID_FIELD_MDTS);
+	sys_write16(0, buf + NVME_ID_FIELD_CNTLID);
+
+	sys_write32(VER, buf + NVME_ID_FIELD_VER);
+	
+	sys_write32(0, buf + NVME_ID_FIELD_RTD3R);
+	sys_write32(0, buf + NVME_ID_FIELD_RTD3E);
+
+	sys_write16(0, buf + NVME_ID_FIELD_OAES);	
+
+	sys_write32(0, buf + NVME_ID_FIELD_CTRATT);
+
+	sys_write8(IO_CNTRL, buf + NVME_ID_FIELD_CNTRLTYPE);
+
+	sys_write32(0, buf + NVME_ID_FIELD_OACS);
+
+	sys_write8(3, buf + NVME_ID_FIELD_ACL);
+	sys_write8(3, buf + NVME_ID_FIELD_AERL);
+
+	sys_write8(3, buf + NVME_ID_FIELD_FRMW);
+
+	sys_write8(0, buf + NVME_ID_FIELD_LPA);
+
+	sys_write8(0, buf + NVME_ID_FIELD_ELPE);
+
+	sys_write8(0, buf + NVME_ID_FIELD_NPSS);
+
+	sys_write8(1, buf + NVME_ID_FIELD_AVSCC);
+
+	sys_write16(0x0157, buf + NVME_ID_FIELD_WCTEMP);
+
+	sys_write16(0x0300, buf + NVME_ID_FIELD_CCTEMP);
+
+	sys_write8(1, buf + NVME_ID_FIELD_FWUG);
+
+	sys_write8(0, buf + NVME_ID_FIELD_KAS);
+
+	sys_write8(0x66, buf + NVME_ID_FIELD_SQES);
+
+	sys_write8(0x44, buf + NVME_ID_FIELD_CQES);
+
+	sys_write8(0, buf + NVME_ID_FIELD_MAXCMD);
+
+	sys_write32(0, buf + NVME_ID_FIELD_NN);
+
+	sys_write16(0, buf + NVME_ID_FIELD_ONCS);
+
+	sys_write16(0, buf + NVME_ID_FIELD_FUSES);
+	
+	sys_write8(1, buf + NVME_ID_FIELD_FNA);
+
+	sys_write8(0, buf + NVME_ID_FIELD_VWC);
+
+	sys_write16(0xFFFF, buf + NVME_ID_FIELD_AWUN);
+
+	sys_write16(0xFFFF, buf + NVME_ID_FIELD_AWUPF);
+
+	sys_write8(1, buf + NVME_ID_FIELD_NVSCC);
+
+	sys_write8(0, buf + NVME_ID_FIELD_NWPC);
+
+	strncat(ptr + NVME_ID_FIELD_SUBNQN, SUBNQN, NVME_ID_FIELD_SUBNQN_SIZE-1);
 
 	__DMB();
 }
 
 static void fill_cq_resp(volatile nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint16_t cmd_id)
 {
-	clear_buf((volatile uint8_t*)cq_buf, NVME_TC_ADM_CQ_ENTRY_SIZE);
+	clear_buf((uint8_t*)cq_buf, NVME_TC_ADM_CQ_ENTRY_SIZE);
 
 	cq_buf->sq_head = sq_head;
 	cq_buf->sq_id = 0;
