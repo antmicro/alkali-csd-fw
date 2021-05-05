@@ -10,6 +10,9 @@ void nvme_cmd_handle_adm(void *tc_priv, void *buf)
 	nvme_tc_priv_t *tc = (nvme_tc_priv_t*)tc_priv;
 
 	switch(cmd->cdw0.opc) {
+		case NVME_ADM_CMD_GET_LOG:
+			nvme_cmd_adm_get_log(tc, buf);
+			break;
 		case NVME_ADM_CMD_IDENTIFY:
 			nvme_cmd_adm_identify(tc, buf);
 			break;
@@ -31,7 +34,7 @@ static void adm_cq_cb(void *tc_priv, void *buf)
 	nvme_tc_cq_notify(tc, ADM_QUEUE_ID);
 }
 
-void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, volatile nvme_cq_entry_t *cq_buf)
+void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, nvme_cq_entry_t *cq_buf)
 {
 	uint64_t ret_addr = cmd->dptr.prp.prp1;
 	uint64_t cq_addr = nvme_tc_get_cq_addr(tc);

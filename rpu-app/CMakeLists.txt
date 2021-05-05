@@ -12,3 +12,4 @@ target_sources(app PRIVATE src/tc.c)
 
 target_sources(app PRIVATE src/cmd.c)
 target_sources(app PRIVATE src/cmds/identify.c)
+target_sources(app PRIVATE src/cmds/get_log.c)

@@ -2,6 +2,7 @@
 #define NVME_CMD_H
 
 #include <stdint.h>
+#include <string.h>
 
 #include "tc.h"
 
@@ -54,6 +55,26 @@ typedef struct nvme_cq_entry {
 	uint32_t dnr : 1;
 } nvme_cq_entry_t;
 
+static inline void fill_cq_resp(nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint16_t cmd_id)
+{
+	memset((void*)cq_buf, 0, NVME_TC_ADM_CQ_ENTRY_SIZE);
+
+	cq_buf->sq_head = sq_head;
+	cq_buf->sq_id = 0;
+
+	cq_buf->cid = cmd_id;
+
+	cq_buf->sc = 0;
+	cq_buf->sct = 0;
+
+	cq_buf->crd = 0;
+	cq_buf->m = 0;
+	cq_buf->dnr = 0;
+
+	__DMB();
+}
+
+#define NVME_ADM_CMD_GET_LOG		0x02
 #define NVME_ADM_CMD_IDENTIFY		0x06
 #define NVME_ADM_CMD_SET_FEATURES	0x09
 #define NVME_ADM_CMD_CREATE_IO_SQ	0x01
@@ -61,7 +82,8 @@ typedef struct nvme_cq_entry {
 #define NVME_ADM_CMD_KEEP_ALIVE		0x18
 
 void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf);
+void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf);
 
-void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, volatile nvme_cq_entry_t *cq_buf);
+void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, nvme_cq_entry_t *cq_buf);
 
 #endif

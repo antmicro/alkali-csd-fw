@@ -4,8 +4,6 @@
 #include <zephyr.h>
 #include <sys/printk.h>
 
-#include <string.h>
-
 typedef struct cmd_cdw10 {
 	uint32_t cns : 8;
 	uint32_t rsvd : 8;
@@ -50,16 +48,10 @@ typedef struct cmd_sq {
 
 #define SUBNQN "NVMe Open Source Controller"
 
-static inline void clear_buf(uint8_t *buf, int len)
-{
-	for(int i = 0; i < len; i++)
-		buf[i] = 0;
-}
-
 static void fill_identify_struct(uint8_t *ptr)
 {
 	mem_addr_t buf = (mem_addr_t)ptr;
-	clear_buf(ptr, NVME_CMD_IDENTIFY_RESP_SIZE);
+	memset(ptr, 0, NVME_CMD_IDENTIFY_RESP_SIZE);
 
 	sys_write16(VID, buf + NVME_ID_FIELD_VID);
 	sys_write16(SSVID, buf + NVME_ID_FIELD_SSVID);
@@ -140,32 +132,12 @@ static void fill_identify_struct(uint8_t *ptr)
 	__DMB();
 }
 
-static void fill_cq_resp(volatile nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint16_t cmd_id)
-{
-	clear_buf((uint8_t*)cq_buf, NVME_TC_ADM_CQ_ENTRY_SIZE);
-
-	cq_buf->sq_head = sq_head;
-	cq_buf->sq_id = 0;
-
-	cq_buf->cid = cmd_id;
-
-	cq_buf->sc = 0;
-	cq_buf->sct = 0;
-
-	cq_buf->crd = 0;
-	cq_buf->m = 0;
-	cq_buf->dnr = 0;
-
-	__DMB();
-}
-
 static void identify_controller(nvme_tc_priv_t *tc, cmd_sq_t *cmd)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
-	volatile nvme_cq_entry_t *cq_buf;
+	nvme_cq_entry_t *cq_buf;
 
 	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq_buf, K_NO_WAIT) == 0) {
-
 		fill_identify_struct(resp_buf);
 		fill_cq_resp(cq_buf, tc->adm_sq_head, cmd->base.cdw0.cid);
 
