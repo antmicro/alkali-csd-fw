@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <zephyr.h>
 
+#define MAX_IO_QUEUES		1
+
 #define DOORBELLS		5
 
 #define DOORBELL_BASE		0x1000
@@ -53,9 +55,9 @@ typedef struct nvme_tc_priv {
 
 	void *dma_priv;
 
-	int io_cq_entry_size;
-	int io_sq_entry_size;
 	int memory_page_size;
+
+	/* Admin Queues */
 
 	int adm_cq_size;
 	int adm_sq_size;
@@ -68,10 +70,45 @@ typedef struct nvme_tc_priv {
 
 	uint32_t adm_cq_tail;
 	uint32_t adm_cq_head;
-	uint32_t adm_cq_phase;
+	bool adm_cq_phase;
 
 	struct k_mem_slab adm_sq_slab;
 	struct k_mem_slab adm_cq_slab;
+
+	/* IO Queues */
+
+	int io_queues;
+
+	int io_cq_entry_size;
+	int io_sq_entry_size;
+
+	uint64_t io_sq_base[MAX_IO_QUEUES];
+	uint64_t io_cq_base[MAX_IO_QUEUES];
+
+	uint16_t io_sq_tail[MAX_IO_QUEUES];
+	uint16_t io_sq_head[MAX_IO_QUEUES];
+
+	uint16_t io_cq_tail[MAX_IO_QUEUES];
+	uint16_t io_cq_head[MAX_IO_QUEUES];
+	bool io_cq_phase[MAX_IO_QUEUES];
+
+	bool io_sq_ien[MAX_IO_QUEUES];
+	bool io_cq_ien[MAX_IO_QUEUES];
+
+	bool io_sq_pc[MAX_IO_QUEUES];
+	bool io_cq_pc[MAX_IO_QUEUES];
+
+	uint16_t io_sq_iv[MAX_IO_QUEUES];
+	uint16_t io_cq_iv[MAX_IO_QUEUES];
+
+	uint16_t io_sq_size[MAX_IO_QUEUES];
+	uint16_t io_cq_size[MAX_IO_QUEUES];
+
+	bool io_sq_valid[MAX_IO_QUEUES];
+	bool io_cq_valid[MAX_IO_QUEUES];
+
+	struct k_mem_slab io_sq_slab;
+	struct k_mem_slab io_cq_slab;
 
 } nvme_tc_priv_t;
 

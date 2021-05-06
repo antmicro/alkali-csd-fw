@@ -31,6 +31,8 @@ typedef struct cmd_sq {
 #define NVME_CMD_IDENTIFY_RESP_SIZE	4096
 
 #define CNS_IDENTIFY_CONTROLLER		0x01
+#define CNS_IDENTIFY_NAMESPACE_LIST	0x02
+#define CNS_IDENTIFY_NAMESPACE		0x03
 
 #define VID 0x1b96
 #define SSVID VID
@@ -128,30 +130,46 @@ static void fill_identify_struct(uint8_t *ptr)
 	sys_write8(0, buf + NVME_ID_FIELD_NWPC);
 
 	strncat(ptr + NVME_ID_FIELD_SUBNQN, SUBNQN, NVME_ID_FIELD_SUBNQN_SIZE-1);
-
-	__DMB();
 }
 
-static void identify_controller(nvme_tc_priv_t *tc, cmd_sq_t *cmd)
+static void identify_controller(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
-	nvme_cq_entry_t *cq_buf;
 
-	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq_buf, K_NO_WAIT) == 0) {
-		fill_identify_struct(resp_buf);
-		fill_cq_resp(cq_buf, tc->adm_sq_head, cmd->base.cdw0.cid);
+	fill_identify_struct(resp_buf);
 
-		nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
-	}
+	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
 }
 
-void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf)
+#define NSID 1
+
+static void fill_identify_namespace_list(uint8_t *ptr)
+{
+	mem_addr_t buf = (mem_addr_t)ptr;
+	memset(ptr, 0, NVME_CMD_IDENTIFY_RESP_SIZE);
+
+	sys_write32(NSID, buf + NVME_ID_FIELD_VID);
+}
+
+static void identify_namespace_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+{
+	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
+
+	fill_identify_namespace_list(resp_buf);
+
+	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+}
+
+void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
 
 	switch(cmd->cdw10.cns) {
 		case CNS_IDENTIFY_CONTROLLER:
-			identify_controller(tc, cmd);
+			identify_controller(tc, cmd, cq_buf);
+			break;
+		case CNS_IDENTIFY_NAMESPACE_LIST:
+			identify_namespace_list(tc, cmd, cq_buf);
 			break;
 		default:
 			printk("Invalid Identify CNS value! (%d)\n", cmd->cdw10.cns);

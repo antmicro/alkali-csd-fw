@@ -36,6 +36,8 @@ static void nvme_dma_setup_xfer(nvme_dma_priv_t *priv, nvme_dma_xfer_def_t *desc
 {
 	printk("Configuring DMA transfer\n");
 
+	__DMB();
+
 	sys_write32(desc->host_addr & 0xffffffff, priv->base + off + NVME_DMA_REG_PCIE_ADDRL);
 	sys_write32((desc->host_addr >> 32) & 0xffffffff, priv->base + off + NVME_DMA_REG_PCIE_ADDRH);
 

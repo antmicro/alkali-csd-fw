@@ -43,10 +43,9 @@ static void fill_smart_struct(uint8_t *ptr)
 	sys_write8(5, buf + 4);
 }
 
-static void get_smart_log(nvme_tc_priv_t *tc, cmd_sq_t *cmd)
+static void get_smart_log(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
 {
 	static uint8_t resp_buf[SMART_RESP_SIZE];
-	nvme_cq_entry_t *cq_buf;
 
 	uint32_t len = (cmd->cdw11.numdu << 16) | cmd->cdw10.numdl;
 	uint64_t off = ((uint64_t)cmd->cdw13) << 32 | cmd->cdw12;
@@ -56,21 +55,18 @@ static void get_smart_log(nvme_tc_priv_t *tc, cmd_sq_t *cmd)
 	if(off != 0)
 		printk("Incorrect Get Log offset! (%llu)\n", off);
 
-	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq_buf, K_NO_WAIT) == 0) {
-		fill_smart_struct(resp_buf);
-		fill_cq_resp(cq_buf, tc->adm_sq_head, cmd->base.cdw0.cid);
+	fill_smart_struct(resp_buf);
 
-		nvme_cmd_return_data(tc, &cmd->base, resp_buf, len, cq_buf);
-	}
+	nvme_cmd_return_data(tc, &cmd->base, resp_buf, len, cq_buf);
 }
 
-void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf)
+void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
 
 	switch(cmd->cdw10.lid) {
 		case LID_SMART:
-			get_smart_log(tc, cmd);
+			get_smart_log(tc, cmd, cq_buf);
 			break;
 		default:
 			printk("Invalid Get Log LID value! (%d)\n", cmd->cdw10.lid);

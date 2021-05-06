@@ -21,19 +21,33 @@ typedef struct cmd_sq {
 	cmd_cdw14_t cdw14;
 } cmd_sq_t;
 
-void nvme_cmd_adm_set_features(nvme_tc_priv_t *tc, void *buf)
+#define FID_NUMBER_OF_QUEUES	0x07
+
+static void number_of_queues(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+{
+	uint16_t ncqr = (cmd->cdw[0] >> 16) & 0xFFFF;
+	uint16_t nsqr = cmd->cdw[0] & 0xFFFF;
+
+	printk("NCQR: %d\nNSQR: %d\n", ncqr, nsqr);
+
+	// For now create only one IO queue
+
+	tc->io_queues = 1;
+
+	cq_buf->cdw0 = ((tc->io_queues-1) << 16) | (tc->io_queues-1);
+}
+
+void nvme_cmd_adm_set_features(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
-	nvme_cq_entry_t *cq_buf;
 
 	switch(cmd->cdw10.fid) {
+		case FID_NUMBER_OF_QUEUES:
+			number_of_queues(tc, cmd, cq_buf);
+			break;
 		default:
 			printk("Invalid Set Features FID value! (%d)\n", cmd->cdw10.fid);
 	}
 
-	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq_buf, K_NO_WAIT) == 0) {
-		fill_cq_resp(cq_buf, tc->adm_sq_head, cmd->base.cdw0.cid);
-
-		nvme_cmd_return(tc, &cmd->base, cq_buf);
-	}
+	nvme_cmd_return(tc, &cmd->base, cq_buf);
 }
