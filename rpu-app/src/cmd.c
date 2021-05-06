@@ -37,7 +37,7 @@ void nvme_cmd_handle_adm(void *tc_priv, void *buf)
 	nvme_cq_entry_t *cq;
 	nvme_tc_priv_t *tc = (nvme_tc_priv_t*)tc_priv;
 
-	dump_sq_entry(buf);
+	//dump_sq_entry(buf);
 
 	if(k_mem_slab_alloc(&tc->adm_cq_slab, (void**)&cq, K_NO_WAIT) == 0) {
 		fill_cq_resp(cq, tc->adm_sq_head, cmd->cdw0.cid);
@@ -61,6 +61,12 @@ void nvme_cmd_handle_adm(void *tc_priv, void *buf)
 			break;
 		case NVME_ADM_CMD_CREATE_IO_CQ:
 			nvme_cmd_adm_create_cq(tc, buf, cq);
+			break;
+		case NVME_ADM_CMD_DELETE_IO_SQ:
+			nvme_cmd_adm_delete_sq(tc, buf, cq);
+			break;
+		case NVME_ADM_CMD_DELETE_IO_CQ:
+			nvme_cmd_adm_delete_cq(tc, buf, cq);
 			break;
 		case NVME_ADM_CMD_KEEP_ALIVE:
 		default:

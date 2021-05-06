@@ -160,6 +160,27 @@ static void identify_namespace_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_e
 	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
 }
 
+#define NVME_ID_FIELD_NIDT	0x0
+#define NVME_ID_FIELD_NIDL	0x1
+#define NVME_ID_FIELD_NID	0x4
+#define NIDT_NUUID		0x3
+#define NIDL_NUUID		0x10
+
+static void identify_namespace(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+{
+	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
+	mem_addr_t buf = (mem_addr_t)resp_buf;
+	memset(resp_buf, 0, NVME_CMD_IDENTIFY_RESP_SIZE);
+
+	sys_write8(NIDT_NUUID, buf + NVME_ID_FIELD_NIDT);
+	sys_write8(NIDL_NUUID, buf + NVME_ID_FIELD_NIDL);
+
+	for(int i = 0; i < NIDL_NUUID; i++)
+		sys_write8(i+1, buf + NVME_ID_FIELD_NID + i);
+
+	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+}
+
 void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
@@ -170,6 +191,9 @@ void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_bu
 			break;
 		case CNS_IDENTIFY_NAMESPACE_LIST:
 			identify_namespace_list(tc, cmd, cq_buf);
+			break;
+		case CNS_IDENTIFY_NAMESPACE:
+			identify_namespace(tc, cmd, cq_buf);
 			break;
 		default:
 			printk("Invalid Identify CNS value! (%d)\n", cmd->cdw10.cns);

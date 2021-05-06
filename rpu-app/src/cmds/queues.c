@@ -26,14 +26,6 @@ void nvme_cmd_adm_create_sq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_b
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
 
-	printk("QSIZE: %d, QID: %d, PC: %d, IEN: %d, IV: %d\n",
-		cmd->cdw10.qsize,
-		cmd->cdw10.qid,
-		cmd->cdw11.pc,
-		cmd->cdw11.ien,
-		cmd->cdw11.iv
-	);
-
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > MAX_IO_QUEUES) {
@@ -60,17 +52,29 @@ void nvme_cmd_adm_create_sq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_b
 	nvme_cmd_return(tc, &cmd->base, cq_buf);
 }
 
-void nvme_cmd_adm_create_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
+void nvme_cmd_adm_delete_sq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
 
-	printk("QSIZE: %d, QID: %d, PC: %d, IEN: %d, IV: %d\n",
-		cmd->cdw10.qsize,
-		cmd->cdw10.qid,
-		cmd->cdw11.pc,
-		cmd->cdw11.ien,
-		cmd->cdw11.iv
-	);
+	uint16_t qid = cmd->cdw10.qid;
+
+	if(qid == 0 || qid > MAX_IO_QUEUES) {
+		printk("Invalid Create SQ QID(%d)!\n", qid);
+		cq_buf->sct = 1;
+		cq_buf->sc = 1;
+		return nvme_cmd_return(tc, &cmd->base, cq_buf);
+	}
+
+	qid -= 1;
+
+	tc->io_cq_valid[qid] = false;
+
+	nvme_cmd_return(tc, &cmd->base, cq_buf);
+}
+
+void nvme_cmd_adm_create_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
+{
+	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
 
 	uint16_t qid = cmd->cdw10.qid;
 
@@ -95,6 +99,26 @@ void nvme_cmd_adm_create_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_b
 	tc->io_cq_iv[qid] = cmd->cdw11.iv;
 
 	tc->io_cq_valid[qid] = true;
+
+	nvme_cmd_return(tc, &cmd->base, cq_buf);
+}
+
+void nvme_cmd_adm_delete_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
+{
+	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
+
+	uint16_t qid = cmd->cdw10.qid;
+
+	if(qid == 0 || qid > MAX_IO_QUEUES) {
+		printk("Invalid Create CQ QID(%d)!\n", qid);
+		cq_buf->sct = 1;
+		cq_buf->sc = 1;
+		return nvme_cmd_return(tc, &cmd->base, cq_buf);
+	}
+
+	qid -= 1;
+
+	tc->io_cq_valid[qid] = false;
 
 	nvme_cmd_return(tc, &cmd->base, cq_buf);
 }
