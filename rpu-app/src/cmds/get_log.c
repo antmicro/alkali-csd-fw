@@ -43,8 +43,9 @@ static void fill_smart_struct(uint8_t *ptr)
 	sys_write8(5, buf + 4);
 }
 
-static void get_smart_log(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+static void get_smart_log(nvme_cmd_priv_t *priv)
 {
+	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 	static uint8_t resp_buf[SMART_RESP_SIZE];
 
 	uint32_t len = (cmd->cdw11.numdu << 16) | cmd->cdw10.numdl;
@@ -57,16 +58,16 @@ static void get_smart_log(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq
 
 	fill_smart_struct(resp_buf);
 
-	nvme_cmd_return_data(tc, &cmd->base, resp_buf, len, cq_buf);
+	nvme_cmd_return_data(priv, resp_buf, len);
 }
 
-void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
+void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv)
 {
-	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
+	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 
 	switch(cmd->cdw10.lid) {
 		case LID_SMART:
-			get_smart_log(tc, cmd, cq_buf);
+			get_smart_log(priv);
 			break;
 		default:
 			printk("Invalid Get Log LID value! (%d)\n", cmd->cdw10.lid);

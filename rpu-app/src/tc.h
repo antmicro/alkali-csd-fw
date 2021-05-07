@@ -7,7 +7,9 @@
 #include <stdint.h>
 #include <zephyr.h>
 
-#define MAX_IO_QUEUES		1
+#define IO_QUEUES		1
+
+#define QUEUES	((IO_QUEUES)+1)
 
 #define DOORBELLS		5
 
@@ -19,6 +21,7 @@
 #define DOORBELL_HEAD(n)	(DOORBELL_REG((n*2)+1))
 
 #define ADM_QUEUE_ID		0
+#define ADM_QUEUE_IV		0
 
 #define NVME_TC_REG_ADM_TAIL	(DOORBELL_TAIL(ADM_QUEUE_ID))
 #define NVME_TC_REG_ADM_HEAD	(DOORBELL_HEAD(ADM_QUEUE_ID))
@@ -40,11 +43,13 @@
 #define NVME_TC_SHUTDOWN_PROCESSING	0x1
 #define NVME_TC_SHUTDOWN_COMPLETE	0x2
 
-#define NVME_TC_ADM_SQ_ENTRY_SIZE	64
-#define NVME_TC_ADM_SQ_SLAB_SIZE	256
+#define NVME_TC_SQ_ENTRY_SIZE	64
+#define NVME_TC_SQ_SLAB_SIZE	1024
 
-#define NVME_TC_ADM_CQ_ENTRY_SIZE	16
-#define NVME_TC_ADM_CQ_SLAB_SIZE	256
+#define NVME_TC_CQ_ENTRY_SIZE	16
+#define NVME_TC_CQ_SLAB_SIZE	1024
+
+#define NVME_CMD_SLAB_SIZE	1024
 
 void nvme_tc_irq_init(void);
 void *nvme_tc_init(void *dma_priv);
@@ -56,64 +61,42 @@ typedef struct nvme_tc_priv {
 	void *dma_priv;
 
 	int memory_page_size;
+	int queues;
 
-	/* Admin Queues */
+	struct k_mem_slab cmd_slab;
 
-	int adm_cq_size;
-	int adm_sq_size;
+	/* Submission Queues */
 
-	uint64_t adm_sq_base;
-	uint64_t adm_cq_base;
+	bool sq_valid[QUEUES];
+	uint16_t sq_size[QUEUES];
+	uint64_t sq_base[QUEUES];
+	uint16_t sq_tail[QUEUES];
+	uint16_t sq_head[QUEUES];
+	bool sq_pc[QUEUES];
 
-	uint32_t adm_sq_tail;
-	uint32_t adm_sq_head;
 
-	uint32_t adm_cq_tail;
-	uint32_t adm_cq_head;
-	bool adm_cq_phase;
+	/* Completion Queues */
 
-	struct k_mem_slab adm_sq_slab;
-	struct k_mem_slab adm_cq_slab;
-
-	/* IO Queues */
-
-	int io_queues;
-
-	int io_cq_entry_size;
-	int io_sq_entry_size;
-
-	uint64_t io_sq_base[MAX_IO_QUEUES];
-	uint64_t io_cq_base[MAX_IO_QUEUES];
-
-	uint16_t io_sq_tail[MAX_IO_QUEUES];
-	uint16_t io_sq_head[MAX_IO_QUEUES];
-
-	uint16_t io_cq_tail[MAX_IO_QUEUES];
-	uint16_t io_cq_head[MAX_IO_QUEUES];
-	bool io_cq_phase[MAX_IO_QUEUES];
-
-	bool io_sq_ien[MAX_IO_QUEUES];
-	bool io_cq_ien[MAX_IO_QUEUES];
-
-	bool io_sq_pc[MAX_IO_QUEUES];
-	bool io_cq_pc[MAX_IO_QUEUES];
-
-	uint16_t io_sq_iv[MAX_IO_QUEUES];
-	uint16_t io_cq_iv[MAX_IO_QUEUES];
-
-	uint16_t io_sq_size[MAX_IO_QUEUES];
-	uint16_t io_cq_size[MAX_IO_QUEUES];
-
-	bool io_sq_valid[MAX_IO_QUEUES];
-	bool io_cq_valid[MAX_IO_QUEUES];
-
-	struct k_mem_slab io_sq_slab;
-	struct k_mem_slab io_cq_slab;
-
+	bool cq_valid[QUEUES];
+	uint16_t cq_size[QUEUES];
+	uint64_t cq_base[QUEUES];
+	uint16_t cq_tail[QUEUES];
+	uint16_t cq_head[QUEUES];
+	bool cq_pc[QUEUES];
+	bool cq_phase[QUEUES];
+	bool cq_ien[QUEUES];
+	uint16_t cq_iv[QUEUES];
 } nvme_tc_priv_t;
 
-uint64_t nvme_tc_get_cq_addr(nvme_tc_priv_t *priv);
+typedef struct nvme_cmd_priv {
+	int qid;
+	nvme_tc_priv_t *tc;
+	uint32_t sq_buf[NVME_TC_SQ_ENTRY_SIZE/4];
+	uint32_t cq_buf[NVME_TC_CQ_ENTRY_SIZE/4];
+} nvme_cmd_priv_t;
 
-void nvme_tc_cq_notify(nvme_tc_priv_t *priv, int queue_id);
+uint64_t nvme_tc_get_cq_addr(nvme_tc_priv_t *priv, const int qid);
+
+void nvme_tc_cq_notify(nvme_tc_priv_t *priv, const int qid);
 
 #endif

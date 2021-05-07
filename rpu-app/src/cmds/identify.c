@@ -63,38 +63,18 @@ static void fill_identify_struct(uint8_t *ptr)
 	strncat(ptr + NVME_ID_FIELD_MN, MN, NVME_ID_FIELD_MN_SIZE-1);
 	strncat(ptr + NVME_ID_FIELD_FR, FR, NVME_ID_FIELD_FR_SIZE-1);
 
-	sys_write8(0, buf + NVME_ID_FIELD_RAB);	
-
 	sys_write16(OUI0, buf + NVME_ID_FIELD_IEEE);
 	sys_write16(OUI1, buf + NVME_ID_FIELD_IEEE + 2);
 	sys_write16(OUI2, buf + NVME_ID_FIELD_IEEE + 4);
 
-	sys_write8(0, buf + NVME_ID_FIELD_MDTS);
-	sys_write16(0, buf + NVME_ID_FIELD_CNTLID);
-
 	sys_write32(VER, buf + NVME_ID_FIELD_VER);
 	
-	sys_write32(0, buf + NVME_ID_FIELD_RTD3R);
-	sys_write32(0, buf + NVME_ID_FIELD_RTD3E);
-
-	sys_write16(0, buf + NVME_ID_FIELD_OAES);	
-
-	sys_write32(0, buf + NVME_ID_FIELD_CTRATT);
-
 	sys_write8(IO_CNTRL, buf + NVME_ID_FIELD_CNTRLTYPE);
-
-	sys_write32(0, buf + NVME_ID_FIELD_OACS);
 
 	sys_write8(3, buf + NVME_ID_FIELD_ACL);
 	sys_write8(3, buf + NVME_ID_FIELD_AERL);
 
 	sys_write8(3, buf + NVME_ID_FIELD_FRMW);
-
-	sys_write8(0, buf + NVME_ID_FIELD_LPA);
-
-	sys_write8(0, buf + NVME_ID_FIELD_ELPE);
-
-	sys_write8(0, buf + NVME_ID_FIELD_NPSS);
 
 	sys_write8(1, buf + NVME_ID_FIELD_AVSCC);
 
@@ -104,23 +84,11 @@ static void fill_identify_struct(uint8_t *ptr)
 
 	sys_write8(1, buf + NVME_ID_FIELD_FWUG);
 
-	sys_write8(0, buf + NVME_ID_FIELD_KAS);
-
 	sys_write8(0x66, buf + NVME_ID_FIELD_SQES);
 
 	sys_write8(0x44, buf + NVME_ID_FIELD_CQES);
 
-	sys_write8(0, buf + NVME_ID_FIELD_MAXCMD);
-
-	sys_write32(0, buf + NVME_ID_FIELD_NN);
-
-	sys_write16(0, buf + NVME_ID_FIELD_ONCS);
-
-	sys_write16(0, buf + NVME_ID_FIELD_FUSES);
-	
 	sys_write8(1, buf + NVME_ID_FIELD_FNA);
-
-	sys_write8(0, buf + NVME_ID_FIELD_VWC);
 
 	sys_write16(0xFFFF, buf + NVME_ID_FIELD_AWUN);
 
@@ -128,18 +96,16 @@ static void fill_identify_struct(uint8_t *ptr)
 
 	sys_write8(1, buf + NVME_ID_FIELD_NVSCC);
 
-	sys_write8(0, buf + NVME_ID_FIELD_NWPC);
-
 	strncat(ptr + NVME_ID_FIELD_SUBNQN, SUBNQN, NVME_ID_FIELD_SUBNQN_SIZE-1);
 }
 
-static void identify_controller(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+static void identify_controller(nvme_cmd_priv_t *priv)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
 
 	fill_identify_struct(resp_buf);
 
-	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+	nvme_cmd_return_data(priv, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE);
 }
 
 #define NSID 1
@@ -152,13 +118,13 @@ static void fill_identify_namespace_list(uint8_t *ptr)
 	sys_write32(NSID, buf + NVME_ID_FIELD_VID);
 }
 
-static void identify_namespace_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+static void identify_namespace_list(nvme_cmd_priv_t *priv)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
 
 	fill_identify_namespace_list(resp_buf);
 
-	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+	nvme_cmd_return_data(priv, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE);
 }
 
 #define NVME_ID_FIELD_NIDT	0x0
@@ -167,7 +133,7 @@ static void identify_namespace_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_e
 #define NIDT_NUUID		0x3
 #define NIDL_NUUID		0x10
 
-static void identify_namespace_ident_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+static void identify_namespace_ident_list(nvme_cmd_priv_t *priv)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
 	mem_addr_t buf = (mem_addr_t)resp_buf;
@@ -179,10 +145,10 @@ static void identify_namespace_ident_list(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvm
 	for(int i = 0; i < NIDL_NUUID; i++)
 		sys_write8(i+1, buf + NVME_ID_FIELD_NID + i);
 
-	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+	nvme_cmd_return_data(priv, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE);
 }
 
-static void identify_namespace(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_t *cq_buf)
+static void identify_namespace(nvme_cmd_priv_t *priv)
 {
 	static uint8_t resp_buf[NVME_CMD_IDENTIFY_RESP_SIZE];
 	mem_addr_t buf = (mem_addr_t)resp_buf;
@@ -194,25 +160,25 @@ static void identify_namespace(nvme_tc_priv_t *tc, cmd_sq_t *cmd, nvme_cq_entry_
 
 	sys_write32((9 << 16), buf + 128);
 
-	nvme_cmd_return_data(tc, &cmd->base, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE, cq_buf);
+	nvme_cmd_return_data(priv, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE);
 }
 
-void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf)
+void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv)
 {
-	cmd_sq_t *cmd = (cmd_sq_t*)buf;	
+	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 
 	switch(cmd->cdw10.cns) {
 		case CNS_IDENTIFY_NAMESPACE:
-			identify_namespace(tc, cmd, cq_buf);
+			identify_namespace(priv);
 			break;
 		case CNS_IDENTIFY_CONTROLLER:
-			identify_controller(tc, cmd, cq_buf);
+			identify_controller(priv);
 			break;
 		case CNS_IDENTIFY_NAMESPACE_LIST:
-			identify_namespace_list(tc, cmd, cq_buf);
+			identify_namespace_list(priv);
 			break;
 		case CNS_IDENTIFY_NAMESPACE_IDENT_LIST:
-			identify_namespace_ident_list(tc, cmd, cq_buf);
+			identify_namespace_ident_list(priv);
 			break;
 		default:
 			printk("Invalid Identify CNS value! (%d)\n", cmd->cdw10.cns);

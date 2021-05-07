@@ -6,8 +6,7 @@
 
 #include "tc.h"
 
-void nvme_cmd_handle_adm(void *tc_priv, void *cmd);
-void nvme_cmd_handle_io(void *tc_priv, void *cmd);
+void nvme_cmd_handler(void *cmd_priv, void *cmd);
 
 typedef struct nvme_cmd_cdw0 {
 	uint32_t opc : 8;
@@ -64,17 +63,17 @@ typedef struct nvme_cq_entry {
 #define NVME_ADM_CMD_DELETE_IO_CQ	0x04
 #define NVME_ADM_CMD_KEEP_ALIVE		0x18
 
-void nvme_cmd_adm_identify(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
-void nvme_cmd_adm_get_log(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
-void nvme_cmd_adm_set_features(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
+void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv);
+void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv);
+void nvme_cmd_adm_set_features(nvme_cmd_priv_t *priv);
 
-void nvme_cmd_adm_create_sq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
-void nvme_cmd_adm_create_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
+void nvme_cmd_adm_create_sq(nvme_cmd_priv_t *priv);
+void nvme_cmd_adm_create_cq(nvme_cmd_priv_t *priv);
 
-void nvme_cmd_adm_delete_sq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
-void nvme_cmd_adm_delete_cq(nvme_tc_priv_t *tc, void *buf, nvme_cq_entry_t *cq_buf);
+void nvme_cmd_adm_delete_sq(nvme_cmd_priv_t *priv);
+void nvme_cmd_adm_delete_cq(nvme_cmd_priv_t *priv);
 
-void nvme_cmd_return(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, nvme_cq_entry_t *cq_buf);
-void nvme_cmd_return_data(nvme_tc_priv_t *tc, nvme_sq_entry_base_t *cmd, void *ret_buf, uint32_t ret_len, nvme_cq_entry_t *cq_buf);
+void nvme_cmd_return(nvme_cmd_priv_t *priv);
+void nvme_cmd_return_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len);
 
 #endif
