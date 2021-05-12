@@ -1,4 +1,4 @@
-#include "../cmd.h"
+#include "cmd.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>

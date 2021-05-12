@@ -15,3 +15,5 @@ target_sources(app PRIVATE src/cmds/identify.c)
 target_sources(app PRIVATE src/cmds/get_log.c)
 target_sources(app PRIVATE src/cmds/set_features.c)
 target_sources(app PRIVATE src/cmds/queues.c)
+
+target_include_directories(app PRIVATE src)

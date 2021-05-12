@@ -1,5 +1,5 @@
-#include "../cmd.h"
-#include "../nvme_ident_fields.h"
+#include "cmd.h"
+#include "nvme_ident_fields.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>

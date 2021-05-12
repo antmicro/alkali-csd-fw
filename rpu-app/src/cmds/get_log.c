@@ -1,4 +1,4 @@
-#include "../cmd.h"
+#include "cmd.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
@@ -53,7 +53,6 @@ static void fill_smart_struct(uint8_t *ptr)
 
 static void get_smart_log(nvme_cmd_priv_t *priv, uint32_t len, uint64_t off)
 {
-	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 	static uint8_t resp_buf[SMART_RESP_SIZE];
 
 	len = (len > SMART_RESP_SIZE) ? SMART_RESP_SIZE : len;
