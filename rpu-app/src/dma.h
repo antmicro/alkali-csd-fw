@@ -20,7 +20,7 @@
 #define NVME_DMA_REG_CQ_COUNT		0x408
 #define NVME_DMA_REG_CC_COUNT		0x40c
 
-#define NVME_DMA_SLAB_ENTRIES		256
+#define NVME_DMA_SLAB_ENTRIES		(4096*16)
 
 #include <stdint.h>
 

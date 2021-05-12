@@ -11,6 +11,8 @@ static nvme_tc_priv_t p_tc = {0};
 
 static char __aligned(16) cmd_slab_buffer[sizeof(nvme_cmd_priv_t)*NVME_CMD_SLAB_SIZE];
 
+static char __aligned(16) prp_slab_buffer[NVME_PRP_LIST_SIZE*NVME_PRP_SLAB_SIZE];
+
 static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 {
 	uint32_t cc = sys_read32(priv->base + NVME_TC_REG_CC);
@@ -24,7 +26,9 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 	}
 
 	if(NVME_TC_GET_FIELD(cc, CC_SHN)) {
+#ifdef DEBUG
 		printk("Shutdown notification detected\n");
+#endif
 		NVME_TC_SET_FIELD(csts, NVME_TC_SHUTDOWN_COMPLETE, CSTS_SHST);
 	}
 
@@ -33,16 +37,23 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 
 	priv->memory_page_size = pow(2, NVME_TC_GET_FIELD(cc, CC_MPS) + 12);
 
+	if(priv->memory_page_size != NVME_PRP_LIST_SIZE)
+		printk("Unsupported page size selected!\n");
+
 	if(NVME_TC_GET_FIELD(cc, CC_CSS))
 		printk("Unsupported command set selected!\nWe only support NVM command set (000b)\n");
 
 	if(cc && NVME_TC_REG_CC_EN) {
 		priv->enabled = true;
+#ifdef DEBUG
 		printk("Controller enabled\n");
+#endif
 		csts |= NVME_TC_REG_CSTS_RDY;
 	} else if (priv->enabled) {
 		priv->enabled = false;
+#ifdef DEBUG
 		printk("Controller reset requested\n");
+#endif
 		csts &= ~NVME_TC_REG_CSTS_RDY;
 	}
 
@@ -208,6 +219,8 @@ void *nvme_tc_init(void *dma_priv)
 	priv->dma_priv = dma_priv;
 
 	k_mem_slab_init(&priv->cmd_slab, cmd_slab_buffer, sizeof(nvme_cmd_priv_t), NVME_CMD_SLAB_SIZE);
+
+	k_mem_slab_init(&priv->prp_slab, prp_slab_buffer, NVME_PRP_LIST_SIZE, NVME_PRP_SLAB_SIZE);
 
 	printk("Clearing registers\n");
 	for(int i = 0; i < NVME_TC_REG_IRQ_STA; i+=4)

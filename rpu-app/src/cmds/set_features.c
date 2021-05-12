@@ -25,13 +25,13 @@ typedef struct cmd_sq {
 
 static void number_of_queues(nvme_cmd_priv_t *priv)
 {
-	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 	nvme_cq_entry_t *cq = (nvme_cq_entry_t*)priv->cq_buf;
-
+#ifdef DEBUG
+	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 	uint16_t ncqr = (cmd->cdw[0] >> 16) & 0xFFFF;
 	uint16_t nsqr = cmd->cdw[0] & 0xFFFF;
-
 	printk("NCQR: %d\nNSQR: %d\n", ncqr, nsqr);
+#endif
 
 	// For now create only one IO queue
 

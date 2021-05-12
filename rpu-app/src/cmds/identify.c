@@ -1,5 +1,6 @@
 #include "cmd.h"
 #include "nvme_ident_fields.h"
+#include "ramdisk.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
@@ -154,11 +155,11 @@ static void identify_namespace(nvme_cmd_priv_t *priv)
 	mem_addr_t buf = (mem_addr_t)resp_buf;
 	memset(resp_buf, 0, NVME_CMD_IDENTIFY_RESP_SIZE);
 
-	sys_write32(2048, buf + 0);
+	sys_write32(BLK_CNT, buf + 0);
 
-	sys_write32(2048, buf + 8);
+	sys_write32(BLK_CNT, buf + 8);
 
-	sys_write32((9 << 16), buf + 128);
+	sys_write32((BLK_SHIFT << 16), buf + 128);
 
 	nvme_cmd_return_data(priv, resp_buf, NVME_CMD_IDENTIFY_RESP_SIZE);
 }

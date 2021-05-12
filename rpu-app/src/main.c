@@ -10,11 +10,13 @@
 
 #include "dma.h"
 #include "tc.h"
+#include "ramdisk.h"
 
 #include <string.h>
 
 void init(void)
 {
+	ramdisk_init();
 	void *dma_priv = nvme_dma_init();
 	nvme_tc_init(dma_priv);
 
@@ -27,6 +29,8 @@ void main(void)
 	printk("NVMe Controller FW for %s\n", CONFIG_BOARD);
 
 	init();
+
+	printk("Init complete\nController ready\n");
 
 	while(1);
 }

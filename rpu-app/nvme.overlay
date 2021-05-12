@@ -15,9 +15,14 @@
 			interrupts = <89 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
 			interrupt-names = "dma_done";
 		};
+
+		sram1: memory@68000000 {
+			compatible = "mmio-sram";
+			reg = <0x68000000 DT_SIZE_M(384)>;
+		};
 	};
 };
 
 &sram0 {
-	reg = <0x60000000 DT_SIZE_M(512)>;
+	reg = <0x60000000 DT_SIZE_M(128)>;
 };

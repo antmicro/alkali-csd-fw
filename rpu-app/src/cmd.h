@@ -63,6 +63,10 @@ typedef struct nvme_cq_entry {
 #define NVME_ADM_CMD_DELETE_IO_CQ	0x04
 #define NVME_ADM_CMD_KEEP_ALIVE		0x18
 
+#define NVME_IO_CMD_FLUSH		0x00
+#define NVME_IO_CMD_WRITE		0x01
+#define NVME_IO_CMD_READ		0x02
+
 void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_set_features(nvme_cmd_priv_t *priv);
@@ -73,7 +77,11 @@ void nvme_cmd_adm_create_cq(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_delete_sq(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_delete_cq(nvme_cmd_priv_t *priv);
 
+void nvme_cmd_io_write(nvme_cmd_priv_t *priv);
+void nvme_cmd_io_read(nvme_cmd_priv_t *priv);
+
 void nvme_cmd_return(nvme_cmd_priv_t *priv);
 void nvme_cmd_return_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len);
+void nvme_cmd_get_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len);
 
 #endif

@@ -34,7 +34,9 @@ char __aligned(16) desc_slab_buffer[sizeof(nvme_dma_xfer_def_t)*NVME_DMA_SLAB_EN
 
 static void nvme_dma_setup_xfer(nvme_dma_priv_t *priv, nvme_dma_xfer_def_t *desc, uint32_t off)
 {
+#ifdef DEBUG
 	printk("Configuring DMA transfer\n");
+#endif
 
 	__DMB();
 

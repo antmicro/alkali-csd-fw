@@ -3,6 +3,7 @@
 
 #include "nvme_reg_map.h"
 #include "nvme_reg_fields.h"
+#include "dma.h"
 
 #include <stdint.h>
 #include <zephyr.h>
@@ -51,6 +52,9 @@
 
 #define NVME_CMD_SLAB_SIZE	1024
 
+#define NVME_PRP_SLAB_SIZE	1024
+#define NVME_PRP_LIST_SIZE	4096
+
 void nvme_tc_irq_init(void);
 void *nvme_tc_init(void *dma_priv);
 
@@ -64,6 +68,7 @@ typedef struct nvme_tc_priv {
 	int queues;
 
 	struct k_mem_slab cmd_slab;
+	struct k_mem_slab prp_slab;
 
 	/* Submission Queues */
 
@@ -88,9 +93,17 @@ typedef struct nvme_tc_priv {
 	uint16_t cq_iv[QUEUES];
 } nvme_tc_priv_t;
 
+#define DIR_FROM_HOST 0
+#define DIR_TO_HOST 1
+
 typedef struct nvme_cmd_priv {
 	int qid;
 	nvme_tc_priv_t *tc;
+	int dir;
+	int prp_size;
+	uint32_t xfer_base, xfer_size;
+	uint32_t xfer_buf, xfer_len;
+	nvme_dma_xfer_cb *xfer_cb;
 	uint32_t sq_buf[NVME_TC_SQ_ENTRY_SIZE/4];
 	uint32_t cq_buf[NVME_TC_CQ_ENTRY_SIZE/4];
 } nvme_cmd_priv_t;
