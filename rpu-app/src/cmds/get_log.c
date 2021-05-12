@@ -39,17 +39,22 @@ static void fill_smart_struct(uint8_t *ptr)
 	mem_addr_t buf = (mem_addr_t)ptr;
 	memset(ptr, 0, SMART_RESP_SIZE);
 
+	sys_write16(298, buf + 1);
 	sys_write8(100, buf + 3);
 	sys_write8(5, buf + 4);
+
+	sys_write32(2000, buf + 128);
+
+	sys_write32(10, buf + 144);
+	sys_write32(0, buf + 148);
+	sys_write32(0, buf + 152);
+	sys_write32(0, buf + 156);
 }
 
-static void get_smart_log(nvme_cmd_priv_t *priv)
+static void get_smart_log(nvme_cmd_priv_t *priv, uint32_t len, uint64_t off)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 	static uint8_t resp_buf[SMART_RESP_SIZE];
-
-	uint32_t len = (cmd->cdw11.numdu << 16) | cmd->cdw10.numdl;
-	uint64_t off = ((uint64_t)cmd->cdw13) << 32 | cmd->cdw12;
 
 	len = (len > SMART_RESP_SIZE) ? SMART_RESP_SIZE : len;
 
@@ -65,9 +70,14 @@ void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 
+	uint32_t len = ((cmd->cdw11.numdu << 16) | cmd->cdw10.numdl);
+	uint64_t off = ((uint64_t)cmd->cdw13) << 32 | cmd->cdw12;
+
+	len = (len+1) * 4; // len originally comes as number of dwords and is 0 based
+
 	switch(cmd->cdw10.lid) {
 		case LID_SMART:
-			get_smart_log(priv);
+			get_smart_log(priv, len, off);
 			break;
 		default:
 			printk("Invalid Get Log LID value! (%d)\n", cmd->cdw10.lid);
