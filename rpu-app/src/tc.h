@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021 Antmicro <www.antmicro.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef NVME_TC_H
 #define NVME_TC_H
 

@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021 Antmicro <www.antmicro.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
