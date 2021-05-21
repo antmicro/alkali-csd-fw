@@ -6,9 +6,11 @@
 
 #include "cmd.h"
 #include "dma.h"
+#include "rpmsg.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
+#include <openamp/open_amp.h>
 
 static inline void fill_cq_resp(nvme_cmd_priv_t *priv) /*nvme_cq_entry_t *cq_buf, uint16_t sq_head, uint16_t cmd_id) */
 {
@@ -18,6 +20,28 @@ static inline void fill_cq_resp(nvme_cmd_priv_t *priv) /*nvme_cq_entry_t *cq_buf
 	memset((void*)cq, 0, NVME_TC_CQ_ENTRY_SIZE);
 	cq->sq_head = priv->tc->sq_head[priv->qid];
 	cq->cid = sq->cdw0.cid;
+}
+
+static void send_vendor_cmd(nvme_cmd_priv_t *priv)
+{
+	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
+
+	printk("Vendor %s command (Opcode: %d, priv: %08x)\n", (priv->qid > 0) ? "IO" : "Admin", cmd->cdw0.opc, (uint32_t)priv);
+
+	int size = sizeof(nvme_rpmsg_payload_t) + sizeof(priv->sq_buf);
+
+	nvme_rpmsg_payload_t *buf = (nvme_rpmsg_payload_t*)k_malloc(size);
+
+	buf->id = (priv->qid > 0) ? RPMSG_HANDLE_CUSTOM_IO_COMMAND : RPMSG_HANDLE_CUSTOM_ADM_COMMAND;
+	buf->len = sizeof(priv->sq_buf);
+
+	buf->priv = (uint32_t)priv;
+	
+	memcpy(buf->data, priv->sq_buf, buf->len);
+
+	int ret = rpmsg_send(&priv->tc->lept, buf, size);
+	if(ret != size)
+		printk("failed to send rpmsg message: %d\n", ret);
 }
 
 static void handle_adm(nvme_cmd_priv_t *priv)
@@ -48,6 +72,10 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 			break;
 		case NVME_ADM_CMD_KEEP_ALIVE:
 		default:
+			if(cmd->cdw0.opc >= NVME_ADM_CMD_VENDOR) {
+				send_vendor_cmd(priv);
+				break;
+			}
 			printk("Unsupported Admin command! (Opcode: %d)\n", cmd->cdw0.opc);
 			nvme_cmd_return(priv);
 	}	
@@ -68,6 +96,10 @@ static void handle_io(nvme_cmd_priv_t *priv)
 			nvme_cmd_io_read(priv);
 			break;
 		default:
+			if(cmd->cdw0.opc >= NVME_IO_CMD_VENDOR) {
+				send_vendor_cmd(priv);
+				break;
+			}
 			printk("Unsupported IO Command! (Opcode: %d)\n", cmd->cdw0.opc);
 			nvme_cmd_return(priv);
 	}

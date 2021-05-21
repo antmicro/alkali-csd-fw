@@ -11,6 +11,11 @@ target_sources(app PRIVATE src/dma.c)
 target_sources(app PRIVATE src/tc.c)
 target_sources(app PRIVATE src/ramdisk.c)
 
+target_sources(app PRIVATE src/rpmsg.c)
+target_sources(app PRIVATE src/platform_info.c)
+target_sources(app PRIVATE src/rsc_table.c)
+target_sources(app PRIVATE src/zynqmp_r5_a53_rproc.c)
+
 target_sources(app PRIVATE src/cmd.c)
 target_sources(app PRIVATE src/cmds/identify.c)
 target_sources(app PRIVATE src/cmds/get_log.c)

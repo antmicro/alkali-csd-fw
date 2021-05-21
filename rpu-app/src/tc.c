@@ -216,7 +216,7 @@ void nvme_tc_irq_init(void)
 	printk("TC interrupts enabled\n");
 }
 
-void *nvme_tc_init(void *dma_priv)
+nvme_tc_priv_t *nvme_tc_init(void *dma_priv)
 {
 	nvme_tc_priv_t *priv = &p_tc;
 
@@ -232,5 +232,5 @@ void *nvme_tc_init(void *dma_priv)
 	for(int i = 0; i < NVME_TC_REG_IRQ_STA; i+=4)
 		sys_write32(0, priv->base + i);
 
-	return (void*)priv;
+	return priv;
 }

@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <zephyr.h>
 
+#include <openamp/open_amp.h>
+
 #define IO_QUEUES		1
 
 #define QUEUES	((IO_QUEUES)+1)
@@ -62,13 +64,22 @@
 #define NVME_PRP_LIST_SIZE	4096
 
 void nvme_tc_irq_init(void);
-void *nvme_tc_init(void *dma_priv);
 
 typedef struct nvme_tc_priv {
 	mem_addr_t base;
 	bool enabled;
 
 	void *dma_priv;
+
+	/* RPU APU communication */
+
+	struct rpmsg_device *rpdev;
+	void *platform;
+	struct rpmsg_endpoint lept;
+	struct device *ipm_dev_tx;
+	struct device *ipm_dev_rx;
+
+	/* Queue parameters */
 
 	int memory_page_size;
 	int queues;
@@ -113,6 +124,8 @@ typedef struct nvme_cmd_priv {
 	uint32_t sq_buf[NVME_TC_SQ_ENTRY_SIZE/4];
 	uint32_t cq_buf[NVME_TC_CQ_ENTRY_SIZE/4];
 } nvme_cmd_priv_t;
+
+nvme_tc_priv_t *nvme_tc_init(void *dma_priv);
 
 uint64_t nvme_tc_get_cq_addr(nvme_tc_priv_t *priv, const int qid);
 
