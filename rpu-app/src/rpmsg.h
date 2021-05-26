@@ -5,7 +5,7 @@
 
 int rpmsg_init(nvme_tc_priv_t *tc);
 
-typedef struct __attribute__((__packed__)) nvme_rpmsg_payload {
+typedef struct nvme_rpmsg_payload {
 	uint32_t id;
 	uint32_t len;
 	uint32_t priv;
