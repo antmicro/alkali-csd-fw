@@ -65,7 +65,7 @@ static char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 {
 	char sys_rpmsg_ept_name_path[64];
 	char svc_name[64];
-	char *sys_rpmsg_path = "/sys/class/rpmsg";
+	const char *sys_rpmsg_path = "/sys/class/rpmsg";
 	FILE *fp;
 	int i;
 	int ept_name_len;
@@ -85,7 +85,7 @@ static char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 		fclose(fp);
 		printf("svc_name: %s.\n",svc_name);
 		ept_name_len = strlen(ept_name);
-		if (ept_name_len > sizeof(svc_name))
+		if (ept_name_len > (int)sizeof(svc_name))
 			ept_name_len = sizeof(svc_name);
 		if (!strncmp(svc_name, ept_name, ept_name_len)) {
 			sprintf(ept_dev_name, "rpmsg%d", i);
@@ -101,7 +101,7 @@ static char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 static int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
 {
 	char fpath[256];
-	char *rpmsg_chdrv = "rpmsg_chrdev";
+	const char *rpmsg_chdrv = "rpmsg_chrdev";
 	int fd;
 	int ret;
 
@@ -146,7 +146,7 @@ static int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name,
 {
 	char dpath[256];
 	char fpath[384];
-	char *rpmsg_ctrl_prefix = "rpmsg_ctrl";
+	const char *rpmsg_ctrl_prefix = "rpmsg_ctrl";
 	DIR *dir;
 	struct dirent *ent;
 	int fd;

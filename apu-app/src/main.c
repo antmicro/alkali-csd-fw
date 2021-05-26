@@ -1,21 +1,42 @@
-#include <stdint.h>
+/*
+ * Copyright (c) 2021 Antmicro <www.antmicro.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <unistd.h>
-#include <stdio.h>
+#include <cstdio>
+#include <vector>
+
+#include "nvme.h"
+#include "rpmsg.h"
+#include "cmd.h"
+#include "acc.h"
+
+std::vector<Acc*> accelerators;
 
 int rpmsg_init(void);
 
-struct __attribute__((__packed__)) payload {
-	uint32_t id;
-	uint32_t len;
-	uint32_t priv;
-	uint32_t data[];
-};
+static void setup_acc(void)
+{
+	Acc *a0 = new Acc(0);
+
+	accelerators.push_back(a0);
+}
+
+static void init(void) {
+	setup_acc();
+	setup_identify();
+	setup_status();
+}
 
 int main(int argc, char *argv[])
 {
-	struct payload initial_msg = {1234, 0};
-	struct payload recv_msg = {0};
+	payload_t initial_msg = { .id = 1234, };
+	char buf[NVME_TC_SQ_ENTRY_SIZE + sizeof(payload_t)];
 	int fd = rpmsg_init();
+
+	init();
 
 	if(fd < 0)
 		return fd;
@@ -23,15 +44,19 @@ int main(int argc, char *argv[])
 	write(fd, &initial_msg, sizeof(initial_msg));
 
 	for(;;) {
-		int bytes = read(fd, &recv_msg, sizeof(recv_msg));
-		if(bytes == sizeof(recv_msg)) {
-			struct payload ack_msg = {0};
-			printf("command received, id: %d, len: %d, priv: %08x\n", recv_msg.id, recv_msg.len, recv_msg.priv);
-			ack_msg.id = 0x20;
-			ack_msg.priv = recv_msg.priv;
-			bytes = write(fd, &ack_msg, sizeof(ack_msg));
-			if(bytes != sizeof(ack_msg))
-				printf("Failed to send ACK: %d\n", bytes);
+		int bytes = read(fd, buf, sizeof(buf));
+		if(bytes > 0) {
+			payload_t *recv = (payload_t*)buf;
+			switch(recv->id) {
+				case PAYLOAD_ADM_CMD:
+					handle_adm_cmd(fd, recv);
+					break;
+				case PAYLOAD_IO_CMD:
+					handle_io_cmd(fd, recv);
+					break;
+				default:
+					printf("Unsupported command received! (id: %d, len: %d, priv: %08x)\n", recv->id, recv->len, recv->priv);
+			}
 		}
 	}
 
