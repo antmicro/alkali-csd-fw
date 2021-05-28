@@ -12,16 +12,54 @@
 
 #define RPMSG_SERVICE_NAME         "rpmsg-openamp-nvme-channel"
 
+static void rpmsg_cmd_return_cb(void *cmd_priv, void *buf)
+{
+	nvme_cmd_priv_t *priv = (nvme_cmd_priv_t*)cmd_priv;
+
+	k_mem_pool_free(&priv->block);
+
+	nvme_cmd_return(priv);
+}
+
+static void rpmsg_cmd_return_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len)
+{
+	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
+	uint8_t psdt = cmd->cdw0.psdt;
+
+	priv->xfer_base = priv->xfer_buf = (uint32_t)ret_buf;
+	priv->xfer_size = priv->xfer_len = ret_len;
+
+	priv->dir = DIR_TO_HOST;
+	priv->xfer_cb = rpmsg_cmd_return_cb;
+
+	if(psdt != 0) {
+		printk("Invalid PSDT value! (%d != 0)\n", psdt);
+		nvme_cmd_return(priv);
+	} else {
+		nvme_cmd_transfer_data(priv);
+	}
+}
+
 static int rpmsg_endpoint_cb(struct rpmsg_endpoint *ept, void *data, size_t len,
 		u32_t src, void *priv)
 {
 	nvme_rpmsg_payload_t *payload = (nvme_rpmsg_payload_t*)data;
-	printk("id: %u, len: %u, priv: %08x\n", payload->id, payload->len, payload->priv);
+	printk("id: %x, len: %u, priv: %08x\n", payload->id, payload->len, payload->priv);
 
 	nvme_cmd_priv_t *cmd = (nvme_cmd_priv_t*)payload->priv;
 
-	if(payload->id == RPMSG_SEND_COMPLETION)
-		nvme_cmd_return(cmd);
+	switch(payload->id) {
+		case RPMSG_CMD_RETURN:
+			nvme_cmd_return(cmd);
+			if(cmd->block.data)
+				k_mem_pool_free(&cmd->block);
+			break;
+		case RPMSG_CMD_RETURN_DATA:
+			rpmsg_cmd_return_data(cmd, payload->buf, payload->buf_len);
+			break;
+		default:
+			printk("Unsupported payload ID! (%d)\n", payload->id);
+	}
 
 	return RPMSG_SUCCESS;
 }

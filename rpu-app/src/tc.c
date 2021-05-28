@@ -139,6 +139,7 @@ static void nvme_tc_tail_handler(nvme_tc_priv_t *priv, const int qid)
 		uint64_t host_addr = nvme_tc_get_sq_addr(priv, qid);
 		nvme_cmd_priv_t *arg;
 		if(k_mem_slab_alloc(&priv->cmd_slab, (void**)&arg, K_NO_WAIT) == 0) {
+			memset(arg, 0, sizeof(*arg));
 			arg->qid = qid;
 			arg->tc = priv;
 			nvme_dma_xfer_host_to_mem(priv->dma_priv, host_addr, (uint32_t)arg->sq_buf, NVME_TC_SQ_ENTRY_SIZE, nvme_cmd_handler, arg);

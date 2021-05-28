@@ -63,6 +63,10 @@
 #define NVME_PRP_SLAB_SIZE	1024
 #define NVME_PRP_LIST_SIZE	4096
 
+#define NVME_BUFFER_POOL_ENTRIES	4
+#define NVME_BUFFER_SIZE		(4096*1024)
+#define PAGE_SIZE			4096
+
 void nvme_tc_irq_init(void);
 
 typedef struct nvme_tc_priv {
@@ -78,6 +82,8 @@ typedef struct nvme_tc_priv {
 	struct rpmsg_endpoint lept;
 	struct device *ipm_dev_tx;
 	struct device *ipm_dev_rx;
+
+	struct k_mem_pool *buffer_pool;
 
 	/* Queue parameters */
 
@@ -95,7 +101,6 @@ typedef struct nvme_tc_priv {
 	uint16_t sq_tail[QUEUES];
 	uint16_t sq_head[QUEUES];
 	bool sq_pc[QUEUES];
-
 
 	/* Completion Queues */
 
@@ -121,6 +126,7 @@ typedef struct nvme_cmd_priv {
 	uint32_t xfer_base, xfer_size;
 	uint32_t xfer_buf, xfer_len;
 	nvme_dma_xfer_cb *xfer_cb;
+	struct k_mem_block block;
 	uint32_t sq_buf[NVME_TC_SQ_ENTRY_SIZE/4];
 	uint32_t cq_buf[NVME_TC_CQ_ENTRY_SIZE/4];
 } nvme_cmd_priv_t;

@@ -46,6 +46,12 @@ typedef struct nvme_sq_entry_base {
 	nvme_cmd_dptr_t dptr;
 } nvme_sq_entry_base_t;
 
+typedef struct nvme_sq_entry_vendor_base {
+	nvme_sq_entry_base_t base;
+	uint32_t ndt;
+	uint32_t ndm;
+} nvme_sq_entry_vendor_base_t;
+
 typedef struct nvme_cq_entry {
 	uint32_t cdw0;
 	uint32_t rsvd;
@@ -76,6 +82,16 @@ typedef struct nvme_cq_entry {
 #define NVME_IO_CMD_READ		0x02
 
 #define NVME_IO_CMD_VENDOR		0x80
+
+#define NVME_CMD_XFER_NONE		0x00
+#define NVME_CMD_XFER_FROM_HOST		0x01
+#define NVME_CMD_XFER_TO_HOST		0x02
+#define NVME_CMD_XFER_BIDIR		0x03
+#define NVME_CMD_XFER_MASK		0x03
+
+int nvme_cmd_transfer_data(nvme_cmd_priv_t *priv);
+
+void nvme_cmd_vendor(nvme_cmd_priv_t *priv);
 
 void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv);

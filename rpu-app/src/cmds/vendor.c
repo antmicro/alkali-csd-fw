@@ -1,0 +1,75 @@
+#include "cmd.h"
+#include "rpmsg.h"
+
+static int send_cmd(nvme_cmd_priv_t *priv)
+{
+	nvme_sq_entry_vendor_base_t *cmd = (nvme_sq_entry_vendor_base_t*)priv->sq_buf;
+	const int msg_size = sizeof(nvme_rpmsg_payload_t) + sizeof(priv->sq_buf);
+	nvme_rpmsg_payload_t *msg = (nvme_rpmsg_payload_t*)k_malloc(msg_size);
+	const int buffer_size = cmd->ndt * 4;
+
+	if(msg == NULL) {
+		printk("Failed to allocate rpmsg buffer!\n");
+		// TODO: send response stating that comand failed
+		return -1;
+	}
+
+	msg->id = (priv->qid > 0) ? RPMSG_HANDLE_CUSTOM_IO_COMMAND : RPMSG_HANDLE_CUSTOM_ADM_COMMAND;
+	msg->len = sizeof(priv->sq_buf);
+	msg->priv = (uint32_t)priv;
+	msg->buf = (uint32_t)priv->block.data;
+	msg->buf_len = buffer_size;
+
+	memcpy(msg->data, priv->sq_buf, msg->len);
+
+	printk("vendor buffer %x, %d\n", msg->buf, msg->buf_len);
+
+	int ret = rpmsg_send(&priv->tc->lept, msg, msg_size);
+	if(ret != msg_size) {
+		printk("Failed to send rpmsg message: %d\n", ret);
+		return -1;
+	}
+
+	k_free(msg);
+
+	return 0;
+}
+
+static void vendor_cb(void *cmd_priv, void *buf)
+{
+	nvme_cmd_priv_t *priv = (nvme_cmd_priv_t*)cmd_priv;
+
+	send_cmd(priv);
+}
+
+void nvme_cmd_vendor(nvme_cmd_priv_t *priv)
+{
+	nvme_sq_entry_vendor_base_t *cmd = (nvme_sq_entry_vendor_base_t*)priv->sq_buf;
+	const uint8_t opc = cmd->base.cdw0.opc;
+	const int dir = opc & NVME_CMD_XFER_MASK;
+	const int buffer_size = cmd->ndt * 4;
+
+	printk("Vendor %s command (Opcode: %d, priv: %08x)\n", (priv->qid > 0) ? "IO" : "Admin", opc, (uint32_t)priv);
+	
+	if((dir != NVME_CMD_XFER_NONE) && (buffer_size > 0)) {
+		int ret = k_mem_pool_alloc(priv->tc->buffer_pool, &priv->block, buffer_size, 0);
+		if(ret) {
+			printk("Failed to allocate vendor command data buffer! (size: %d, ret: %d)\n", buffer_size, ret);
+			// TODO: send response stating that comand failed
+			return;
+		}
+
+	}
+
+	if(buffer_size == 0 || dir == NVME_CMD_XFER_TO_HOST) { // No data transfer from host required, we can send rpmsg now
+		send_cmd(priv);
+	} else {
+		priv->xfer_base = priv->xfer_buf = (uint32_t)priv->block.data;
+		priv->xfer_size = priv->xfer_len = buffer_size;
+
+		priv->dir = DIR_FROM_HOST;
+		priv->xfer_cb = vendor_cb;
+
+		nvme_cmd_transfer_data(priv);
+	}
+}

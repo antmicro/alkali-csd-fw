@@ -23,5 +23,6 @@ target_sources(app PRIVATE src/cmds/set_features.c)
 target_sources(app PRIVATE src/cmds/queues.c)
 target_sources(app PRIVATE src/cmds/read.c)
 target_sources(app PRIVATE src/cmds/write.c)
+target_sources(app PRIVATE src/cmds/vendor.c)
 
 target_include_directories(app PRIVATE src)

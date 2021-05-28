@@ -17,13 +17,15 @@
 
 #include <string.h>
 
-static int shutdown_req;
+K_MEM_POOL_DEFINE(buffer_pool, PAGE_SIZE, NVME_BUFFER_SIZE, NVME_BUFFER_POOL_ENTRIES, PAGE_SIZE);
 
 nvme_tc_priv_t *init(void)
 {
 	ramdisk_init();
 	void *dma_priv = nvme_dma_init();
 	nvme_tc_priv_t *tc = nvme_tc_init(dma_priv);
+
+	tc->buffer_pool = &buffer_pool;
 
 	nvme_dma_irq_init();
 	nvme_tc_irq_init();
@@ -43,13 +45,7 @@ void main(void)
 
 	while(1) {
 		platform_poll(tc->platform);
-		/* we got a shutdown request, exit */
-		if (shutdown_req) {
-			printk("Shutdown request!\n");
-			break;
-		}
 	}
-	rpmsg_destroy_ept(&tc->lept);
 
-	for(;;);
+	rpmsg_destroy_ept(&tc->lept);
 }

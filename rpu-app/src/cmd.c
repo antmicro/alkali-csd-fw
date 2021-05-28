@@ -6,7 +6,6 @@
 
 #include "cmd.h"
 #include "dma.h"
-#include "rpmsg.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
@@ -20,28 +19,6 @@ static inline void fill_cq_resp(nvme_cmd_priv_t *priv) /*nvme_cq_entry_t *cq_buf
 	memset((void*)cq, 0, NVME_TC_CQ_ENTRY_SIZE);
 	cq->sq_head = priv->tc->sq_head[priv->qid];
 	cq->cid = sq->cdw0.cid;
-}
-
-static void send_vendor_cmd(nvme_cmd_priv_t *priv)
-{
-	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
-
-	printk("Vendor %s command (Opcode: %d, priv: %08x)\n", (priv->qid > 0) ? "IO" : "Admin", cmd->cdw0.opc, (uint32_t)priv);
-
-	int size = sizeof(nvme_rpmsg_payload_t) + sizeof(priv->sq_buf);
-
-	nvme_rpmsg_payload_t *buf = (nvme_rpmsg_payload_t*)k_malloc(size);
-
-	buf->id = (priv->qid > 0) ? RPMSG_HANDLE_CUSTOM_IO_COMMAND : RPMSG_HANDLE_CUSTOM_ADM_COMMAND;
-	buf->len = sizeof(priv->sq_buf);
-
-	buf->priv = (uint32_t)priv;
-	
-	memcpy(buf->data, priv->sq_buf, buf->len);
-
-	int ret = rpmsg_send(&priv->tc->lept, buf, size);
-	if(ret != size)
-		printk("failed to send rpmsg message: %d\n", ret);
 }
 
 static void handle_adm(nvme_cmd_priv_t *priv)
@@ -77,7 +54,7 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 		case NVME_ADM_CMD_KEEP_ALIVE:
 		default:
 			if(cmd->cdw0.opc >= NVME_ADM_CMD_VENDOR) {
-				send_vendor_cmd(priv);
+				nvme_cmd_vendor(priv);
 				break;
 			}
 			printk("Unsupported Admin command! (Opcode: %d)\n", cmd->cdw0.opc);
@@ -105,7 +82,7 @@ static void handle_io(nvme_cmd_priv_t *priv)
 			break;
 		default:
 			if(cmd->cdw0.opc >= NVME_IO_CMD_VENDOR) {
-				send_vendor_cmd(priv);
+				nvme_cmd_vendor(priv);
 				break;
 			}
 			printk("Unsupported IO Command! (Opcode: %d)\n", cmd->cdw0.opc);
@@ -262,40 +239,41 @@ static void transfer_data_with_prps(nvme_cmd_priv_t *priv)
 	}
 }
 
-void nvme_cmd_get_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len)
+int nvme_cmd_transfer_data(nvme_cmd_priv_t *priv)
 {
 	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
 	uint8_t psdt = cmd->cdw0.psdt;
+	
+	if(psdt != 0) {
+		printk("Invalid PSDT value! (%d != 0)\n", psdt);
+		return 1;
+	} else {
+		transfer_data_with_prps(priv);
+		return 0;
+	}
 
+}
+
+void nvme_cmd_get_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len)
+{
 	priv->xfer_base = priv->xfer_buf = (uint32_t)ret_buf;
 	priv->xfer_size = priv->xfer_len = ret_len;
 
 	priv->dir = DIR_FROM_HOST;
 	priv->xfer_cb = nvme_cmd_return_cb;
-	
-	if(psdt != 0) {
-		printk("Invalid PSDT value! (%d != 0)\n", psdt);
+
+	if(nvme_cmd_transfer_data(priv))
 		nvme_cmd_return(priv);
-	} else {
-		transfer_data_with_prps(priv);
-	}
 }
 
 void nvme_cmd_return_data(nvme_cmd_priv_t *priv, void *ret_buf, uint32_t ret_len)
 {
-	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
-	uint8_t psdt = cmd->cdw0.psdt;
-
 	priv->xfer_base = priv->xfer_buf = (uint32_t)ret_buf;
 	priv->xfer_size = priv->xfer_len = ret_len;
 
 	priv->dir = DIR_TO_HOST;
 	priv->xfer_cb = nvme_cmd_return_cb;
 
-	if(psdt != 0) {
-		printk("Invalid PSDT value! (%d != 0)\n", psdt);
+	if(nvme_cmd_transfer_data(priv))
 		nvme_cmd_return(priv);
-	} else {
-		transfer_data_with_prps(priv);
-	}
 }
