@@ -1,6 +1,8 @@
 CC=$(CROSS_COMPILE)gcc
-OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
-CFLAGS=-Wall -Werror
+SRCS=$(wildcard src/*.c)
+SRCS+=$(wildcard src/cmds/*.c)
+OBJS=$(patsubst %.c,%.o,$(SRCS))
+CFLAGS=-Wall -Werror -static
 OUT=apu-app
 
 $(OUT): $(OBJS)
