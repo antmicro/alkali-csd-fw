@@ -95,6 +95,8 @@ static void fill_identify_struct(uint8_t *ptr)
 
 	sys_write8(0x44, buf + NVME_ID_FIELD_CQES);
 
+	sys_write32(1, buf + NVME_ID_FIELD_NN);
+
 	sys_write8(1, buf + NVME_ID_FIELD_FNA);
 
 	sys_write16(0xFFFF, buf + NVME_ID_FIELD_AWUN);
