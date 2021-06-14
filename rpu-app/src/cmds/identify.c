@@ -174,6 +174,10 @@ void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 
+#ifdef DEBUG
+	printk("Identify CNS value (%d)\n", cmd->cdw10.cns);
+#endif
+
 	switch(cmd->cdw10.cns) {
 		case CNS_IDENTIFY_NAMESPACE:
 			identify_namespace(priv);

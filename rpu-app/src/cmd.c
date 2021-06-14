@@ -48,6 +48,10 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 {
 	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
 
+#ifdef DEBUG	
+	printk("Admin command (Opcode: %d)\n", cmd->cdw0.opc);
+#endif
+
 	switch(cmd->cdw0.opc) {
 		case NVME_ADM_CMD_GET_LOG:
 			nvme_cmd_adm_get_log(priv);
@@ -84,6 +88,10 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 static void handle_io(nvme_cmd_priv_t *priv)
 {
 	nvme_sq_entry_base_t *cmd = (nvme_sq_entry_base_t*)priv->sq_buf;
+
+#ifdef DEBUG	
+	printk("IO command (Opcode: %d)\n", cmd->cdw0.opc);
+#endif
 
 	switch(cmd->cdw0.opc) {
 		case NVME_IO_CMD_FLUSH:

@@ -25,10 +25,10 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 	uint32_t csts = sys_read32(priv->base + NVME_TC_REG_CSTS);
 
 	if(pow(2, NVME_TC_GET_FIELD(cc, CC_IOCQES)) != NVME_TC_CQ_ENTRY_SIZE) {
-		printk("Invalid IO CQ entry size!\n");
+		printk("Invalid IO CQ entry size! (%d)\n", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOCQES)));
 	}
 	if(pow(2, NVME_TC_GET_FIELD(cc, CC_IOSQES)) != NVME_TC_SQ_ENTRY_SIZE) {
-		printk("Invalid IO SQ entry size!\n");
+		printk("Invalid IO SQ entry size! (%d)\n", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOSQES)));
 	}
 
 	if(NVME_TC_GET_FIELD(cc, CC_SHN)) {
