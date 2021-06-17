@@ -70,8 +70,8 @@ static void nvme_tc_aqa_handler(nvme_tc_priv_t *priv)
 {
 	uint32_t aqa = sys_read32(priv->base + NVME_TC_REG_AQA);
 
-	priv->cq_size[ADM_QUEUE_ID] = NVME_TC_GET_FIELD(aqa, AQA_ACQS);
-	priv->sq_size[ADM_QUEUE_ID] = NVME_TC_GET_FIELD(aqa, AQA_ASQS);
+	priv->cq_size[ADM_QUEUE_ID] = NVME_TC_GET_FIELD(aqa, AQA_ACQS) + 1; // 0's based values
+	priv->sq_size[ADM_QUEUE_ID] = NVME_TC_GET_FIELD(aqa, AQA_ASQS) + 1;
 }
 
 static void nvme_tc_asq_handler(nvme_tc_priv_t *priv)
@@ -143,7 +143,7 @@ static void nvme_tc_tail_handler(nvme_tc_priv_t *priv, const int qid)
 			arg->tc = priv;
 			nvme_dma_xfer_host_to_mem(priv->dma_priv, host_addr, (uint32_t)arg->sq_buf, NVME_TC_SQ_ENTRY_SIZE, nvme_cmd_handler, arg);
 		} else {
-			printk("Failed to allocate memory for command!\n");
+			printk("Failed to allocate memory for command!(tail: %d, head: %d)\n", priv->sq_tail[qid], priv->sq_head[qid]);
 		}
 	}
 }

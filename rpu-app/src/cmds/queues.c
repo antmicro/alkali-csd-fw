@@ -47,7 +47,7 @@ void nvme_cmd_adm_create_sq(nvme_cmd_priv_t *priv)
 	tc->sq_tail[qid] = 0;
 
 	tc->sq_pc[qid] = cmd->cdw11.pc;
-	tc->sq_size[qid] = cmd->cdw10.qsize;
+	tc->sq_size[qid] = cmd->cdw10.qsize + 1; // 0's based value
 
 	tc->sq_valid[qid] = true;
 
@@ -95,7 +95,7 @@ void nvme_cmd_adm_create_cq(nvme_cmd_priv_t *priv)
 
 	tc->cq_ien[qid] = cmd->cdw11.ien;
 	tc->cq_pc[qid] = cmd->cdw11.pc;
-	tc->cq_size[qid] = cmd->cdw10.qsize;
+	tc->cq_size[qid] = cmd->cdw10.qsize + 1; // 0's based value
 	tc->cq_iv[qid] = cmd->cdw11.iv;
 
 	tc->cq_valid[qid] = true;
