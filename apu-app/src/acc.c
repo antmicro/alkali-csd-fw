@@ -67,11 +67,6 @@ void Acc::runBPF(void)
 
 }
 
-unsigned int Acc::getId(void)
-{
-	return id;
-}
-
 void Acc::ramdiskToBuf(void)
 {
 	unsigned char *buf;
