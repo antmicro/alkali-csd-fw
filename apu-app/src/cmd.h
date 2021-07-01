@@ -18,6 +18,9 @@ void adm_cmd_identify(payload_t *recv, unsigned char *buf);
 void adm_cmd_acc_ctl(payload_t *recv);
 void adm_cmd_status(payload_t *recv, unsigned char *buf);
 
+void adm_cmd_fw_commit(payload_t *recv);
+void adm_cmd_fw_download(payload_t *recv, unsigned char *buf);
+
 void setup_identify(void);
 void setup_status(void);
 

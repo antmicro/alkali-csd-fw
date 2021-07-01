@@ -58,6 +58,9 @@ typedef struct nvme_cq_entry {
 	uint32_t dnr : 1;
 } nvme_cq_entry_t;
 
+#define CMD_ADM_FW_COMMIT	0x10
+#define CMD_ADM_FW_DOWNLOAD	0x11
+
 #define CMD_ADM_IDENTIFY	0xC2
 #define CMD_ADM_STATUS		0xC6
 #define CMD_ADM_CTL		0xC0

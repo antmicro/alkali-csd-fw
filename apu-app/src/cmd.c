@@ -65,6 +65,14 @@ void handle_adm_cmd(int fd, payload_t *recv)
 	}
 
 	switch(cmd->cdw0.opc) {
+		case CMD_ADM_FW_COMMIT:
+			adm_cmd_fw_commit(recv);
+			send_ack(fd, recv, PAYLOAD_ACK);
+			break;
+		case CMD_ADM_FW_DOWNLOAD:
+			adm_cmd_fw_download(recv, mmap_buf);
+			send_ack(fd, recv, PAYLOAD_ACK);
+			break;
 		case CMD_ADM_IDENTIFY:
 			adm_cmd_identify(recv, mmap_buf);
 			send_ack(fd, recv, PAYLOAD_ACK_DATA);
