@@ -42,11 +42,15 @@ static void vendor_cb(void *cmd_priv, void *buf)
 	send_cmd(priv);
 }
 
-void nvme_cmd_vendor(nvme_cmd_priv_t *priv)
+void nvme_cmd_vendor(nvme_cmd_priv_t *priv, int zero_based)
 {
 	nvme_sq_entry_vendor_base_t *cmd = (nvme_sq_entry_vendor_base_t*)priv->sq_buf;
 	const uint8_t opc = cmd->base.cdw0.opc;
 	const int dir = opc & NVME_CMD_XFER_MASK;
+
+	if(zero_based)
+		cmd->ndt++;
+
 	const int buffer_size = cmd->ndt * 4;
 
 	printk("Vendor %s command (Opcode: %d, priv: %08x)\n", (priv->qid > 0) ? "IO" : "Admin", opc, (uint32_t)priv);

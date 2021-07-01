@@ -89,7 +89,7 @@ static void fill_identify_struct(uint8_t *ptr)
 
 	sys_write16(0x0300, buf + NVME_ID_FIELD_CCTEMP);
 
-	sys_write8(1, buf + NVME_ID_FIELD_FWUG);
+	sys_write8(128, buf + NVME_ID_FIELD_FWUG);
 
 	sys_write8(0x66, buf + NVME_ID_FIELD_SQES);
 

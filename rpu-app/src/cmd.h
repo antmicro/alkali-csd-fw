@@ -73,6 +73,8 @@ typedef struct nvme_cq_entry {
 #define NVME_ADM_CMD_CREATE_IO_CQ	0x05
 #define NVME_ADM_CMD_DELETE_IO_SQ	0x00
 #define NVME_ADM_CMD_DELETE_IO_CQ	0x04
+#define NVME_ADM_CMD_FW_COMMIT		0x10
+#define NVME_ADM_CMD_FW_DOWNLOAD	0x11
 #define NVME_ADM_CMD_KEEP_ALIVE		0x18
 
 #define NVME_ADM_CMD_VENDOR		0xC0
@@ -91,7 +93,7 @@ typedef struct nvme_cq_entry {
 
 int nvme_cmd_transfer_data(nvme_cmd_priv_t *priv);
 
-void nvme_cmd_vendor(nvme_cmd_priv_t *priv);
+void nvme_cmd_vendor(nvme_cmd_priv_t *priv, int zero_based);
 
 void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv);
 void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv);

@@ -51,10 +51,16 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 		case NVME_ADM_CMD_DELETE_IO_CQ:
 			nvme_cmd_adm_delete_cq(priv);
 			break;
+		case NVME_ADM_CMD_FW_COMMIT: // Vendor command layout is compatible with FW commands and in the end FW commands are handled by the APU
+			nvme_cmd_vendor(priv, 0);
+			break;
+		case NVME_ADM_CMD_FW_DOWNLOAD:
+			nvme_cmd_vendor(priv, 1);
+			break;
 		case NVME_ADM_CMD_KEEP_ALIVE:
 		default:
 			if(cmd->cdw0.opc >= NVME_ADM_CMD_VENDOR) {
-				nvme_cmd_vendor(priv);
+				nvme_cmd_vendor(priv, 0);
 				break;
 			}
 			printk("Unsupported Admin command! (Opcode: %d)\n", cmd->cdw0.opc);
@@ -82,7 +88,7 @@ static void handle_io(nvme_cmd_priv_t *priv)
 			break;
 		default:
 			if(cmd->cdw0.opc >= NVME_IO_CMD_VENDOR) {
-				nvme_cmd_vendor(priv);
+				nvme_cmd_vendor(priv, 0);
 				break;
 			}
 			printk("Unsupported IO Command! (Opcode: %d)\n", cmd->cdw0.opc);
