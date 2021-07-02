@@ -38,10 +38,10 @@ void mmap_cleanup(uint32_t len, int fd, unsigned char *buf)
 void send_ack(int fd, payload_t *data, uint32_t id)
 {
 	struct payload ack_msg = {
-		.id = id,
-		.priv = data->priv,
-		.buf = data->buf,
-		.buf_len = data->buf_len,
+		id : id,
+		priv : data->priv,
+		buf : data->buf,
+		buf_len : data->buf_len,
 	};
 
 	int bytes = write(fd, &ack_msg, sizeof(ack_msg));

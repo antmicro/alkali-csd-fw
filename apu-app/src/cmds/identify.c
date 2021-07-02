@@ -40,14 +40,14 @@ void setup_identify(void)
 	assert(sizeof(cap_entry_t) == 16);
 	assert(sizeof(desc_list_t) == 8);
 
-	ident_head_t head = {.magic={'W', 'D', 'C', '0'}};
+	ident_head_t head = {magic : {'W', 'D', 'C', '0'}};
 
 	desc_list_t desc = {
-		.id = 0,
+		id : 0,
 	};
 
 	cap_entry_t cap = {
-		.id = 0,
+		id : 0,
 	};
 
 	off = sizeof(head) + sizeof(desc);
