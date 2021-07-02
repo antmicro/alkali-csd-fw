@@ -86,5 +86,6 @@ void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv)
 			break;
 		default:
 			printk("Invalid Get Log LID value! (%d)\n", cmd->cdw10.lid);
+			nvme_cmd_return(priv);
 	}
 }

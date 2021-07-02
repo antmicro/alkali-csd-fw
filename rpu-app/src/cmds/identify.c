@@ -195,5 +195,6 @@ void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv)
 			break;
 		default:
 			printk("Invalid Identify CNS value! (%d)\n", cmd->cdw10.cns);
+			nvme_cmd_return(priv);
 	}
 }
