@@ -1,2 +1,3 @@
 *.o
 apu-app
+build/

@@ -24,7 +24,8 @@ static void setup_acc(void)
 	accelerators.push_back(a0);
 }
 
-static void init(void) {
+static void init(void)
+{
 	setup_acc();
 	setup_identify();
 	setup_status();
