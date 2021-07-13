@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-static const char model_path[] = "model.tflite";
+static const char model_path[] = "/bin/model.tflite";
 
 void vm_tflite(char *ibuf, char *obuf, int isize, int osize)
 {
