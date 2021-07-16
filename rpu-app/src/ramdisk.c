@@ -29,12 +29,12 @@ void ramdisk_init()
 
 uint8_t *ramdisk_read(uint32_t lba, uint32_t nlb)
 {
-	return (lba < BLK_CNT) ? &ramdisk_buffer[lba*BLK_SIZE] : NULL;
+	return (lba <= BLK_CNT) ? &ramdisk_buffer[lba*BLK_SIZE] : NULL;
 }
 
 uint8_t *ramdisk_write(uint32_t lba, uint32_t nlb)
 {
-	if((lba < BLK_CNT) && ((lba + nlb) < BLK_CNT))
+	if((lba <= BLK_CNT) && ((lba + nlb) <= BLK_CNT))
 		return &ramdisk_buffer[lba*BLK_SIZE];
 	else
 		return NULL;
