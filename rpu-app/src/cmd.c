@@ -169,7 +169,7 @@ static void transfer_chunk(nvme_cmd_priv_t *priv, uint64_t host_addr, uint32_t l
 
 static uint32_t calc_prp_size(uint64_t base, uint32_t mps, uint32_t len)
 {
-	uint32_t total = (len / mps) * sizeof(uint64_t);
+	uint32_t total = ((len + mps - 1) / mps) * sizeof(uint64_t);
 	uint32_t page = mps - (base % mps);
 	return (page > total) ? total : page;
 }
