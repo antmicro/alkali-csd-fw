@@ -5,6 +5,8 @@
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
+#include "tflite-delegate.hpp"
+
 #include <algorithm>
 
 static const char model_path[] = "/bin/model.tflite";

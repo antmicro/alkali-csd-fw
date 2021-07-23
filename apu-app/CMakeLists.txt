@@ -42,3 +42,18 @@ add_subdirectory(
   "${CMAKE_CURRENT_BINARY_DIR}/tensorflow-lite" EXCLUDE_FROM_ALL)
 
 target_link_libraries(apu-app tensorflow-lite)
+
+add_library(custom-delegate SHARED
+  src/tflite-delegate.cpp
+  ${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/utils/simple_delegate.cc
+)
+target_link_libraries(custom-delegate tensorflow-lite)
+
+add_executable(tflite-delegate-test
+  src/vta/sim_driver.cc
+  src/vta/vta_runtime.cc
+  src/vta/sim_tlpp.cc
+  src/vta/virtual_memory.cc
+  src/tflite-test.cpp
+)
+target_link_libraries(tflite-delegate-test custom-delegate tensorflow-lite)
