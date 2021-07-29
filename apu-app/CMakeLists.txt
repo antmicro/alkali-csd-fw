@@ -50,10 +50,15 @@ add_library(custom-delegate SHARED
 target_link_libraries(custom-delegate tensorflow-lite)
 
 add_executable(tflite-delegate-test
-  src/vta/sim_driver.cc
   src/vta/vta_runtime.cc
-  src/vta/sim_tlpp.cc
-  src/vta/virtual_memory.cc
   src/tflite-test.cpp
+
+  # SIM driver
+  # src/vta/sim_driver.cc
+  # src/vta/sim_tlpp.cc
+  # src/vta/virtual_memory.cc
+
+  # Pynq-based driver
+  src/vta/tf_driver.cc
 )
 target_link_libraries(tflite-delegate-test custom-delegate tensorflow-lite)
