@@ -12,6 +12,7 @@
 #include "rpmsg.h"
 #include "cmd.h"
 #include "acc.h"
+#include "vta/tf_driver.h"
 
 std::vector<Acc*> accelerators;
 
@@ -29,6 +30,7 @@ static void init(void)
 	setup_acc();
 	setup_identify();
 	setup_status();
+	cma_init();
 }
 
 int main(int argc, char *argv[])

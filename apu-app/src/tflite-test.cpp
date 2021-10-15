@@ -2,6 +2,8 @@
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
 
+#include "vta/tf_driver.h"
+
 #include "tflite-delegate.hpp"
 
 #include <memory>
@@ -10,6 +12,8 @@ static const char model_path[] = "/bin/model.tflite";
 
 int main(int argc, char *argv[])
 {
+    cma_init();
+
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(model_path);
 
     tflite::ops::builtin::BuiltinOpResolver resolver;

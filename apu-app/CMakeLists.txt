@@ -21,6 +21,10 @@ target_sources(apu-app PRIVATE src/cmds/lba.cpp)
 target_sources(apu-app PRIVATE src/cmds/qspi.cpp)
 target_sources(apu-app PRIVATE src/cmds/status.cpp)
 
+target_sources(apu-app PRIVATE src/vta/vta_runtime.cc)
+target_sources(apu-app PRIVATE src/vta/tf_driver.cc)
+target_sources(apu-app PRIVATE src/vta/pynqlib.cpp)
+
 include_directories(src/)
 
 target_link_libraries(apu-app ${CMAKE_SOURCE_DIR}/src/libubpf.a)
@@ -41,24 +45,21 @@ add_subdirectory(
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite"
   "${CMAKE_CURRENT_BINARY_DIR}/tensorflow-lite" EXCLUDE_FROM_ALL)
 
-target_link_libraries(apu-app tensorflow-lite)
-
 add_library(custom-delegate SHARED
   src/tflite-delegate.cpp
   ${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/utils/simple_delegate.cc
 )
+
 target_link_libraries(custom-delegate tensorflow-lite)
 
 add_executable(tflite-delegate-test
   src/vta/vta_runtime.cc
   src/tflite-test.cpp
 
-  # SIM driver
-  # src/vta/sim_driver.cc
-  # src/vta/sim_tlpp.cc
-  # src/vta/virtual_memory.cc
-
   # Pynq-based driver
   src/vta/tf_driver.cc
+  src/vta/pynqlib.cpp
 )
+
+target_link_libraries(apu-app tensorflow-lite custom-delegate)
 target_link_libraries(tflite-delegate-test custom-delegate tensorflow-lite)

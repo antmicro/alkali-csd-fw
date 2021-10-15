@@ -38,15 +38,13 @@ extern "C" {
 #include <time.h>
 #include <unistd.h>
 
-#if defined(__arm__) || defined(__aarch64__)
-#include <libxlnk_cma.h>
-#else
+void cma_init(void);
+void cma_clean(void);
 void* cma_alloc(size_t size, int cached);
 void cma_free(void* buf);
 uint32_t cma_get_phy_addr(void* buf);
 void cma_flush_cache(void* buf, unsigned int phys_addr, int size);
 void cma_invalidate_cache(void* buf, unsigned int phys_addr, int size);
-#endif
 
 void *VTAMapRegister(uint32_t addr);
 void VTAUnmapRegister(void *vta);
