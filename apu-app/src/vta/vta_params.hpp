@@ -1,7 +1,7 @@
 #pragma once
 
 // // pynq
-#define VTA_COHERENT_ACCESSES true
+#define VTA_COHERENT_ACCESSES false
 #define VTA_COMPUTE_ADDR 0xB0020000
 #define VTA_COMPUTE_BIAS_ADDR_OFFSET 40
 #define VTA_COMPUTE_DONE_RD_OFFSET 24
