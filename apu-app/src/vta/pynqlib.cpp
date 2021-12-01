@@ -107,9 +107,23 @@ unsigned long cma_get_phy_addr(void *buf) {
 }
 
 void cma_free(void *buf) {
-    for(auto const& val: maps) {
-        if(val->virt == buf) {
-            //Remove entry
+    auto it = maps.begin();
+    while(it != maps.end()) {
+        if((*it)->virt == buf) {
+            union xlnk_args arg = {0};
+            arg.freebuf.id = (*it)->id;
+
+            munmap((*it)->virt, (*it)->len);
+
+            if (ioctl(xlnkfd, FREE_IOCTL, &arg) < 0) {
+                printf("Free failed - IOCTL failed: %d\n", errno);
+            }
+
+            maps.erase(it);
+
+            return;
+        } else {
+            it++;
         }
     }
 }
