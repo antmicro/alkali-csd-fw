@@ -45,11 +45,12 @@ void vm_tflite(char *ibuf, char *obuf, int isize, int osize)
 	printf("%f %f\n", output[0], output[1]);
 }
 
-void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize)
+void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize, int model_size)
 {
-	static const char model_path[] = "/bin/model2.tflite";
+	const char *model_buf = ibuf;
+	ibuf += model_size;
 
-	std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(model_path);
+	std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromBuffer(model_buf, model_size);
 
 	// Build the interpreter
 	tflite::ops::builtin::BuiltinOpResolver resolver;
