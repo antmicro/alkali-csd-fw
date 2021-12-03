@@ -64,27 +64,18 @@ void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize, int model_size)
 	// Resize input tensors, if desired.
 	interpreter->AllocateTensors();
 
-	int8_t* input1 = interpreter->typed_input_tensor<int8_t>(0);
-	int8_t* input2 = interpreter->typed_input_tensor<int8_t>(1);
+	float* input = interpreter->typed_input_tensor<float>(0);
 	// ... pass input data to the input array
-
-	if(isize >= 4) {
-		std::copy(ibuf, ibuf+2, input1);
-		std::copy(ibuf+2, ibuf+4, input2);
-	} else {
-		input1[0] = 5;
-		input1[1] = 8;
-		input2[0] = 2;
-		input2[1] = 4;
-	}
 
 	// run model
 	interpreter->Invoke();
 
 	// get pointer to outputs
-	int8_t* output = interpreter->typed_output_tensor<int8_t>(0);
+	float* output = interpreter->typed_output_tensor<float>(0);
 
-	std::copy((char*)output, ((char*)output) + osize, obuf);
-
-	printf("%d %d\n", output[0], output[1]);
+	for(int i = 0; i < 1000; i++) {
+		if (i%20 == 0)
+			printf("\n");
+		printf("%f ", output[i]);
+	}
 }
