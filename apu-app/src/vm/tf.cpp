@@ -67,11 +67,15 @@ void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize, int model_size)
 	float* input = interpreter->typed_input_tensor<float>(0);
 	// ... pass input data to the input array
 
+	std::copy(ibuf, ibuf+isize, input);
+
 	// run model
 	interpreter->Invoke();
 
 	// get pointer to outputs
 	float* output = interpreter->typed_output_tensor<float>(0);
+
+	std::copy((char*)output, ((char*)output) + osize, obuf);
 
 	for(int i = 0; i < 1000; i++) {
 		if (i%20 == 0)
