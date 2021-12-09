@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include <time.h>
+
 void vm_tflite(char *ibuf, char *obuf, int isize, int osize)
 {
 	static const char model_path[] = "/bin/model.tflite";
@@ -34,8 +36,17 @@ void vm_tflite(char *ibuf, char *obuf, int isize, int osize)
 
 	std::copy(ibuf, ibuf+isize, input);
 
+	struct timespec ts[2];
+	timespec_get(&ts[0], TIME_UTC);
+
 	// run model
 	interpreter->Invoke();
+
+	timespec_get(&ts[1], TIME_UTC);
+
+	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+
+	printf("Model processing took %llu ns\n", duration);
 
 	// get pointer to outputs
 	float* output = interpreter->typed_output_tensor<float>(0);
@@ -69,8 +80,17 @@ void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize, int model_size)
 
 	std::copy(ibuf, ibuf+isize, input);
 
+	struct timespec ts[2];
+	timespec_get(&ts[0], TIME_UTC);
+
 	// run model
 	interpreter->Invoke();
+
+	timespec_get(&ts[1], TIME_UTC);
+
+	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+
+	printf("Model processing took %llu ns\n", duration);
 
 	// get pointer to outputs
 	float* output = interpreter->typed_output_tensor<float>(0);
