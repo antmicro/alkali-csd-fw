@@ -44,7 +44,7 @@ void vm_tflite(char *ibuf, char *obuf, int isize, int osize)
 
 	timespec_get(&ts[1], TIME_UTC);
 
-	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+	const uint64_t duration = (ts[1].tv_sec * 1000000000 + ts[1].tv_nsec) - (ts[0].tv_sec * 1000000000 + ts[0].tv_nsec);
 
 	printf("Model processing took %llu ns\n", duration);
 
@@ -88,7 +88,7 @@ void vm_tflite_float(char *ibuf, char *obuf, int isize, int osize, int model_siz
 
 	timespec_get(&ts[1], TIME_UTC);
 
-	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+	const uint64_t duration = (ts[1].tv_sec * 1000000000 + ts[1].tv_nsec) - (ts[0].tv_sec * 1000000000 + ts[0].tv_nsec);
 
 	printf("Model processing took %llu ns\n", duration);
 
@@ -132,7 +132,7 @@ void vm_tflite_uint(char *ibuf, char *obuf, int isize, int osize, int model_size
 
 	timespec_get(&ts[1], TIME_UTC);
 
-	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+	const uint64_t duration = (ts[1].tv_sec * 1000000000 + ts[1].tv_nsec) - (ts[0].tv_sec * 1000000000 + ts[0].tv_nsec);
 
 	printf("Model processing took %llu ns\n", duration);
 
@@ -180,7 +180,7 @@ void vm_tflite_vta(char *ibuf, char *obuf, int isize, int osize, int model_size)
 
 	timespec_get(&ts[1], TIME_UTC);
 
-	const uint64_t duration = (ts[1].tv_sec - ts[0].tv_sec) * 1000000000 + (ts[1].tv_nsec - ts[0].tv_nsec);
+	const uint64_t duration = (ts[1].tv_sec * 1000000000 + ts[1].tv_nsec) - (ts[0].tv_sec * 1000000000 + ts[0].tv_nsec);
 
 	printf("Model processing took %llu ns\n", duration);
 
