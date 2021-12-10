@@ -107,27 +107,23 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     auto* output = GetTensorData<int8_t>(output_tensor);
     size_t num = NumElements(input_tensor_1);
 
-    int32_t input_1_align[2] = {input_1[0], input_1[1]};
-    int32_t input_2_align[2] = {input_2[0], input_2[1]};
-
     // get VTA command handler
     auto cmd = VTATLSCommandHandle();
     // set debug for VTA
     // VTASetDebugMode(cmd, 1);
 
     // Create VTA buffers (they are host-target sync buffers)
-    auto *vtainput1 = VTABufferAlloc(sizeof(int8_t) * num);
-    auto *vtainput2 = VTABufferAlloc(sizeof(int8_t) * num);
-    auto *vtaoutput = VTABufferAlloc(sizeof(int8_t) * num);
+    auto *vtainput1 = VTABufferAlloc(sizeof(int32_t) * num);
+    auto *vtainput2 = VTABufferAlloc(sizeof(int32_t) * num);
+    auto *vtaoutput = VTABufferAlloc(sizeof(int32_t) * num);
 
     // empty pointer to the UopKernelMap object required for forming micro-op kernel
     void *map = nullptr;
 
-
     // copy data to DRAM
     // from address, from offset, to address, to offset, data size and kind (VTA_MEMCPY_H2D means copy from host to DRAM)
-    VTABufferCopy(input_1_align, 0, vtainput1, 0, sizeof(int32_t) * num, VTA_MEMCPY_H2D);
-    VTABufferCopy(input_2_align, 0, vtainput2, 0, sizeof(int32_t) * num, VTA_MEMCPY_H2D);
+    VTABufferCopy(input_1, 0, vtainput1, 0, num, VTA_MEMCPY_H2D);
+    VTABufferCopy(input_2, 0, vtainput2, 0, num, VTA_MEMCPY_H2D);
 
     // schedule loading data to VTA
     // command handle, vtabuffer with source DRAM address, source offset, number of elements on X axis, number of elements on Y axis, X axis stride, start padding on X, start padding on Y, end padding on X, end padding on Y, destination SRAM index, memory type (VTA_MEM_ID_ACC_8BIT means 8-bit integers)
@@ -161,7 +157,7 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
 
     // TODO set more appropriate timeout
     // run VTA computations (wait for 1000 cycles before timing out)
-    VTASynchronize(cmd, 1000);
+    VTASynchronize(cmd, 10000000);
 
     // pop the dependency
     VTADepPop(cmd, 2, 3);
@@ -172,7 +168,7 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
 
     // TODO set more appropriate timeout
     // sync storing
-    VTASynchronize(cmd, 1000);
+    VTASynchronize(cmd, 10000000);
 
     // get data
     VTABufferCopy(vtaoutput, 0, output, 0, sizeof(int8_t) * num, VTA_MEMCPY_D2H);
