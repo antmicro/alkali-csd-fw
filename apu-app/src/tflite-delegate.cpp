@@ -117,13 +117,25 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     auto *vtainput2 = VTABufferAlloc(sizeof(int32_t) * num);
     auto *vtaoutput = VTABufferAlloc(sizeof(int32_t) * num);
 
+    int32_t *tmp_in_buf1 = (int32_t*)malloc(sizeof(int32_t) * num);
+    int32_t *tmp_in_buf2 = (int32_t*)malloc(sizeof(int32_t) * num);
+    int32_t *tmp_out_buf = (int32_t*)malloc(sizeof(int32_t) * num);
+
+    for(int i = 0; i < num; i++) {
+	tmp_in_buf1[i] = input_1[i];
+    }
+
+    for(int i = 0; i < num; i++) {
+	tmp_in_buf2[i] = input_2[i];
+    }
+
     // empty pointer to the UopKernelMap object required for forming micro-op kernel
     void *map = nullptr;
 
     // copy data to DRAM
     // from address, from offset, to address, to offset, data size and kind (VTA_MEMCPY_H2D means copy from host to DRAM)
-    VTABufferCopy(input_1, 0, vtainput1, 0, num, VTA_MEMCPY_H2D);
-    VTABufferCopy(input_2, 0, vtainput2, 0, num, VTA_MEMCPY_H2D);
+    VTABufferCopy(tmp_in_buf1, 0, vtainput1, 0, sizeof(int32_t) * num, VTA_MEMCPY_H2D);
+    VTABufferCopy(tmp_in_buf2, 0, vtainput2, 0, sizeof(int32_t) * num, VTA_MEMCPY_H2D);
 
     // schedule loading data to VTA
     // command handle, vtabuffer with source DRAM address, source offset, number of elements on X axis, number of elements on Y axis, X axis stride, start padding on X, start padding on Y, end padding on X, end padding on Y, destination SRAM index, memory type (VTA_MEM_ID_ACC_8BIT means 8-bit integers)
@@ -171,12 +183,20 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     VTASynchronize(cmd, 10000000);
 
     // get data
-    VTABufferCopy(vtaoutput, 0, output, 0, sizeof(int8_t) * num, VTA_MEMCPY_D2H);
+    VTABufferCopy(vtaoutput, 0, tmp_out_buf, 0, sizeof(int32_t) * num, VTA_MEMCPY_D2H);
+
+    for(int i = 0; i < num; i++) {
+	output[i] = tmp_out_buf[i];
+    }
 
     // Release VTA buffers
     VTABufferFree(vtainput1);
     VTABufferFree(vtainput2);
     VTABufferFree(vtaoutput);
+
+    free(tmp_in_buf1);
+    free(tmp_in_buf2);
+    free(tmp_out_buf);
 
     // Reset VTA
     VTARuntimeShutdown();
