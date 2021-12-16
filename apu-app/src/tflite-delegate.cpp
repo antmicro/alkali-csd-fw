@@ -119,7 +119,6 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
 
     int32_t *tmp_in_buf1 = (int32_t*)malloc(sizeof(int32_t) * num);
     int32_t *tmp_in_buf2 = (int32_t*)malloc(sizeof(int32_t) * num);
-    int32_t *tmp_out_buf = (int32_t*)malloc(sizeof(int32_t) * num);
 
     for(int i = 0; i < num; i++) {
 	tmp_in_buf1[i] = input_1[i];
@@ -183,11 +182,7 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     VTASynchronize(cmd, 10000000);
 
     // get data
-    VTABufferCopy(vtaoutput, 0, tmp_out_buf, 0, sizeof(int32_t) * num, VTA_MEMCPY_D2H);
-
-    for(int i = 0; i < num; i++) {
-	output[i] = tmp_out_buf[i];
-    }
+    VTABufferCopy(vtaoutput, 0, output, 0, sizeof(int8_t) * num, VTA_MEMCPY_D2H);
 
     // Release VTA buffers
     VTABufferFree(vtainput1);
@@ -196,7 +191,6 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
 
     free(tmp_in_buf1);
     free(tmp_in_buf2);
-    free(tmp_out_buf);
 
     // Reset VTA
     VTARuntimeShutdown();
