@@ -1,0 +1,6 @@
+[submodule "third-party/ubpf"]
+	path = third-party/ubpf
+	url = ../wd-nvme-ubpf.git
+[submodule "third-party/tensorflow"]
+	path = third-party/tensorflow
+	url = https://github.com/tensorflow/tensorflow.git
