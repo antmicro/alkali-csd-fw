@@ -112,7 +112,7 @@ void Acc::addFirmware(std::vector<unsigned char> &vec)
 
 void Acc::start(void)
 {
-	th = new std::thread(&Acc::runBPF, this); 
+	th = new std::thread(&Acc::runBPF, this);
 }
 
 void Acc::stop(void)

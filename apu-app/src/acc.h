@@ -49,7 +49,6 @@ public:
 	void addFirmware(std::vector<unsigned char> &vec);
 	void start(void);
 	void stop(void);
-	
 };
 
 extern std::vector<Acc*> accelerators;
