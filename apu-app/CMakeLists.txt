@@ -8,29 +8,43 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(Threads REQUIRED)
 
-set(USE_SIM_DRIVER OFF CACHE BOOL "Use simulated driver for VTA")
+set(NO_HARDWARE OFF CACHE BOOL "Use simulated driver for VTA")
 set(BUILD_TESTS OFF CACHE BOOL "Build tests for the VTA delegate")
 
 add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
 
+if (BUILD_TESTS)
+    add_subdirectory(third-party/googletest/)
+endif()
+
 include_directories(src third-party/tensorflow)
 
-add_library(pynqlib
-    src/vta/pynqlib.cpp
-)
-
 # Select driver to use
-if (NOT USE_SIM_DRIVER)
-    add_library(vta-driver SHARED
-        src/vta/tf_driver.cc
-    )
-    target_link_libraries(vta-driver pynqlib)
-else()
+if (NO_HARDWARE)
     add_library(vta-driver SHARED
         src/vta/sim_driver.cc
         src/vta/sim_tlpp.cc
         src/vta/virtual_memory.cc
+
+        src/vta/vta_runtime.cc
+    )
+else()
+    add_library(vta-driver SHARED
+        src/cmds/adm_acc_ctl.cpp
+        src/cmds/fw.cpp
+        src/cmds/identify.cpp
+        src/cmds/io_acc_ctl.cpp
+        src/cmds/lba.cpp
+        src/cmds/qspi.cpp
+        src/cmds/status.cpp
+
+        src/vta/tf_driver.cc
+        src/vta/pynqlib.cpp
+        src/cmd.cpp
+        src/rpmsg.cpp
+
+        src/vta/vta_runtime.cc
     )
 endif()
 
@@ -44,36 +58,25 @@ target_link_libraries(vta-delegate
     vta-driver
 )
 
-# Build APU APP
-add_executable(apu-app
-    src/main.cpp
-    src/cmd.cpp
-    src/rpmsg.cpp
+if (NOT NO_HARDWARE)
+    # Build APU APP only if hardware is available
+    # TODO make apu-app work in a simulated environment
+    add_executable(apu-app
+        src/main.cpp
 
-    src/vm/print.cpp
-    src/vm/tf.cpp
-    src/vm/register.cpp
-
-    src/cmds/adm_acc_ctl.cpp
-    src/cmds/fw.cpp
-    src/cmds/identify.cpp
-    src/cmds/io_acc_ctl.cpp
-    src/cmds/lba.cpp
-    src/cmds/qspi.cpp
-    src/cmds/status.cpp
-
-    src/vta/vta_runtime.cc
-)
-target_link_libraries(apu-app
-    ubpf
-    Threads::Threads
-    vta-delegate
-    pynqlib
-)
+        src/vm/print.cpp
+        src/vm/tf.cpp
+        src/vm/register.cpp
+    )
+    target_link_libraries(apu-app
+        ubpf
+        Threads::Threads
+        vta-delegate
+    )
+endif()
 
 # Build TFLite delegate test app
 add_executable(tflite-delegate-test
-    src/vta/vta_runtime.cc
     src/tflite-test.cpp
 )
 target_link_libraries(tflite-delegate-test
