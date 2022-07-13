@@ -1,3 +1,4 @@
 *.o
 apu-app
 build/
+.cache/
