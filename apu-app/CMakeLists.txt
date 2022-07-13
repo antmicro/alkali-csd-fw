@@ -73,6 +73,11 @@ if (NOT NO_HARDWARE)
         Threads::Threads
         vta-delegate
     )
+    install(
+        TARGETS
+            apu-app
+        DESTINATION bin
+    )
 endif()
 
 # Build TFLite delegate test app
@@ -81,4 +86,16 @@ add_executable(tflite-delegate-test
 )
 target_link_libraries(tflite-delegate-test
     vta-delegate
+)
+
+install(
+    TARGETS
+        vta-driver
+        vta-delegate
+    DESTINATION lib
+)
+install(
+    TARGETS
+        tflite-delegate-test
+    DESTINATION bin
 )
