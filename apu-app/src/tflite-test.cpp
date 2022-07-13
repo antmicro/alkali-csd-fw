@@ -12,8 +12,6 @@ static const char model_path[] = "/bin/model.tflite";
 
 int main(int argc, char *argv[])
 {
-    cma_init();
-
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(model_path);
 
     tflite::ops::builtin::BuiltinOpResolver resolver;
@@ -37,8 +35,8 @@ int main(int argc, char *argv[])
     interpreter->Invoke();
 
     int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
-    
+
     printf("output: %d %d\n", out[0], out[1]);
-    
+
     return 0;
 }
