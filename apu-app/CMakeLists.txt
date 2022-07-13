@@ -25,7 +25,9 @@ add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
 
 if (BUILD_TESTS)
+    enable_testing()
     add_subdirectory(third-party/googletest/)
+    message(STATUS "Added testing")
 endif()
 
 include_directories(src third-party/tensorflow third-party/ubpf/vm/inc)
@@ -107,6 +109,21 @@ add_executable(tflite-delegate-test
 target_link_libraries(tflite-delegate-test
     vta-delegate
 )
+
+if (BUILD_TESTS)
+    add_executable(vta-delegate-test-runner
+        tests/add-tests.cpp
+        tests/conv2d-tests.cpp
+        tests/tests-main.cpp
+    )
+    target_link_libraries(vta-delegate-test-runner
+        gtest
+        gmock
+        vta-delegate
+        stdc++fs
+    )
+    add_test(vta-delegate-test vta-delegate-test-runner)
+endif()
 
 install(
     TARGETS
