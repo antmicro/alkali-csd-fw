@@ -39,7 +39,7 @@ def save_to_tflite(inputpath: Path, outputpath: Path):
     converter, inputs, convertedpath = onnxconversion(str(inputpath))
 
     def calibration_dataset_generator():
-        for _ in tqdm(range(1000)):
+        for _ in tqdm(range(100)):
             sampledata = {}
             for inp, dim in inputs.items():
                 sampledata[inp] = np.random.normal(
