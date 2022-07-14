@@ -71,7 +71,9 @@ def simple_add(out: Path, vector_length: int):
     data2 = Variable(torch.FloatTensor([[i for i in range(vector_length)]]))
     print(model)
     print(model.forward(data1, data2))
-    torch.onnx.export(model, (data1, data2,), str(out), verbose=True)
+    input_names = ['input_0', 'input_1']
+    output_names = ['output_0']
+    torch.onnx.export(model, (data1, data2,), str(out), verbose=True, input_names=input_names, output_names=output_names)
 
 
 def create_network_with_two_inputs():
