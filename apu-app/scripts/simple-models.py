@@ -2,6 +2,7 @@ import torch
 import argparse
 from pathlib import Path
 from torch.autograd import Variable
+import itertools
 
 
 def create_simple_network():
@@ -47,15 +48,42 @@ def create_simple_conv():
     torch.onnx.export(model, data, "conv.onnx", verbose=True)
 
 
-def create_simple_conv_large():
-    model = torch.nn.Sequential(torch.nn.Conv2d(1, 32, 9))
+def simple_conv2d(
+        out: Path,
+        inputsize: int,
+        inpchannels: int,
+        outchannels: int,
+        kernelsize: int,
+        stride: int,
+        padding: int):
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f'Creating {str(out)}')
+
+    model = torch.nn.Sequential(torch.nn.Conv2d(
+        inpchannels,
+        outchannels,
+        kernelsize,
+        stride=stride,
+        padding=padding
+    ))
     for param in model.parameters():
         param.requires_grad = False
     print(model)
-    data = Variable(torch.zeros([1, 1, 256, 256]))
+    data = Variable(torch.zeros([1, inpchannels, inputsize, inputsize]))
     print(data)
     print(model(data).numpy())
-    torch.onnx.export(model, data, "conv.onnx", verbose=True)
+    input_names = ['input_0']
+    output_names = ['output_0']
+    torch.onnx.export(
+        model,
+        data,
+        str(out),
+        verbose=True,
+        input_names=input_names,
+        output_names=output_names
+    )
 
 
 def simple_add(out: Path, vector_length: int):
@@ -66,6 +94,10 @@ def simple_add(out: Path, vector_length: int):
         def forward(self, x, y):
             return x + y
 
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f'Creating {str(out)}')
+
     model = SimpleAdd()
     data1 = Variable(torch.FloatTensor([[i for i in range(vector_length)]]))
     data2 = Variable(torch.FloatTensor([[i for i in range(vector_length)]]))
@@ -73,7 +105,14 @@ def simple_add(out: Path, vector_length: int):
     print(model.forward(data1, data2))
     input_names = ['input_0', 'input_1']
     output_names = ['output_0']
-    torch.onnx.export(model, (data1, data2,), str(out), verbose=True, input_names=input_names, output_names=output_names)
+    torch.onnx.export(
+        model,
+        (data1, data2,),
+        str(out),
+        verbose=True,
+        input_names=input_names,
+        output_names=output_names
+    )
 
 
 def create_network_with_two_inputs():
@@ -120,17 +159,45 @@ if __name__ == '__main__':
         type=Path,
         help='Output directory with the models'
     )
-    parser.add_argument(
-        '--alu-vectors-sizes',
-        type=int,
-        nargs='+',
-        default=[1, 4, 16, 64, 256, 1024, 4096, 8192],
-        help='Sizes of ALU vectors to investigate'
-    )
 
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    for size in args.alu_vectors_sizes:
-        simple_add(args.output_dir / f'add-{size}.onnx', size)
+    alu_vectors_sizes = [1, 4, 16, 64, 256, 1024, 4096, 8192]
+    for size in alu_vectors_sizes:
+        simple_add(args.output_dir / 'add' / f'add-{size}.onnx', size)
+
+    # inputsize, inpchannels, outchannels, kernelsize, stride, padding
+
+    inpsizes = [10, 224]
+    inpchannels = [1, 3, 32]
+    outchannels = [32, 256]
+    kernelsizes = [3, 5, 11]
+    strides = [1, 3]
+    paddings = [0, 2]
+
+    for variant in itertools.product(
+            inpsizes,
+            inpchannels,
+            outchannels,
+            kernelsizes,
+            strides,
+            paddings):
+        isize, ichan, ochan, ksize, stride, padding = variant
+        if padding > ksize // 2:
+            continue
+        if isize > 224 and ichan > 32:
+            continue
+        if isize <= ksize:
+            continue
+        name = f'conv2d-is{isize}_ic{ichan}_oc{ochan}_ks{ksize}_s{stride}_p{padding}.onnx'  # noqa: E501
+        simple_conv2d(
+            args.output_dir / 'conv2d' / name,
+            isize,
+            ichan,
+            ochan,
+            ksize,
+            stride,
+            padding
+        )
