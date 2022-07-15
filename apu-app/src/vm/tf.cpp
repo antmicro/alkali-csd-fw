@@ -14,7 +14,7 @@
 
 #include "vta/tf_driver.h"
 
-#include "tflite-delegate.hpp"
+#include "vta-delegate.hpp"
 
 #include <algorithm>
 

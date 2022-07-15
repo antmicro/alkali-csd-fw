@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "tflite-delegate.hpp"
+#include "vta-delegate.hpp"
 
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"

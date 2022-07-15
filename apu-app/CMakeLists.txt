@@ -76,7 +76,7 @@ endif()
 
 # Build VTA delegate
 add_library(vta-delegate SHARED
-    src/tflite-delegate.cpp
+    src/vta-delegate.cpp
     third-party/tensorflow/tensorflow/lite/delegates/utils/simple_delegate.cc
 )
 target_link_libraries(vta-delegate
@@ -103,10 +103,10 @@ if (NOT NO_HARDWARE)
 endif()
 
 # Build TFLite delegate test app
-add_executable(tflite-delegate-test
-    src/tflite-test.cpp
+add_executable(vta-delegate-test
+    src/tflite-vta-test.cpp
 )
-target_link_libraries(tflite-delegate-test
+target_link_libraries(vta-delegate-test
     vta-delegate
 )
 
@@ -134,6 +134,6 @@ install(
 )
 install(
     TARGETS
-        tflite-delegate-test
+        vta-delegate-test
     DESTINATION bin
 )

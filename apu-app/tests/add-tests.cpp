@@ -7,7 +7,7 @@
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
 
-#include "tflite-delegate.hpp"
+#include "vta-delegate.hpp"
 
 #define NUM_MODELS 8
 
