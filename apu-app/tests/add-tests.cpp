@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <regex>
+#include <tuple>
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -8,14 +9,14 @@
 
 #include "tflite-delegate.hpp"
 
-#define NUM_MODELS 1
+#define NUM_MODELS 8
 
 class VTAAddTest : public ::testing::TestWithParam<int>
 {
     public:
         static const std::string modelspath;
         static std::vector<std::string> modelfiles;
-        static void SetUpTestCase()
+        static void SetUpTestSuite()
         {
             std::filesystem::path modelsdir = modelspath;
             std::regex fileregex("(^.*)\\/add-(\\d+).tflite");
@@ -28,9 +29,13 @@ class VTAAddTest : public ::testing::TestWithParam<int>
             }
             ASSERT_EQ(NUM_MODELS, modelfiles.size()) << "Invalid number of declared models and present models in the " << modelspath << " directory" << std::endl;
         }
+        void SetUp()
+        {
+            std::cout << "Running test on " << modelfiles[GetParam()] << std::endl;
+        }
 };
 
-const std::string VTAAddTest::modelspath = "../tests/data";
+const std::string VTAAddTest::modelspath = "../tests/data/add";
 std::vector<std::string> VTAAddTest::modelfiles;
 
 TEST_P(VTAAddTest, AddTestSimple)
@@ -50,10 +55,6 @@ TEST_P(VTAAddTest, AddTestSimple)
 
     int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
     int8_t *input2 = interpreter->typed_input_tensor<int8_t>(1);
-    input1[0] = 5;
-    input1[1] = 8;
-    input2[0] = 2;
-    input2[1] = 4;
 
     interpreter->Invoke();
 
@@ -62,7 +63,7 @@ TEST_P(VTAAddTest, AddTestSimple)
     printf("output: %d %d\n", out[0], out[1]);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VTAAddTestGroup,
     VTAAddTest,
     ::testing::Range(0, NUM_MODELS)
