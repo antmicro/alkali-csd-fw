@@ -34,7 +34,7 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
 	tflite::InterpreterBuilder(*model, resolver)(&interpreter);
 
 	if(with_vta) {
-		std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteCustomDelegateDelete)> delegate(tflite::TfLiteCustomDelegateCreate(NULL), &tflite::TfLiteCustomDelegateDelete);
+		std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteVTADelegateDelete)> delegate(tflite::TfLiteVTADelegateCreate(NULL), &tflite::TfLiteVTADelegateDelete);
 		interpreter->ModifyGraphWithDelegate(std::move(delegate));
 	}
 

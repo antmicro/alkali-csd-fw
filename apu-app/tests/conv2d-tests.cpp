@@ -18,7 +18,7 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
         static void SetUpTestSuite()
         {
             std::filesystem::path modelsdir = modelspath;
-            std::regex fileregex("(^.*)\\/add-(\\d+).tflite");
+            std::regex fileregex("(^.*)\\/.*\\.tflite");
             for (auto file : std::filesystem::directory_iterator(modelspath))
             {
                 if (std::regex_match(file.path().string(), fileregex))

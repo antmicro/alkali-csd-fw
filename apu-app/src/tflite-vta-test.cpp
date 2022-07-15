@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
     tflite::InterpreterBuilder(*model, resolver)(&interpreter);
 
-    std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteCustomDelegateDelete)> delegate(tflite::TfLiteCustomDelegateCreate(NULL), &tflite::TfLiteCustomDelegateDelete);
+    std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteVTADelegateDelete)> delegate(tflite::TfLiteVTADelegateCreate(NULL), &tflite::TfLiteVTADelegateDelete);
 
     interpreter->ModifyGraphWithDelegate(std::move(delegate));
 

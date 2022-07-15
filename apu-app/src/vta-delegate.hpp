@@ -21,67 +21,59 @@ using namespace tflite::tools;
 
 namespace tflite
 {
-typedef struct {
-  // Allowed ops to delegate.
-  int allowed_builtin_code;
-  // Report error during init.
-  bool error_during_init;
-  // Report error during prepare.
-  bool error_during_prepare;
-  // Report error during invoke.
-  bool error_during_invoke;
-} CustomDelegateOptions;
 
-class CustomDelegate : public SimpleDelegateInterface
+/**
+ * A TensorFlow Lite delegate for VTA accelerator.
+ */
+class VTADelegate : public SimpleDelegateInterface
 {
 public:
-	explicit CustomDelegate(const CustomDelegateOptions &options) : options_(options) {}
+    explicit VTADelegate(const SimpleDelegateInterface::Options &options) : options(options) {}
 
-	bool IsNodeSupportedByDelegate(const TfLiteRegistration *registration, const TfLiteNode *node, TfLiteContext *context) const;
+    bool IsNodeSupportedByDelegate(const TfLiteRegistration *registration, const TfLiteNode *node, TfLiteContext *context) const override;
 
-	TfLiteStatus Initialize(TfLiteContext *context) override;
+    TfLiteStatus Initialize(TfLiteContext *context) override;
 
-	const char *Name() const override;
+    const char *Name() const override;
 
-	std::unique_ptr<SimpleDelegateKernelInterface> CreateDelegateKernelInterface() override;
+    std::unique_ptr<SimpleDelegateKernelInterface> CreateDelegateKernelInterface() override;
 
-	SimpleDelegateInterface::Options DelegateOptions() const {return options;};
+    SimpleDelegateInterface::Options DelegateOptions() const override {return options;};
 private:
-	const CustomDelegateOptions options_;
-	const SimpleDelegateInterface::Options options;
+    const SimpleDelegateInterface::Options options;
 };
 
-class CustomDelegateKernel : public SimpleDelegateKernelInterface
+class VTADelegateKernel : public SimpleDelegateKernelInterface
 {
 public:
-	TfLiteStatus Init(TfLiteContext* context, const TfLiteDelegateParams* params) override;
+    TfLiteStatus Init(TfLiteContext* context, const TfLiteDelegateParams* params) override;
 
-	TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) override;
+    TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) override;
 
-	TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) override;
+    TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) override;
 private:
-	TfLiteStatus ComputeResult(
+    TfLiteStatus ComputeResult(
             TfLiteContext* context, int builtin_code,
-			const TfLiteTensor* input_tensor_1,
-			const TfLiteTensor* input_tensor_2,
-			TfLiteTensor* output_tensor);
+            const TfLiteTensor* input_tensor_1,
+            const TfLiteTensor* input_tensor_2,
+            TfLiteTensor* output_tensor);
 
-	std::vector<std::vector<int>> inputs_, outputs_;
-	std::vector<int> builtin_code_;
+    std::vector<std::vector<int>> inputs_, outputs_;
+    std::vector<int> builtin_code_;
 };
 
-CustomDelegateOptions TfLiteCustomDelegateOptionsDefault();
+tflite::SimpleDelegateInterface::Options TfLiteVTADelegateOptionsDefault();
 
-TfLiteDelegate *TfLiteCustomDelegateCreate(const CustomDelegateOptions *options);
+TfLiteDelegate *TfLiteVTADelegateCreate(const SimpleDelegateInterface::Options *options);
 
-void TfLiteCustomDelegateDelete(TfLiteDelegate *delegate);
+void TfLiteVTADelegateDelete(TfLiteDelegate *delegate);
 
-TfLiteDelegate *CreateCustomDelegateFromOptions(char **options_keys, char **options_values, size_t num_options);
+TfLiteDelegate *CreateVTADelegateFromOptions(char **options_keys, char **options_values, size_t num_options);
 };
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 TFL_CAPI_EXPORT TfLiteDelegate *tflite_plugin_create_delegate(char** options_keys, char** options_values, size_t num_options, void (*report_error)(const char*));
 

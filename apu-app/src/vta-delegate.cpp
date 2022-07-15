@@ -12,15 +12,19 @@
 
 namespace tflite
 {
-bool CustomDelegate::IsNodeSupportedByDelegate(
+bool VTADelegate::IsNodeSupportedByDelegate(
         const TfLiteRegistration *registration,
         const TfLiteNode *node,
         TfLiteContext *context) const
 {
     // Only support add
-    if (kTfLiteBuiltinAdd != registration->builtin_code)
+    switch (registration->builtin_code)
     {
-        return false;
+        case kTfLiteBuiltinAdd:
+            break;
+        default:
+            printf("Skipped builtin code%d\n", registration->builtin_code);
+            return false;
     }
     // Only support int8
     for (int i = 0; i < node->inputs->size; ++i)
@@ -28,30 +32,35 @@ bool CustomDelegate::IsNodeSupportedByDelegate(
         auto &tensor = context->tensors[node->inputs->data[i]];
         if (tensor.type != kTfLiteInt8)
         {
-            printf("Skipped delegate %d\n", tensor.type);
+            printf("Skipped tensor type %d for %d (%s,%d)\n",
+                tensor.type,
+                i,
+                registration->custom_name == NULL ? "" : registration->custom_name,
+                registration->builtin_code
+            );
             return false;
         }
     }
     return true;
 }
 
-TfLiteStatus CustomDelegate::Initialize(TfLiteContext *context)
+TfLiteStatus VTADelegate::Initialize(TfLiteContext *context)
 {
     return kTfLiteOk;
 }
 
-const char *CustomDelegate::Name() const
+const char *VTADelegate::Name() const
 {
-    static constexpr char kName[] = "CustomDelegate";
+    static constexpr char kName[] = "VTADelegate";
     return kName;
 }
 
-std::unique_ptr<SimpleDelegateKernelInterface> CustomDelegate::CreateDelegateKernelInterface()
+std::unique_ptr<SimpleDelegateKernelInterface> VTADelegate::CreateDelegateKernelInterface()
 {
-    return std::make_unique<CustomDelegateKernel>();
+    return std::make_unique<VTADelegateKernel>();
 }
 
-TfLiteStatus CustomDelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
+TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
 {
     // Save index to all nodes which are part of this delegate.
     inputs_.resize(params->nodes_to_replace->size);
@@ -76,12 +85,12 @@ TfLiteStatus CustomDelegateKernel::Init(TfLiteContext* context, const TfLiteDele
     return kTfLiteOk;
 }
 
-TfLiteStatus CustomDelegateKernel::Prepare(TfLiteContext* context, TfLiteNode* node)
+TfLiteStatus VTADelegateKernel::Prepare(TfLiteContext* context, TfLiteNode* node)
 {
     return kTfLiteOk;
 }
 
-TfLiteStatus CustomDelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
+TfLiteStatus VTADelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
 {
     for (int i = 0; i < inputs_.size(); ++i)
     {
@@ -98,7 +107,7 @@ TfLiteStatus CustomDelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node
     return kTfLiteOk;
 }
 
-TfLiteStatus CustomDelegateKernel::ComputeResult(
+TfLiteStatus VTADelegateKernel::ComputeResult(
         TfLiteContext* context, int builtin_code,
         const TfLiteTensor* input_tensor_1,
         const TfLiteTensor* input_tensor_2,
@@ -128,11 +137,11 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     int32_t *tmp_in_buf2 = (int32_t*)malloc(sizeof(int32_t) * num);
 
     for(int i = 0; i < num; i++) {
-	tmp_in_buf1[i] = input_1[i];
+    tmp_in_buf1[i] = input_1[i];
     }
 
     for(int i = 0; i < num; i++) {
-	tmp_in_buf2[i] = input_2[i];
+    tmp_in_buf2[i] = input_2[i];
     }
 
     // empty pointer to the UopKernelMap object required for forming micro-op kernel
@@ -205,35 +214,35 @@ TfLiteStatus CustomDelegateKernel::ComputeResult(
     return kTfLiteOk;
 }
 
-CustomDelegateOptions TfLiteCustomDelegateOptionsDefault() {
-  CustomDelegateOptions options = {0};
-  options.allowed_builtin_code = kTfLiteBuiltinAdd;
-  return options;
+tflite::SimpleDelegateInterface::Options TfLiteVTADelegateOptionsDefault() {
+        tflite::SimpleDelegateInterface::Options options = {0};
+            return options;
 }
 
-TfLiteDelegate *TfLiteCustomDelegateCreate(const CustomDelegateOptions* options) {
-  std::unique_ptr<tflite::CustomDelegate> custom(
-      new tflite::CustomDelegate(
-          options ? *options : tflite::TfLiteCustomDelegateOptionsDefault()));
+TfLiteDelegate *TfLiteVTADelegateCreate(const SimpleDelegateInterface::Options *options) {
+  std::unique_ptr<tflite::VTADelegate> custom(
+      new tflite::VTADelegate(
+          options ? *options : TfLiteVTADelegateOptionsDefault()));
   return tflite::TfLiteDelegateFactory::CreateSimpleDelegate(std::move(custom));
 }
 
-void TfLiteCustomDelegateDelete(TfLiteDelegate* delegate) {
+void TfLiteVTADelegateDelete(TfLiteDelegate* delegate) {
   tflite::TfLiteDelegateFactory::DeleteSimpleDelegate(delegate);
 }
 
-TfLiteDelegate *CreateCustomDelegateFromOptions(char **options_keys, char **options_values, size_t num_options)
+TfLiteDelegate *CreateVTADelegateFromOptions(char **options_keys, char **options_values, size_t num_options)
 {
-	return TfLiteCustomDelegateCreate(NULL);
+    return TfLiteVTADelegateCreate(NULL);
 }
 
 TfLiteDelegate *tflite_plugin_create_delegate(char** options_keys, char** options_values, size_t num_options, void (*report_error)(const char*))
 {
-	return tflite::CreateCustomDelegateFromOptions(options_keys, options_values, num_options);
+    return tflite::CreateVTADelegateFromOptions(options_keys, options_values, num_options);
 }
 
 void tflite_plugin_destroy_delegate(TfLiteDelegate *delegate)
 {
-	tflite::TfLiteCustomDelegateDelete(delegate);
+    tflite::TfLiteVTADelegateDelete(delegate);
 }
+
 };
