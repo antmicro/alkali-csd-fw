@@ -17,13 +17,13 @@ bool VTADelegate::IsNodeSupportedByDelegate(
         const TfLiteNode *node,
         TfLiteContext *context) const
 {
-    // Only support add
     switch (registration->builtin_code)
     {
         case kTfLiteBuiltinAdd:
+        case kTfLiteBuiltinConv2d:
             break;
         default:
-            printf("Skipped builtin code%d\n", registration->builtin_code);
+            printf("Skipped builtin code %d\n", registration->builtin_code);
             return false;
     }
     // Only support int8
@@ -60,33 +60,95 @@ std::unique_ptr<SimpleDelegateKernelInterface> VTADelegate::CreateDelegateKernel
     return std::make_unique<VTADelegateKernel>();
 }
 
+VTAOp::VTAOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    tfliteop(tfliteop),
+    inputs(tfliteinputs),
+    outputs(tfliteoutputs)
+{}
+
+VTAOp::~VTAOp()
+{}
+
+VTAALUOp::~VTAALUOp()
+{}
+
+VTAGEMMOp::~VTAGEMMOp()
+{}
+
+VTAALUOp::VTAALUOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    VTAOp(tfliteop, tfliteinputs, tfliteoutputs)
+{}
+
+VTAGEMMOp::VTAGEMMOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    VTAOp(tfliteop, tfliteinputs, tfliteoutputs)
+{}
+
+void VTAALUOp::getComputeOps()
+{
+}
+
+void VTAGEMMOp::getComputeOps()
+{
+}
+
 TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
 {
-    // Save index to all nodes which are part of this delegate.
-    inputs_.resize(params->nodes_to_replace->size);
-    outputs_.resize(params->nodes_to_replace->size);
-    builtin_code_.resize(params->nodes_to_replace->size);
-    for (int i = 0; i < params->nodes_to_replace->size; ++i)
+    for (int i = 0; i < params->nodes_to_replace->size; i++)
     {
         const int node_index = params->nodes_to_replace->data[i];
-        // Get this node information.
-        TfLiteNode* delegated_node = nullptr;
-        TfLiteRegistration* delegated_node_registration = nullptr;
+        TfLiteNode *node = nullptr;
+        TfLiteRegistration *registerdata = nullptr;
         TF_LITE_ENSURE_EQ(
             context,
-            context->GetNodeAndRegistration(context, node_index, &delegated_node,
-                &delegated_node_registration),
-                kTfLiteOk);
-        inputs_[i].push_back(delegated_node->inputs->data[0]);
-        inputs_[i].push_back(delegated_node->inputs->data[1]);
-        outputs_[i].push_back(delegated_node->outputs->data[0]);
-        builtin_code_[i] = delegated_node_registration->builtin_code;
+            context->GetNodeAndRegistration(
+                context,
+                node_index,
+                &node,
+                &registerdata
+            ),
+            kTfLiteOk
+        );
+        std::vector<int> inputs(node->inputs->size);
+        std::vector<int> outputs(node->outputs->size);
+        for (int i = 0; i < node->inputs->size; i++)
+        {
+            inputs.push_back(node->inputs->data[i]);
+        }
+        for (int i = 0; i < node->outputs->size; i++)
+        {
+            outputs.push_back(node->outputs->data[i]);
+        }
+        switch (registerdata->builtin_code)
+        {
+            case kTfLiteBuiltinAdd:
+                ops.push_back(
+                    std::make_shared<VTAALUOp>(
+                        registerdata->builtin_code,
+                        inputs,
+                        outputs
+                    )
+                );
+                break;
+            case kTfLiteBuiltinConv2d:
+                ops.push_back(
+                    std::make_shared<VTAGEMMOp>(
+                        registerdata->builtin_code,
+                        inputs,
+                        outputs
+                    )
+                );
+                break;
+            default:
+                printf("Unsupported builtin code %d\n", registerdata->builtin_code);
+                return TfLiteStatus::kTfLiteUnresolvedOps;
+        }
     }
     return kTfLiteOk;
 }
 
 TfLiteStatus VTADelegateKernel::Prepare(TfLiteContext* context, TfLiteNode* node)
 {
+    // TODO handle resizing nodes
     return kTfLiteOk;
 }
 
