@@ -30,7 +30,9 @@ bool VTADelegate::IsNodeSupportedByDelegate(
     for (int i = 0; i < node->inputs->size; ++i)
     {
         auto &tensor = context->tensors[node->inputs->data[i]];
-        if (tensor.type != kTfLiteInt8)
+        if (tensor.type != kTfLiteInt8 &&
+            tensor.type != kTfLiteUInt8 &&
+            tensor.type != kTfLiteInt32)
         {
             printf("Skipped tensor type %d for %d (%s,%d)\n",
                 tensor.type,
