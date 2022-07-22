@@ -112,6 +112,7 @@ target_link_libraries(vta-delegate-test
 
 if (BUILD_TESTS)
     add_executable(vta-delegate-test-runner
+        tests/basic-vta-delegate-tests.cpp
         tests/add-tests.cpp
         tests/conv2d-tests.cpp
         tests/tests-main.cpp

@@ -42,8 +42,12 @@ std::vector<std::string> VTAAddTest::modelfiles;
 
 TEST_P(VTAAddTest, AddTestTFLite)
 {
-    std::unique_ptr<tflite::Interpreter> interpreter = createInterpreter(VTAAddTest::modelfiles[GetParam()]);
+    std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAAddTest::modelfiles[GetParam()].c_str());
 
+    tflite::ops::builtin::BuiltinOpResolver resolver;
+    std::unique_ptr<tflite::Interpreter> interpreter;
+
+    tflite::InterpreterBuilder(*model, resolver)(&interpreter);
     interpreter->AllocateTensors();
 
     // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
