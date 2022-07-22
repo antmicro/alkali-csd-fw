@@ -74,13 +74,6 @@ else()
     )
 endif()
 
-add_library(tflite-utils
-    src/tflite-utils.cpp
-)
-target_link_libraries(tflite-utils
-    tensorflow-lite
-)
-
 # Build VTA delegate
 add_library(vta-delegate SHARED
     src/vta-delegate.cpp
@@ -127,7 +120,6 @@ if (BUILD_TESTS)
         gmock
         gtest
         stdc++fs
-        tflite-utils
         vta-delegate
     )
     add_test(vta-delegate-test vta-delegate-test-runner)
@@ -135,7 +127,6 @@ endif()
 
 install(
     TARGETS
-        tflite-utils
         vta-delegate
         bpf-vm-utils
         vta-driver

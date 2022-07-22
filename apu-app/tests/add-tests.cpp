@@ -7,7 +7,6 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
-#include "tflite-utils.hpp"
 
 #include "vta-delegate.hpp"
 
