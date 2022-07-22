@@ -150,6 +150,41 @@ def simple_conv2d_add_network(out: Path):
     )
 
 
+def simple_conv2d_add_network_v2(out: Path):
+    class TestDelegateModel(torch.nn.Module):
+        def __init__(self):
+            # input: 1x5x5
+            super(TestDelegateModel, self).__init__()
+            self.l = {}
+            self.l['x1'] = torch.nn.Conv2d(1, 3, 3)  # 3x5x5
+            self.l['x2'] = torch.nn.Conv2d(1, 3, 3)  # 3x5x5
+            self.l['x3'] = torch.nn.Conv2d(3, 5, 3)  # 5x3x3
+            self.l['r1'] = torch.nn.Conv2d(5, 1, 3)  # 1x1x1
+            for _, layer in self.l.items():
+                layer.weight.requires_grad = False
+                layer.bias.requires_grad = False
+
+        def forward(self, x):
+            rx1 = self.l['x1'](x)
+            rx2 = self.l['x2'](x)
+            rx3 = rx1 + rx2
+            rx4 = self.l['x3'](rx3)
+            return self.l['r1'](rx4)
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    model = TestDelegateModel()
+    data = Variable(
+        torch.FloatTensor([[[[i for i in range(7)] for _ in range(7)]]])
+    )
+    print(model.forward(data))
+    torch.onnx.export(
+        model,
+        (data,),
+        str(out)
+    )
+
+
 def create_network_with_two_inputs():
     class SimpleComp(torch.nn.Module):
         def __init__(self):
@@ -239,4 +274,8 @@ if __name__ == '__main__':
 
     simple_conv2d_add_network(
         args.output_dir / 'simple-models' / 'simple-conv2d-add.onnx'
+    )
+
+    simple_conv2d_add_network_v2(
+        args.output_dir / 'simple-models' / 'simple-conv2d-add-v2.onnx'
     )
