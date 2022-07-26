@@ -10,3 +10,6 @@
 [submodule "third-party/buildroot"]
 	path = third-party/buildroot
 	url = git@github.com:antmicro/wd-nvme-buildroot.git
+[submodule "third-party/linux"]
+	path = third-party/linux
+	url = git@github.com:antmicro/wd-nvme-linux.git
