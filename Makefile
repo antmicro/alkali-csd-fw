@@ -10,14 +10,11 @@ buildroot/all: ## build buildroot
 	make ${BUILDROOT_OPTS} zynqmp_nvme_defconfig
 	make ${BUILDROOT_OPTS} -j$(nproc)
 
-buildroot/menuconfig:
-	make ${BUILDROOT_OPTS} menuconfig
-
-buildroot/clean:
-	make ${BUILDROOT_OPTS} clean
-
-buildroot/distclean:
+buildroot/distclean: ## help
 	make ${BUILDROOT_OPTS} distclean
+
+buildroot/%: ## help
+	make ${BUILDROOT_OPTS} $*
 
 linux: ## build linux
 	make O=${LINUX_BUILD_DIR} -C ${LINUX_DIR} zynqmp_nvme_defconfig
