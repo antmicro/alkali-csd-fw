@@ -6,12 +6,18 @@ LINUX_DIR = ${PWD}/third-party/linux
 LINUX_BUILD_DIR = ${BUILD_DIR}/linux
 
 BUILDROOT_OPTS = O=${BUILDROOT_BUILD_DIR} -C ${BUILDROOT_DIR} BR2_EXTERNAL=${PWD}/br2-external
-buildroot: ## build buildroot
+buildroot/all: ## build buildroot
 	make ${BUILDROOT_OPTS} zynqmp_nvme_defconfig
 	make ${BUILDROOT_OPTS} -j$(nproc)
 
-buildroot-menuconfig:
+buildroot/menuconfig:
 	make ${BUILDROOT_OPTS} menuconfig
+
+buildroot/clean:
+	make ${BUILDROOT_OPTS} clean
+
+buildroot/distclean:
+	make ${BUILDROOT_OPTS} distclean
 
 linux: ## build linux
 	make O=${LINUX_BUILD_DIR} -C ${LINUX_DIR} zynqmp_nvme_defconfig
