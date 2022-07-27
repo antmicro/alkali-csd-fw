@@ -18,7 +18,7 @@ BR2_LINUX_KERNEL_GZIP=y
 # BR2_LINUX_KERNEL_CUSTOM_DTS_PATH="${BR2_EXTERNAL_NVME_FIRMWARE_PATH}/board/basalt/kernel/zynqmp-basalt-nvme.dts"
 
 # Bootloaders
-BR2_SSP_NONE=y
+# BR2_SSP_NONE=y
 # BR2_RELRO_NONE=y
 # BR2_FORTIFY_SOURCE_1=n
 
