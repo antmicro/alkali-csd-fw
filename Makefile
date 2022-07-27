@@ -2,6 +2,8 @@ BUILD_DIR ?= ${PWD}/build
 
 BUILDROOT_DIR = ${PWD}/third-party/buildroot
 BUILDROOT_BUILD_DIR = ${BUILD_DIR}/buildroot
+BUILDROOT_TOOLCHAIN_DIR = ${BUILDROOT_BUILD_DIR}/images/aarch64-buildroot-linux-gnu_sdk-buildroot
+
 LINUX_DIR = ${PWD}/third-party/linux
 LINUX_BUILD_DIR = ${BUILD_DIR}/linux
 
@@ -13,8 +15,20 @@ buildroot/all: ## build buildroot
 buildroot/distclean: ## help
 	make ${BUILDROOT_OPTS} distclean
 
-buildroot/%: ## help
+buildroot/sdk: ${BUILDROOT_TOOLCHAIN_TAR_PATH}
+buildroot/sdk-untar: ${BUILDROOT_TOOLCHAIN_DIR}
+BUILDROOT_TOOLCHAIN_TAR_PATH = ${BUILDROOT_TOOLCHAIN_DIR}.tar.gz
+
+${BUILDROOT_TOOLCHAIN_DIR}: ${BUILDROOT_TOOLCHAIN_TAR_PATH}
+	tar xf ${BUILDROOT_TOOLCHAIN_TAR_PATH} -C ${BUILDROOT_BUILD_DIR}/images/
+
+${BUILDROOT_TOOLCHAIN_TAR_PATH}:
+	make ${BUILDROOT_OPTS} sdk
+
+
+buildroot//%: ## help
 	make ${BUILDROOT_OPTS} $*
+
 
 linux: ## build linux
 	make O=${LINUX_BUILD_DIR} -C ${LINUX_DIR} zynqmp_nvme_defconfig
