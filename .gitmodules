@@ -1,15 +1,15 @@
-[submodule "third-party/ubpf"]
-	path = third-party/ubpf
-	url = ../wd-nvme-ubpf.git
 [submodule "third-party/tensorflow"]
 	path = third-party/tensorflow
 	url = https://github.com/tensorflow/tensorflow.git
 [submodule "third-party/googletest"]
 	path = third-party/googletest
 	url = https://github.com/google/googletest.git
+[submodule "third-party/ubpf"]
+	path = third-party/ubpf
+	url = ../wd-nvme-ubpf.git
 [submodule "third-party/buildroot"]
 	path = third-party/buildroot
-	url = git@github.com:antmicro/wd-nvme-buildroot.git
+	url = ../wd-nvme-buildroot.git
 [submodule "third-party/linux"]
 	path = third-party/linux
-	url = git@github.com:antmicro/wd-nvme-linux.git
+	url = ../wd-nvme-linux.git
