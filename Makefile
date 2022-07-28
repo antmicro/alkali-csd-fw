@@ -37,11 +37,12 @@ ${BUILDROOT_TOOLCHAIN_TAR_PATH}:
 
 APUAPP_SRC_DIR = apu-app/src
 APUAPP_BUILD_DIR = build/apu-app
-APUAPP_OUTPUTS = ${APUAPP_BUILD_DIR}/libvta-delegate.so
+APUAPP_INSTALL_DIR = build/apu-app/install
+APUAPP_OUTPUTS = ${APUAPP_BUILD_DIR}/libvta-delegate.so ${APUAPP_BUILD_DIR}/apu-app
 
 apu-app/all: ${APUAPP_OUTPUTS} ## build apu app
 apu-app/clean: ## clean apu app build artifacts
-	-rm -r ${APUAPP_BUILD_DIR}
+	-rm -rf ${APUAPP_BUILD_DIR}
 
 .PHONY: apu-app
 
@@ -58,13 +59,14 @@ ${APUAPP_OUTPUTS}: $(wildcard ${APUAPP_SRC_DIR}/vta/*.hpp)
 	@mkdir -p ${APUAPP_BUILD_DIR}
 	cmake \
 	      -DCMAKE_TOOLCHAIN_FILE=${BUILDROOT_TOOLCHAIN_CMAKE_FILE} \
+	      -DCMAKE_INSTALL_PREFIX=${APUAPP_INSTALL_DIR} \
 	      -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
-	      -DCMAKE_BUILD_TYPE=Debug \
-	      -DNO_HARDWARE=ON \
-	      -DBUILD_TESTS=ON \
 	      -DUBPF_ENABLE_INSTALL=ON \
+	      -DCMAKE_BUILD_TYPE=Debug \
+	      -DNO_HARDWARE=OFF \
+	      -DBUILD_TESTS=ON \
 	      -S apu-app -B ${APUAPP_BUILD_DIR}
-	make -C ${APUAPP_BUILD_DIR} -j$(nproc) all
+	make -C ${APUAPP_BUILD_DIR} -j all
 
 # help
 

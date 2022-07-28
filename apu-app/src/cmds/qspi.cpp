@@ -32,7 +32,7 @@ static void flash_fw(const char *dev, std::vector<unsigned char> *buf)
 	struct erase_info_user erase;
 	struct mtd_info_user mtd;
 
-	int fd = open(dev, O_RDWR | O_CREAT | O_TRUNC);
+	int fd = open(dev, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
 
 	if(fd == -1) {
 		printf("Failed to open '%s'!\n", dev);

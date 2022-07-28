@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(apu-app)
 
+get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../" ABSOLUTE)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -15,10 +17,10 @@ add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
 
 if (BUILD_TESTS)
-    add_subdirectory(third-party/googletest/)
+	add_subdirectory(third-party/googletest/)
 endif()
 
-include_directories(src third-party/tensorflow)
+include_directories(src third-party/tensorflow third-party/ubpf/vm/inc ${REPO_ROOT}/build/apu-app/third-party/ubpf/vm)
 
 # Select driver to use
 if (NO_HARDWARE)
@@ -63,7 +65,6 @@ if (NOT NO_HARDWARE)
     # TODO make apu-app work in a simulated environment
     add_executable(apu-app
         src/main.cpp
-
         src/vm/print.cpp
         src/vm/tf.cpp
         src/vm/register.cpp
