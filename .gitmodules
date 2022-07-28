@@ -10,6 +10,3 @@
 [submodule "third-party/buildroot"]
 	path = third-party/buildroot
 	url = ../wd-nvme-buildroot.git
-[submodule "third-party/linux"]
-	path = third-party/linux
-	url = ../wd-nvme-linux.git
