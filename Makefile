@@ -68,6 +68,23 @@ ${APUAPP_OUTPUTS}: $(wildcard ${APUAPP_SRC_DIR}/vta/*.hpp)
 	      -S apu-app -B ${APUAPP_BUILD_DIR}
 	make -C ${APUAPP_BUILD_DIR} -j all
 
+# zephyr
+
+ZEPHYR_SDK_VERSION=zephyr-sdk-0.14.2
+ZEPHYR_SDK_DOWNLOAD_PATH = ${BUILD_DIR}/zephyr-sdk.tar.gz
+ZEPHYR_SDK_DIR = ${BUILD_DIR}/${ZEPHYR_SDK_VERSION}
+
+${ZEPHYR_SDK_DOWNLOAD_PATH}:
+	@mkdir -p ${BUILD_DIR}
+	wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.14.2/${ZEPHYR_SDK_VERSION}.2_linux-x86_64.tar.gz \
+		-O ${ZEPHYR_SDK_DOWNLOAD_PATH}
+
+${ZEPHYR_SDK_DIR}: ${ZEPHYR_SDK_DOWNLOAD_PATH}
+	tar mxf ${ZEPHYR_SDK_DOWNLOAD_PATH} -C ${BUILD_DIR}
+
+zephyr-sdk: ${ZEPHYR_SDK_DIR}
+	bash ${ZEPHYR_SDK_DIR}/setup.sh
+
 # help
 
 HELP_COLUMN_SPAN = 20
