@@ -1,0 +1,23 @@
+manifest:
+  self:
+    path: rpu-app
+
+  remotes:
+    - name: antmicro-wd
+      url-base: git@github.com:antmicro
+
+  projects:
+    - name: zephyr
+      repo-path: wd-nvme-zephyr
+      remote: antmicro-wd
+      revision: 144448403e0356d430845d0ebc514ddd48b4e054
+      import: true
+
+    - name: libmetal
+      repo-path: wd-nvme-libmetal
+      remote: antmicro-wd
+      revision: c8944fe5af45f1a20e657f14806b78535f8c6b02
+      path: ./modules/hal/libmetal
+      groups:
+        - hal
+
