@@ -62,7 +62,8 @@ std::unique_ptr<SimpleDelegateKernelInterface> VTADelegate::CreateDelegateKernel
     return std::make_unique<VTADelegateKernel>();
 }
 
-VTAOp::VTAOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+VTAOp::VTAOp(std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    name(name),
     tfliteop(tfliteop),
     inputs(tfliteinputs),
     outputs(tfliteoutputs)
@@ -70,28 +71,6 @@ VTAOp::VTAOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tflit
 
 VTAOp::~VTAOp()
 {}
-
-VTAALUOp::~VTAALUOp()
-{}
-
-VTAGEMMOp::~VTAGEMMOp()
-{}
-
-VTAALUOp::VTAALUOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
-    VTAOp(tfliteop, tfliteinputs, tfliteoutputs)
-{}
-
-VTAGEMMOp::VTAGEMMOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
-    VTAOp(tfliteop, tfliteinputs, tfliteoutputs)
-{}
-
-void VTAALUOp::getComputeOps()
-{
-}
-
-void VTAGEMMOp::getComputeOps()
-{
-}
 
 TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
 {
@@ -110,8 +89,8 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
             ),
             kTfLiteOk
         );
-        std::vector<int> inputs(node->inputs->size);
-        std::vector<int> outputs(node->outputs->size);
+        std::vector<int> inputs;
+        std::vector<int> outputs;
         for (int i = 0; i < node->inputs->size; i++)
         {
             inputs.push_back(node->inputs->data[i]);
@@ -145,12 +124,35 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
                 return TfLiteStatus::kTfLiteUnresolvedOps;
         }
     }
+    for (auto &op: ops)
+    {
+        std::cout << "Op:  " << op->name << " number of inputs:  " << op->inputs.size() << " number of outputs: " << op->outputs.size() << std::endl;
+        for (auto &inp: op->inputs)
+        {
+            printf("%d:(%x)[%d", inp, context->tensors[inp].data, context->tensors[inp].dims->data[0]);
+            for (int dim = 1; dim < context->tensors[inp].dims->size; dim++)
+            {
+                printf("x%d", context->tensors[inp].dims->data[dim]);
+            }
+            printf("]  ");
+        }
+        std::cout << std::endl;
+        for (auto &out: op->outputs)
+        {
+            printf("%d:(%x)[%d", out, context->tensors[out].data, context->tensors[out].dims->data[0]);
+            for (int dim = 1; dim < context->tensors[out].dims->size; dim++)
+            {
+                printf("x%d", context->tensors[out].dims->data[dim]);
+            }
+            printf("]  ");
+        }
+        std::cout << std::endl;
+    }
     return kTfLiteOk;
 }
 
 TfLiteStatus VTADelegateKernel::Prepare(TfLiteContext* context, TfLiteNode* node)
 {
-    // TODO handle resizing nodes
     return kTfLiteOk;
 }
 
@@ -244,21 +246,21 @@ TfLiteStatus VTADelegateKernel::ComputeResult(
     );
 
     // push dependency between command and getting outputs
-    VTADepPush(cmd, 2, 3);
+    VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
 
     // TODO set more appropriate timeout
     // run VTA computations (wait for 1000 cycles before timing out)
     VTASynchronize(cmd, 10000000);
 
     // pop the dependency
-    VTADepPop(cmd, 2, 3);
+    VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
 
     // Get the data from VTA
     // command, SRAM index, data type (VTA_MEM_ID_OUT means int8), destination DRAM address, destination offset, the size of the lowest dimension, the number of rows and x axis stride
     VTAStoreBuffer2D(cmd, 0, VTA_MEM_ID_OUT, vtaoutput, 0, num, 1, num);
 
     // TODO set more appropriate timeout
-    // sync storing
+    // the argument is number of cycles to wait for
     VTASynchronize(cmd, 10000000);
 
     // get data

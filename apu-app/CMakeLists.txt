@@ -77,6 +77,7 @@ endif()
 # Build VTA delegate
 add_library(vta-delegate SHARED
     src/vta-delegate.cpp
+    src/vta-delegate-ops.cpp
     third-party/tensorflow/tensorflow/lite/delegates/utils/simple_delegate.cc
 )
 target_link_libraries(vta-delegate

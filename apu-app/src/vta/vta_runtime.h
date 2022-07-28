@@ -40,6 +40,13 @@
 
 #define ALLOC_ALIGNMENT 64
 
+namespace vta
+{
+
+enum PipelineStage : int { kNoneStage = 0, kLoadStage = 1, kComputeStage = 2, kStoreStage = 3 };
+
+};
+
 /*!
  * \brief Allocate data buffer.
  * \param size Buffer size.

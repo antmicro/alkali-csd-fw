@@ -578,8 +578,6 @@ class UopKernelMap {
   std::vector<UopKernel*> kmap_;
 };
 
-enum PipelineStage : int { kNoneStage = 0, kLoadStage = 1, kComputeStage = 2, kStoreStage = 3 };
-
 // Instruction Queue
 template <int kMaxBytes, bool kCoherent, bool kAlwaysCache>
 class InsnQueue : public BaseQueue<VTAGenericInsn> {

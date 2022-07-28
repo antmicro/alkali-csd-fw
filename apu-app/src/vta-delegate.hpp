@@ -96,8 +96,9 @@ private:
 class VTAOp
 {
     public:
-        VTAOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+        VTAOp(std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
 
+        std::string name;
         int tfliteop = 0; ///< builtin code for the TFLite operation corresponding to this op
 
         std::vector<int> inputs; ///< indices to vector of inputs (and weights) from the context
@@ -106,7 +107,7 @@ class VTAOp
         /**
          * Provides VTA commands for executing the given operation.
          */
-        virtual void getComputeOps() = 0;
+        virtual TfLiteStatus getComputeOps() = 0;
 
         virtual ~VTAOp() = 0;
 };
@@ -120,8 +121,11 @@ class VTAALUOp : public VTAOp
         VTAALUOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
 
         int opcode = VTA_ALU_OPCODE_ADD;
-        void getComputeOps() override;
+        TfLiteStatus getComputeOps() override;
         ~VTAALUOp();
+
+    private:
+        TfLiteStatus getAddOps();
 };
 
 /**
@@ -131,8 +135,11 @@ class VTAGEMMOp : public VTAOp
 {
     public:
         VTAGEMMOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
-        void getComputeOps() override;
+        TfLiteStatus getComputeOps() override;
         ~VTAGEMMOp();
+
+    private:
+        TfLiteStatus getConv2dOps();
 };
 
 /**
