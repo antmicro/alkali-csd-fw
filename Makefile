@@ -40,8 +40,8 @@ ${BUILDROOT_TOOLCHAIN_TAR_PATH}:
 # apu app
 
 APUAPP_SRC_DIR = apu-app/src
-APUAPP_BUILD_DIR = build/apu-app
-APUAPP_INSTALL_DIR = build/apu-app/install
+APUAPP_BUILD_DIR = ${BUILD_DIR}/apu-app
+APUAPP_INSTALL_DIR = ${BUILD_DIR}/apu-app/install
 APUAPP_OUTPUTS = ${APUAPP_BUILD_DIR}/libvta-delegate.so ${APUAPP_BUILD_DIR}/apu-app
 
 apu-app: ${APUAPP_OUTPUTS} ## build apu app
@@ -81,32 +81,32 @@ ZEPHYR_SDK_DOWNLOAD_PATH=${BUILD_DIR}/zephyr-sdk.run
 ZEPHYR_SDK_INSTALL_DIR=${BUILD_DIR}/${ZEPHYR_SDK_VERSION}
 
 ZEPHYR_PROJECTS= \
-	build/zephyr \
-	build/modules/hal/libmetal \
-	build/modules build/tools \
-	build/modules/hal/atmel \
-	build/modules/lib/civetweb \
-	build/modules/hal/esp-idf \
-	build/modules/fs/fatfs \
-	build/modules/hal/cypress \
-	build/modules/hal/nordic \
-	build/modules/hal/openisa \
-	build/modules/hal/microchip \
-	build/modules/hal/silabs \
-	build/modules/hal/st \
-	build/modules/hal/stm32 \
-	build/modules/hal/ti \
-	build/modules/lib/gui/lvgl \
-	build/modules/crypto/mbedtls \
-	build/modules/lib/mcumgr \
-	build/modules/fs/nffs \
-	build/modules/hal/nxp \
-	build/modules/lib/open-amp \
-	build/modules/lib/openthread \
-	build/modules/debug/segger \
-	build/modules/lib/tinycbor \
-	build/modules/fs/littlefs \
-	build/modules/debug/mipi-sys-t
+	${BUILD_DIR}/zephyr \
+	${BUILD_DIR}/modules/hal/libmetal \
+	${BUILD_DIR}/modules build/tools \
+	${BUILD_DIR}/modules/hal/atmel \
+	${BUILD_DIR}/modules/lib/civetweb \
+	${BUILD_DIR}/modules/hal/esp-idf \
+	${BUILD_DIR}/modules/fs/fatfs \
+	${BUILD_DIR}/modules/hal/cypress \
+	${BUILD_DIR}/modules/hal/nordic \
+	${BUILD_DIR}/modules/hal/openisa \
+	${BUILD_DIR}/modules/hal/microchip \
+	${BUILD_DIR}/modules/hal/silabs \
+	${BUILD_DIR}/modules/hal/st \
+	${BUILD_DIR}/modules/hal/stm32 \
+	${BUILD_DIR}/modules/hal/ti \
+	${BUILD_DIR}/modules/lib/gui/lvgl \
+	${BUILD_DIR}/modules/crypto/mbedtls \
+	${BUILD_DIR}/modules/lib/mcumgr \
+	${BUILD_DIR}/modules/fs/nffs \
+	${BUILD_DIR}/modules/hal/nxp \
+	${BUILD_DIR}/modules/lib/open-amp \
+	${BUILD_DIR}/modules/lib/openthread \
+	${BUILD_DIR}/modules/debug/segger \
+	${BUILD_DIR}/modules/lib/tinycbor \
+	${BUILD_DIR}/modules/fs/littlefs \
+	${BUILD_DIR}/modules/debug/mipi-sys-t
 
 zephyr/sdk: ${ZEPHYR_SDK_INSTALL_DIR} ## install Zephyr SDK locally (helper)
 	@echo "To use local installation of the toolchain set the following environment variables:"
