@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <algorithm>
 
+std::vector<Acc *> accelerators;
+
 Acc::Acc(unsigned int id)
 {
 	this->id = id;
@@ -52,9 +54,10 @@ void Acc::runBPF(void)
 	if(ramdisk_out)
 		obuf.resize(ramdisk_out_size);
 
-	toggle_bounds_check(vm, false);
+	ubpf_toggle_bounds_check(vm, false);
 
-	ret = ubpf_exec(vm, ibuf.data(), ibuf.size(), obuf.data());
+	uint64_t bpf_return_value = 0;
+	ret = ubpf_exec(vm, ibuf.data(), ibuf.size(), obuf.data(), &bpf_return_value);
 
 	if(ramdisk_out)
 		bufToRamdisk();

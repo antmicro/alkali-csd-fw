@@ -13,14 +13,27 @@ find_package(Threads REQUIRED)
 set(NO_HARDWARE OFF CACHE BOOL "Use simulated driver for VTA")
 set(BUILD_TESTS OFF CACHE BOOL "Build tests for the VTA delegate")
 
+# Enable installing ubpf
+set(UBPF_ENABLE_INSTALL ON)
+
 add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
 
 if (BUILD_TESTS)
-	add_subdirectory(third-party/googletest/)
+    add_subdirectory(third-party/googletest/)
 endif()
 
-include_directories(src third-party/tensorflow third-party/ubpf/vm/inc ${REPO_ROOT}/build/apu-app/third-party/ubpf/vm)
+include_directories(src third-party/tensorflow third-party/ubpf/vm/inc)
+
+add_library(bpf-vm-utils SHARED
+        src/vm/print.cpp
+        src/vm/tf.cpp
+        src/vm/register.cpp
+)
+target_link_libraries(bpf-vm-utils
+    tensorflow-lite
+    ubpf
+)
 
 # Select driver to use
 if (NO_HARDWARE)
@@ -45,8 +58,12 @@ else()
         src/vta/pynqlib.cpp
         src/cmd.cpp
         src/rpmsg.cpp
+        src/acc.cpp
 
         src/vta/vta_runtime.cc
+    )
+    target_link_libraries(vta-driver
+        bpf-vm-utils
     )
 endif()
 
@@ -65,9 +82,6 @@ if (NOT NO_HARDWARE)
     # TODO make apu-app work in a simulated environment
     add_executable(apu-app
         src/main.cpp
-        src/vm/print.cpp
-        src/vm/tf.cpp
-        src/vm/register.cpp
     )
     target_link_libraries(apu-app
         ubpf
@@ -93,6 +107,7 @@ install(
     TARGETS
         vta-driver
         vta-delegate
+        bpf-vm-utils
     DESTINATION lib
 )
 install(

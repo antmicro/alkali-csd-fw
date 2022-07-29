@@ -14,8 +14,6 @@
 #include "acc.h"
 #include "vta/tf_driver.h"
 
-std::vector<Acc*> accelerators;
-
 int rpmsg_init(void);
 
 static void setup_acc(void)
