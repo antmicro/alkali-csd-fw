@@ -1,13 +1,19 @@
 manifest:
+  defaults:
+    remote: upstream
+
   self:
     path: rpu-app
 
   remotes:
     - name: antmicro-wd
       url-base: git@github.com:antmicro
+    - name: upstream
+      url-base: https://github.com/zephyrproject-rtos
 
   projects:
     - name: zephyr
+      path: build/zephyr
       repo-path: wd-nvme-zephyr
       remote: antmicro-wd
       revision: 144448403e0356d430845d0ebc514ddd48b4e054
@@ -17,7 +23,83 @@ manifest:
       repo-path: wd-nvme-libmetal
       remote: antmicro-wd
       revision: c8944fe5af45f1a20e657f14806b78535f8c6b02
-      path: ./modules/hal/libmetal
+      path: build/modules/hal/libmetal
       groups:
         - hal
 
+    - name: ci-tools
+      revision: c083680dd5e281218ddb47d0ceac5c5fd5619749
+      path: build/tools/ci-tools
+    - name: net-tools
+      revision: 30b7efa827b04d2e47840716b0372737fe7d6c92
+      path: build/tools/net-tools
+
+    - name: hal_atmel
+      revision: 5690f5b84495c8b657ff204c5c827df1ab9e12e3
+      path: build/modules/hal/atmel
+    - name: civetweb
+      revision: 99129c5efc907ea613c4b73ccff07581feb58a7a
+      path: build/modules/lib/civetweb
+    - name: esp-idf
+      revision: 6835bfc741bf15e98fb7971293913f770df6081f
+      path: build/modules/hal/esp-idf
+    - name: fatfs
+      revision: df96914dd989907f3a5de4cb95b116c2f305820d
+      path: build/modules/fs/fatfs
+    - name: hal_cypress
+      revision: a12d92816a53a521d79cefcf5c38b9dc8a4fed6e
+      path: build/modules/hal/cypress
+    - name: hal_nordic
+      revision: 64f3473398f9fba11059dd0c7ae969e74f74f356
+      path: build/modules/hal/nordic
+    - name: hal_openisa
+      revision: 6416140c00f7e663752bd420ba89e3caefc1d70e
+      path: build/modules/hal/openisa
+    - name: hal_microchip
+      revision: 85302959c0c659311cf90ac51d133e5ce19c9288
+      path: build/modules/hal/microchip
+    - name: hal_silabs
+      revision: 9151e614c23997074acd1096a3e8a9e5c255d5b9
+      path: build/modules/hal/silabs
+    - name: hal_st
+      revision: fa481784b3c49780f18d50bafe00390ccb62b2ec
+      path: build/modules/hal/st
+    - name: hal_stm32
+      revision: 20776221282b6447c6330a041bc27758c8f593f3
+      path: build/modules/hal/stm32
+    - name: hal_ti
+      revision: 7a82e93e14766ef6e42df9915ea2ab8e3b952a8b
+      path: build/modules/hal/ti
+    - name: lvgl
+      revision: d4708d0a432e95f51bdc712591ba5295b751140c
+      path: build/modules/lib/gui/lvgl
+    - name: mbedtls
+      revision: 4f1e8f5a78dc08aa42a47cc1ad059cce558c26c3
+      path: build/modules/crypto/mbedtls
+    - name: mcumgr
+      revision: 84934959d2d1722a23b7e7e200191ae4a6f96168
+      path: build/modules/lib/mcumgr
+    - name: nffs
+      revision: bc62a2fa9d98ddb5d633c932ea199bc68e10f194
+      path: build/modules/fs/nffs
+    - name: hal_nxp
+      revision: c6ce9b7e8ddb501ca6d54e927e1602cb5f7a7183
+      path: build/modules/hal/nxp
+    - name: open-amp
+      revision: 9b591b289e1f37339bd038b5a1f0e6c8ad39c63a
+      path: build/modules/lib/open-amp
+    - name: openthread
+      revision: 882e7074b5986027b85cb4f3ba1dc563a11ca013
+      path: build/modules/lib/openthread
+    - name: segger
+      revision: 6fcf61606d6012d2c44129edc033f59331e268bc
+      path: build/modules/debug/segger
+    - name: tinycbor
+      path: build/modules/lib/tinycbor
+      revision: 0fc68fceacd1efc1ce809c5880c380f3d98b7b6e
+    - name: littlefs
+      path: build/modules/fs/littlefs
+      revision: fe9572dd5a9fcf93a249daa4233012692bd2881d
+    - name: mipi-sys-t
+      path: build/modules/debug/mipi-sys-t
+      revision: baf51863f19f009b92e762115ba5572a5b996b92
