@@ -120,11 +120,11 @@ zephyr/setup: ${ZEPHYR_PROJECTS} ## clone main zephyr repositories and modules
 
 ${ZEPHYR_SDK_DOWNLOAD_PATH}:
 	@mkdir -p ${BUILD_DIR}
-	wget ${ZEPHYR_SDK_DOWNLOAD_URL} -O ${ZEPHYR_SDK_DOWNLOAD_PATH}
+	wget -q ${ZEPHYR_SDK_DOWNLOAD_URL} -O ${ZEPHYR_SDK_DOWNLOAD_PATH}
 
 ${ZEPHYR_SDK_INSTALL_DIR}: ${ZEPHYR_SDK_DOWNLOAD_PATH}
 	chmod u+rwx ${ZEPHYR_SDK_DOWNLOAD_PATH}
-	bash ${ZEPHYR_SDK_DOWNLOAD_PATH} -- -d ${ZEPHYR_SDK_INSTALL_DIR}
+	bash ${ZEPHYR_SDK_DOWNLOAD_PATH} --quiet -- -d ${ZEPHYR_SDK_INSTALL_DIR}
 
 ${ZEPHYR_PROJECTS}: .west/config rpu-app/west.yml
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
