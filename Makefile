@@ -11,6 +11,10 @@ BUILDROOT_DIR = ${PWD}/third-party/buildroot
 BUILDROOT_BUILD_DIR = ${BUILD_DIR}/buildroot
 BUILDROOT_OPTS = O=${BUILDROOT_BUILD_DIR} -C ${BUILDROOT_DIR} BR2_EXTERNAL=${PWD}/br2-external
 
+BUILDROOT_TOOLCHAIN_TAR_PATH = ${BUILDROOT_BUILD_DIR}/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
+BUILDROOT_TOOLCHAIN_OUTPUT_DIR = ${BUILD_DIR}/aarch64-buildroot-linux-gnu_sdk-buildroot
+BUILDROOT_TOOLCHAIN_CMAKE_FILE = ${BUILDROOT_TOOLCHAIN_OUTPUT_DIR}/share/buildroot/toolchainfile.cmake
+
 buildroot: ## build buildroot
 	$(MAKE) ${BUILDROOT_OPTS} zynqmp_nvme_defconfig
 	$(MAKE) ${BUILDROOT_OPTS} -j$(nproc)
@@ -26,16 +30,11 @@ buildroot//%: ## forward rule to invoke buildroot rules directly e.g. `make buil
 
 .PHONY: buildroot buildroot/distclean buildroot/sdk buildroot/sdk-untar
 
-# buildroot toolchain
-
-BUILDROOT_TOOLCHAIN_TAR_PATH = ${BUILDROOT_BUILD_DIR}/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
-BUILDROOT_TOOLCHAIN_OUTPUT_DIR = ${BUILD_DIR}/aarch64-buildroot-linux-gnu_sdk-buildroot
-BUILDROOT_TOOLCHAIN_CMAKE_FILE = ${BUILDROOT_TOOLCHAIN_OUTPUT_DIR}/share/buildroot/toolchainfile.cmake
-
 ${BUILDROOT_TOOLCHAIN_CMAKE_FILE}: ${BUILDROOT_TOOLCHAIN_TAR_PATH}
 	tar mxf ${BUILDROOT_TOOLCHAIN_TAR_PATH} -C ${BUILD_DIR}
 
 ${BUILDROOT_TOOLCHAIN_TAR_PATH}:
+	$(MAKE) ${BUILDROOT_OPTS} zynqmp_nvme_defconfig
 	$(MAKE) ${BUILDROOT_OPTS} sdk
 
 # apu app
