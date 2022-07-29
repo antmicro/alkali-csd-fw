@@ -116,7 +116,6 @@ zephyr/sdk: ${ZEPHYR_SDK_INSTALL_DIR} ## install Zephyr SDK locally (helper)
 zephyr/setup: ${ZEPHYR_PROJECTS} ## clone main zephyr repositories and modules
 
 zephyr/deps: ${ZEPHYR_PROJECTS}
-	pip3 install west
 	pip3 install -r ${BUILD_DIR}/zephyr/scripts/requirements.txt
 
 .PHONY: zephyr/sdk zephyr/setup zephyr/deps
