@@ -116,7 +116,11 @@ zephyr/sdk: ${ZEPHYR_SDK_INSTALL_DIR} ## install Zephyr SDK locally (helper)
 
 zephyr/setup: ${ZEPHYR_PROJECTS} ## clone main zephyr repositories and modules
 
-.PHONY: zephyr/sdk zephyr/setup
+zephyr/deps: ${ZEPHYR_PROJECTS}
+	pip3 install west
+	pip3 install -r ${BUILD_DIR}/zephyr/scripts/requirements.txt
+
+.PHONY: zephyr/sdk zephyr/setup zephyr/deps
 
 ${ZEPHYR_SDK_DOWNLOAD_PATH}:
 	@mkdir -p ${BUILD_DIR}
@@ -141,7 +145,7 @@ IN_SDK_ENV = \
 	export ZEPHYR_TOOLCHAIN_VARIANT=zephyr && \
 	export ZEPHYR_SDK_INSTALL_DIR=${ZEPHYR_SDK_INSTALL_DIR}
 rpu-app/with-sdk: SHELL:=/bin/bash
-rpu-app/with-sdk: zephyr/sdk zephyr/setup ## build rpu-app with local Zephyr SDK (helper)
+rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup  ## build rpu-app with local Zephyr SDK (helper)
 	${IN_SDK_ENV} && west build -b zcu106 -d ${RPUAPP_BUILD_DIR} rpu-app
 
 IN_ZEPHYR_ENV = source ${BUILD_DIR}/zephyr/zephyr-env.sh
