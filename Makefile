@@ -180,11 +180,12 @@ $(ZEPHYR_SOURCES): .west/config rpu-app/west.yml
 # -----------------------------------------------------------------------------
 RPUAPP_SRC_DIR = $(ROOT_DIR)/rpu-app/src
 RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
+RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
 RPUAPP_REG_HEADERS = \
-	$(RPUAPP_SRC_DIR)/nvme_ident_fields.h \
-	$(RPUAPP_SRC_DIR)/nvme_reg_fields.h \
-	$(RPUAPP_SRC_DIR)/nvme_reg_map.h
+	$(RPUAPP_GENERATED_DIR)/nvme_ident_fields.h \
+	$(RPUAPP_GENERATED_DIR)/nvme_reg_fields.h \
+	$(RPUAPP_GENERATED_DIR)/nvme_reg_map.h
 
 IN_ZEPHYR_ENV = source $(BUILD_DIR)/zephyr/zephyr-env.sh
 IN_SDK_ENV = \
@@ -213,10 +214,11 @@ rpu-app/clean:
 # RPU App dependencies --------------------------------------------------------
 $(RPUAPP_REG_HEADERS): $(REGGEN_DIR)/get_reg_fields.py
 $(RPUAPP_REG_HEADERS): $(NVME_SPEC_FILE)
-	$(REGGEN_DIR)/get_reg_fields.py $(NVME_SPEC_FILE) -f $(BUILD_DIR)/registers.json
-	$(REGGEN_DIR)/get_reg_fields_zephyr.py $(BUILD_DIR)/registers.json -f $(RPUAPP_SRC_DIR)/nvme_reg_fields.h
-	$(REGGEN_DIR)/get_reg_map_zephyr.py $(NVME_SPEC_FILE) -f $(RPUAPP_SRC_DIR)/nvme_reg_map.h
-	$(REGGEN_DIR)/get_identify_struct.py $(NVME_SPEC_FILE) -f $(RPUAPP_SRC_DIR)/nvme_ident_fields.h
+	mkdir -p $(RPUAPP_GENERATED_DIR)
+	$(REGGEN_DIR)/get_reg_fields.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/registers.json
+	$(REGGEN_DIR)/get_reg_fields_zephyr.py $(RPUAPP_GENERATED_DIR)/registers.json -f $(RPUAPP_GENERATED_DIR)/nvme_reg_fields.h
+	$(REGGEN_DIR)/get_reg_map_zephyr.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/nvme_reg_map.h
+	$(REGGEN_DIR)/get_identify_struct.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/nvme_ident_fields.h
 
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
