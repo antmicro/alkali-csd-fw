@@ -11,7 +11,7 @@ BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
 
 # Helper directories ----------------------------------------------------------
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
-BUILDROOT_DIR = $(PWD)/third-party/buildroot
+BUILDROOT_DIR = $(CURDIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 
 
@@ -27,13 +27,15 @@ all: buildroot apu-app rpu-app ## Build all binaries (Buildroot, APU App, RPU Ap
 # -----------------------------------------------------------------------------
 .PHONY: clean
 clean: ## Remove ALL build artifacts
-	$(RM) -r build
+	$(RM) -r $(BUILD_DIR)
 
 
 # -----------------------------------------------------------------------------
 # Buildroot -------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(PWD)/br2-external
+BR2_EXTERNAL_DIR = $(ROOT_DIR)/br2-external
+BR2_BASALT_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/basalt/overlay
+BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL_DIR)
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = $(BUILD_DIR)/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildroot/toolchainfile.cmake
@@ -41,8 +43,8 @@ BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildro
 # Buildroot rules -------------------------------------------------------------
 .PHONY: buildroot
 buildroot: apu-app ## Build Buildroot
-	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(PWD)/br2-external/board/basalt/overlay/lib/libvta-delegate.so
-	cp $(APUAPP_BUILD_DIR)/apu-app $(PWD)/br2-external/board/basalt/overlay/bin/apu-app
+	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BR2_BASALT_OVERLAY_DIR)/lib/libvta-delegate.so
+	cp $(APUAPP_BUILD_DIR)/apu-app $(BR2_BASALT_OVERLAY_DIR)/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
 
@@ -109,7 +111,7 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 
 
 # -----------------------------------------------------------------------------
-# zephyr ----------------------------------------------------------------------
+# Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 ZEPHYR_SDK_VERSION = zephyr-sdk-0.10.3
 ZEPHYR_SDK_DOWNLOAD_URL = https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/zephyr-sdk-0.10.3-setup.run
@@ -199,7 +201,7 @@ rpu-app: $(RPUAPP_ZEPHYR_ELF) ## Build RPU App
 
 .PHONY: rpu-app/with-sdk
 rpu-app/with-sdk: SHELL:=/bin/bash
-rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup  ## Build RPU App with local Zephyr SDK (helper)
+rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup ## Build RPU App with local Zephyr SDK (helper)
 	$(IN_SDK_ENV) && $(WEST_BUILD)
 
 .PHONY: rpu-app/clean
