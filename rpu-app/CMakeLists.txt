@@ -26,3 +26,30 @@ target_sources(app PRIVATE src/cmds/write.c)
 target_sources(app PRIVATE src/cmds/vendor.c)
 
 target_include_directories(app PRIVATE src)
+target_include_directories(app PRIVATE ${GENERATED_DIR})
+
+find_package( PythonInterp REQUIRED )
+
+add_custom_target(
+    generate_headers ALL
+    COMMAND ${PYTHON_EXECUTABLE} ${REGGEN_DIR}/get_reg_fields.py
+            ${NVME_SPEC_FILE} -f ${RPUAPP_GENERATED_DIR}/registers.json
+
+    COMMAND ${PYTHON_EXECUTABLE} ${REGGEN_DIR}/get_reg_fields_zephyr.py
+            ${RPUAPP_GENERATED_DIR}/registers.json -f ${RPUAPP_GENERATED_DIR}/nvme_reg_fields.h
+
+    COMMAND ${PYTHON_EXECUTABLE} ${REGGEN_DIR}/get_reg_map_zephyr.py
+            ${NVME_SPEC_FILE} -f ${RPUAPP_GENERATED_DIR}/nvme_reg_map.h
+
+    COMMAND ${PYTHON_EXECUTABLE} ${REGGEN_DIR}/get_identify_struct.py
+            ${NVME_SPEC_FILE} -f ${RPUAPP_GENERATED_DIR}/nvme_ident_fields.h
+
+    BYPRODUCTS ${RPUAPP_GENERATED_DIR}/registers.json
+                ${RPUAPP_GENERATED_DIR}/nvme_reg_fields.h
+                ${RPUAPP_GENERATED_DIR}/nvme_reg_map.h
+                ${RPUAPP_GENERATED_DIR}/nvme_ident_fields.h
+
+    COMMENT "Generating NVMe headers"
+)
+
+add_dependencies(app generate_headers)

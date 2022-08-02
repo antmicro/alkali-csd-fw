@@ -182,10 +182,6 @@ RPUAPP_SRC_DIR = $(ROOT_DIR)/rpu-app/src
 RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
-RPUAPP_REG_HEADERS = \
-	$(RPUAPP_GENERATED_DIR)/nvme_ident_fields.h \
-	$(RPUAPP_GENERATED_DIR)/nvme_reg_fields.h \
-	$(RPUAPP_GENERATED_DIR)/nvme_reg_map.h
 
 IN_ZEPHYR_ENV = source $(BUILD_DIR)/zephyr/zephyr-env.sh
 IN_SDK_ENV = \
@@ -193,36 +189,27 @@ IN_SDK_ENV = \
 	export ZEPHYR_TOOLCHAIN_VARIANT=zephyr && \
 	export ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)
 
+CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
+	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
+WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
+
 # RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app
-rpu-app: $(RPUAPP_REG_HEADERS)
 rpu-app: $(RPUAPP_ZEPHYR_ELF) ## build rpu-app
 
 .PHONY: rpu-app/with-sdk
-rpu-app/with-sdk: $(RPUAPP_REG_HEADERS)
 rpu-app/with-sdk: SHELL:=/bin/bash
 rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup  ## build rpu-app with local Zephyr SDK (helper)
-	$(IN_SDK_ENV) && west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app
+	$(IN_SDK_ENV) && $(WEST_BUILD)
 
 .PHONY: rpu-app/clean
 rpu-app/clean:
 	$(RM) -r $(RPUAPP_BUILD_DIR)
-	$(RM) $(RPUAPP_SRC_DIR)/nvme_reg_fields.h
-	$(RM) $(RPUAPP_SRC_DIR)/nvme_reg_map.h
-	$(RM) $(RPUAPP_SRC_DIR)/nvme_ident_fields.h
 
 # RPU App dependencies --------------------------------------------------------
-$(RPUAPP_REG_HEADERS): $(REGGEN_DIR)/get_reg_fields.py
-$(RPUAPP_REG_HEADERS): $(NVME_SPEC_FILE)
-	mkdir -p $(RPUAPP_GENERATED_DIR)
-	$(REGGEN_DIR)/get_reg_fields.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/registers.json
-	$(REGGEN_DIR)/get_reg_fields_zephyr.py $(RPUAPP_GENERATED_DIR)/registers.json -f $(RPUAPP_GENERATED_DIR)/nvme_reg_fields.h
-	$(REGGEN_DIR)/get_reg_map_zephyr.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/nvme_reg_map.h
-	$(REGGEN_DIR)/get_identify_struct.py $(NVME_SPEC_FILE) -f $(RPUAPP_GENERATED_DIR)/nvme_ident_fields.h
-
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
-	$(IN_ZEPHYR_ENV) && west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app
+	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
 
 
 # -----------------------------------------------------------------------------
