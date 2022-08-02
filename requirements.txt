@@ -1,1 +1,2 @@
+-r third-party/registers-generator/requirements.txt
 west==0.13.1
