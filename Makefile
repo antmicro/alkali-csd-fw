@@ -5,6 +5,8 @@ all: buildroot apu-app rpu-app ## build all binaries (buildroot, apu-app, rpu-ap
 clean: ## clean build artifacts
 	-rm -rf build
 
+APUAPP_BUILD_DIR = ${BUILD_DIR}/apu-app
+
 # buildroot
 
 BUILDROOT_DIR = ${PWD}/third-party/buildroot
@@ -15,7 +17,9 @@ BUILDROOT_TOOLCHAIN_TAR_PATH = ${BUILDROOT_BUILD_DIR}/images/aarch64-buildroot-l
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = ${BUILD_DIR}/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = ${BUILDROOT_TOOLCHAIN_OUTPUT_DIR}/share/buildroot/toolchainfile.cmake
 
-buildroot: ## build buildroot
+buildroot: apu-app ## build buildroot
+	cp ${APUAPP_BUILD_DIR}/libvta-delegate.so ${PWD}/br2-external/board/basalt/overlay/lib/libvta-delegate.so
+	cp ${APUAPP_BUILD_DIR}/apu-app ${PWD}/br2-external/board/basalt/overlay/bin/apu-app
 	$(MAKE) ${BUILDROOT_OPTS} zynqmp_nvme_defconfig
 	$(MAKE) ${BUILDROOT_OPTS} -j$(nproc)
 
@@ -40,7 +44,6 @@ ${BUILDROOT_TOOLCHAIN_TAR_PATH}:
 # apu app
 
 APUAPP_SRC_DIR = apu-app/src
-APUAPP_BUILD_DIR = ${BUILD_DIR}/apu-app
 APUAPP_INSTALL_DIR = ${BUILD_DIR}/apu-app/install
 APUAPP_OUTPUTS = ${APUAPP_BUILD_DIR}/libvta-delegate.so ${APUAPP_BUILD_DIR}/apu-app
 
