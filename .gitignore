@@ -2,6 +2,7 @@
 build/
 .cache/
 
-# Ignore generated overlay files
+# Ignore generated files
 br2-external/board/basalt/overlay/bin/apu-app
 br2-external/board/basalt/overlay/lib/libvta-delegate.so
+rpu-app/src/nvme_*
