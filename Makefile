@@ -19,14 +19,14 @@ REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 # All -------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 .PHONY: all
-all: buildroot apu-app rpu-app ## build all binaries (buildroot, apu-app, rpu-app)
+all: buildroot apu-app rpu-app ## Build all binaries (Buildroot, APU App, RPU App)
 
 
 # -----------------------------------------------------------------------------
 # Clean -----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 .PHONY: clean
-clean: ## clean build artifacts
+clean: ## Remove ALL build artifacts
 	$(RM) -r build
 
 
@@ -40,24 +40,24 @@ BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildro
 
 # Buildroot rules -------------------------------------------------------------
 .PHONY: buildroot
-buildroot: apu-app ## build buildroot
+buildroot: apu-app ## Build Buildroot
 	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(PWD)/br2-external/board/basalt/overlay/lib/libvta-delegate.so
 	cp $(APUAPP_BUILD_DIR)/apu-app $(PWD)/br2-external/board/basalt/overlay/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
 
 .PHONY: buildroot/distclean
-buildroot/distclean: ## clean buildroot build
+buildroot/distclean: ## Remove Buildroot build
 	$(MAKE) $(BUILDROOT_OPTS) distclean
 
 .PHONY: buildroot/sdk
-buildroot/sdk: $(BUILDROOT_TOOLCHAIN_TAR_FILE) ## generate buildroot toolchain
+buildroot/sdk: $(BUILDROOT_TOOLCHAIN_TAR_FILE) ## Generate Buildroot toolchain
 
 .PHONY: buildroot/sdk-untar
-buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_DIR) ## untar buildroot toolchain
+buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_DIR) ## Untar Buildroot toolchain (helper)
 
 .PHONY: buildroot//%
-buildroot//%: ## forward rule to invoke buildroot rules directly e.g. `make buildroot//menuconfig
+buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buildroot//menuconfig`
 	$(MAKE) $(BUILDROOT_OPTS) $*
 
 # Buildroot dependencies-------------------------------------------------------
@@ -78,10 +78,10 @@ APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-
 
 # APU App rules ---------------------------------------------------------------
 .PHONY: apu-app
-apu-app: $(APUAPP_OUTPUTS) ## build apu app
+apu-app: $(APUAPP_OUTPUTS) ## Build APU App
 
 .PHONY: apu-app/clean
-apu-app/clean: ## clean apu-app build artifacts
+apu-app/clean: ## Remove APU App build files
 	$(RM) -r $(APUAPP_BUILD_DIR)
 
 # APU App dependencies --------------------------------------------------------
@@ -146,20 +146,20 @@ ZEPHYR_SOURCES= \
 
 # Zephyr rules ----------------------------------------------------------------
 .PHONY: zephyr/sdk
-zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## install Zephyr SDK locally (helper)
+zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "To use local installation of the toolchain set the following environment variables:"
 	@echo "  - ZEPHYR_TOOLCHAIN_VARIANT=zephyr"
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(ZEPHYR_SOURCES) ## clone main zephyr repositories and modules
+zephyr/setup: $(ZEPHYR_SOURCES) ## Clone main zephyr repositories and modules
 
 .PHONY: zephyr/deps
-zephyr/deps: $(ZEPHYR_SOURCES)
+zephyr/deps: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies
 	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
 
 .PHONY: zephyr/clean
-zephyr/clean:
+zephyr/clean: ## Remove Zephyr installed files
 	$(RM) -r build/zephyr*
 
 # Zephyr dependencies ---------------------------------------------------------
@@ -195,15 +195,15 @@ WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
 
 # RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app
-rpu-app: $(RPUAPP_ZEPHYR_ELF) ## build rpu-app
+rpu-app: $(RPUAPP_ZEPHYR_ELF) ## Build RPU App
 
 .PHONY: rpu-app/with-sdk
 rpu-app/with-sdk: SHELL:=/bin/bash
-rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup  ## build rpu-app with local Zephyr SDK (helper)
+rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup  ## Build RPU App with local Zephyr SDK (helper)
 	$(IN_SDK_ENV) && $(WEST_BUILD)
 
 .PHONY: rpu-app/clean
-rpu-app/clean:
+rpu-app/clean: ## Remove RPU App build files
 	$(RM) -r $(RPUAPP_BUILD_DIR)
 
 # RPU App dependencies --------------------------------------------------------
@@ -218,7 +218,7 @@ $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 HELP_COLUMN_SPAN = 20
 HELP_FORMAT_STRING = "\033[36m%-$(HELP_COLUMN_SPAN)s\033[0m %s\n"
 .PHONY: help
-help: ## show this help
+help: ## Show this help message
 	@echo Here is the list of available targets:
 	@echo ""
 	@grep -E '^[^#[:blank:]]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf $(HELP_FORMAT_STRING), $$1, $$2}'
