@@ -1,11 +1,16 @@
-BUILD_DIR ?= $(PWD)/build
+ROOT_DIR = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+APUAPP_BUILD_DIR = $(BUILD_DIR)/apu-app
+BUILD_DIR ?= $(ROOT_DIR)/build
+THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
+
+REGGEN_PATH = $(ROOT_DIR)/third-party/registers-generator
+NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
+NVME_SPEC_FILE = $(REGGEN_PATH)/NVM-Express-1_4-2019.06.10-Ratified.pdf
 
 all: buildroot apu-app rpu-app ## build all binaries (buildroot, apu-app, rpu-app)
 
 clean: ## clean build artifacts
 	-rm -rf build
-
-APUAPP_BUILD_DIR = $(BUILD_DIR)/apu-app
 
 # buildroot
 
@@ -136,10 +141,21 @@ $(ZEPHYR_PROJECTS): .west/config rpu-app/west.yml
 
 # rpu-app
 
+RPUAPP_SRC_DIR=$(ROOT_DIR)/rpu-app/src
 RPUAPP_BUILD_DIR=$(BUILD_DIR)/rpu-app
 RPUAPP_BUILD_PATH=$(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
+RPUAPP_REG_HEADERS=nvme_ident_fields.h nvme_reg_fields.h nvme_reg_map.h
 
-rpu-app: $(RPUAPP_BUILD_PATH) ## build rpu-app
+rpu-app: $(RPUAPP_BUILD_PATH)
+rpu-app: $(RPUAPP_REG_HEADERS)
+rpu-app: $(NVME_SPEC_FILE) ## build rpu-app
+
+$(RPUAPP_REG_HEADERS): $(REGGEN_PATH)/get_reg_fields.py
+$(RPUAPP_REG_HEADERS): $(NVME_SPEC_FILE)
+	$(REGGEN_PATH)/get_reg_fields.py $(NVME_SPEC_FILE) -f $(BUILD_DIR)/registers.json
+	$(REGGEN_PATH)/get_reg_fields_zephyr.py $(BUILD_DIR)/registers.json -f $(RPUAPP_SRC_DIR)/nvme_reg_fields.h
+	$(REGGEN_PATH)/get_reg_map_zephyr.py $(NVME_SPEC_FILE) -f $(RPUAPP_SRC_DIR)/nvme_reg_map.h
+	$(REGGEN_PATH)/get_indentify_struct.py $(NVME_SPEC_FILE) -f $(RPUAPP_SRC_DIR)/nvme_ident_fields.h
 
 IN_SDK_ENV = \
 	source $(BUILD_DIR)/zephyr/zephyr-env.sh && \
