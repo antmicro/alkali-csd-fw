@@ -1,4 +1,5 @@
 # Helper macros ---------------------------------------------------------------
+SHELL:=/bin/bash
 ROOT_DIR = $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
 NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
@@ -13,6 +14,8 @@ BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
 BUILDROOT_DIR = $(CURDIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
+WEST_DIR = $(ROOT_DIR)/.west
+RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 
 
 # -----------------------------------------------------------------------------
@@ -162,7 +165,7 @@ zephyr/deps: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
-	$(RM) -r build/zephyr*
+	$(RM) -r $(BUILD_DIR)/zephyr*
 
 # Zephyr dependencies ---------------------------------------------------------
 $(ZEPHYR_SDK_DOWNLOAD_PATH):
@@ -173,7 +176,7 @@ $(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	chmod u+rwx $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
 
-$(ZEPHYR_SOURCES): .west/config rpu-app/west.yml
+$(ZEPHYR_SOURCES): $(WEST_DIR)/config $(RPUAPP_DIR)/west.yml
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
 
 
