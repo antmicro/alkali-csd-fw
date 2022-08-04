@@ -14,7 +14,6 @@ BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
 BUILDROOT_DIR = $(CURDIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
-WEST_DIR = $(ROOT_DIR)/.west
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 
 
@@ -117,16 +116,19 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+WEST_CONFIG ?= $(ROOT_DIR)/.west/config
+WEST_YML ?= $(RPUAPP_DIR)/west.yml
 ZEPHYR_SDK_VERSION = 0.10.3
 ZEPHYR_SDK_NAME = zephyr-sdk-$(ZEPHYR_SDK_VERSION)
 ZEPHYR_SDK_DOWNLOAD_URL = https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v$(ZEPHYR_SDK_VERSION)/$(ZEPHYR_SDK_NAME)-setup.run
 ZEPHYR_SDK_DOWNLOAD_PATH = $(BUILD_DIR)/zephyr-sdk.run
-ZEPHYR_SDK_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_VERSION)
+ZEPHYR_SDK_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_NAME)
 
 ZEPHYR_SOURCES= \
 	$(BUILD_DIR)/zephyr \
+	$(BUILD_DIR)/tools \
 	$(BUILD_DIR)/modules/hal/libmetal \
-	$(BUILD_DIR)/modules build/tools \
+	$(BUILD_DIR)/modules \
 	$(BUILD_DIR)/modules/hal/atmel \
 	$(BUILD_DIR)/modules/lib/civetweb \
 	$(BUILD_DIR)/modules/hal/esp-idf \
@@ -159,11 +161,7 @@ zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(ZEPHYR_SOURCES) ## Clone main zephyr repositories and modules
-
-.PHONY: zephyr/deps
-zephyr/deps: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies
-	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
+zephyr/setup: $(WEST_CONFIG) $(WEST_YML) $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
@@ -178,15 +176,17 @@ $(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	chmod u+rwx $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
 
-$(ZEPHYR_SOURCES): $(WEST_DIR)/config $(RPUAPP_DIR)/west.yml
+$(ZEPHYR_SOURCES):
 	# In case there are any connection issues, retry west update few times
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
+	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
 
 
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-RPUAPP_SRC_DIR = $(ROOT_DIR)/rpu-app/src
+RPUAPP_APP_DIR ?= rpu-app
+RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
 RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
@@ -199,7 +199,7 @@ IN_SDK_ENV = \
 
 CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
-WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
+WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) $(RPUAPP_APP_DIR) $(CMAKE_OPTS)
 
 # RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app
@@ -207,7 +207,7 @@ rpu-app: $(RPUAPP_ZEPHYR_ELF) ## Build RPU App
 
 .PHONY: rpu-app/with-sdk
 rpu-app/with-sdk: SHELL:=/bin/bash
-rpu-app/with-sdk: zephyr/deps zephyr/sdk zephyr/setup ## Build RPU App with local Zephyr SDK (helper)
+rpu-app/with-sdk: zephyr/sdk zephyr/setup ## Build RPU App with local Zephyr SDK (helper)
 	$(IN_SDK_ENV) && $(WEST_BUILD)
 
 .PHONY: rpu-app/clean
