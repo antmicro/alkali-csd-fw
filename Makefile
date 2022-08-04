@@ -12,7 +12,7 @@ BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
 
 # Helper directories ----------------------------------------------------------
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
-BUILDROOT_DIR = $(CURDIR)/third-party/buildroot
+BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 
