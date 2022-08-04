@@ -80,6 +80,7 @@ $(BUILDROOT_TOOLCHAIN_TAR_FILE):
 APUAPP_SRC_DIR = apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
+APUAPP_BUILD_TYPE ?= Debug
 
 # APU App rules ---------------------------------------------------------------
 .PHONY: apu-app
@@ -106,7 +107,7 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 	      -DCMAKE_INSTALL_PREFIX=$(APUAPP_INSTALL_DIR) \
 	      -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
 	      -DUBPF_ENABLE_INSTALL=ON \
-	      -DCMAKE_BUILD_TYPE=Debug \
+	      -DCMAKE_BUILD_TYPE=$(APUAPP_BUILD_TYPE) \
 	      -DNO_HARDWARE=OFF \
 	      -DBUILD_TESTS=ON \
 	      -S apu-app -B $(APUAPP_BUILD_DIR)
