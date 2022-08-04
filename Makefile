@@ -117,8 +117,9 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-ZEPHYR_SDK_VERSION = zephyr-sdk-0.10.3
-ZEPHYR_SDK_DOWNLOAD_URL = https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/zephyr-sdk-0.10.3-setup.run
+ZEPHYR_SDK_VERSION = 0.10.3
+ZEPHYR_SDK_NAME = zephyr-sdk-$(ZEPHYR_SDK_VERSION)
+ZEPHYR_SDK_DOWNLOAD_URL = https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v$(ZEPHYR_SDK_VERSION)/$(ZEPHYR_SDK_NAME)-setup.run
 ZEPHYR_SDK_DOWNLOAD_PATH = $(BUILD_DIR)/zephyr-sdk.run
 ZEPHYR_SDK_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_VERSION)
 
