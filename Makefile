@@ -76,7 +76,7 @@ $(BUILDROOT_TOOLCHAIN_TAR_FILE):
 # -----------------------------------------------------------------------------
 # APU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-APUAPP_SRC_DIR = apu-app/src
+APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
 APUAPP_BUILD_TYPE ?= Debug
