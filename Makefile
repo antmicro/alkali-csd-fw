@@ -4,6 +4,10 @@ ROOT_DIR = $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
 NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
 
+DOCKER_IMAGE_BASE ?= debian:bullseye
+DOCKER_TAG_NAME=hw:1.0
+DOCKER_TAG = $(DOCKER_IMAGE_PREFIX)$(DOCKER_TAG_NAME)
+
 # Build directories -----------------------------------------------------------
 BUILD_DIR ?= $(ROOT_DIR)/build
 APUAPP_BUILD_DIR = $(BUILD_DIR)/apu-app
@@ -15,6 +19,7 @@ THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
 BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
+DOCKER_BUILD_DIR = $(BUILD_DIR)/docker
 
 
 # -----------------------------------------------------------------------------
@@ -76,6 +81,7 @@ $(BUILDROOT_TOOLCHAIN_TAR_FILE):
 # -----------------------------------------------------------------------------
 # APU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+APUAPP_DIR = $(ROOT_DIR)/apu-app
 APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
@@ -109,7 +115,7 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 	      -DCMAKE_BUILD_TYPE=$(APUAPP_BUILD_TYPE) \
 	      -DNO_HARDWARE=OFF \
 	      -DBUILD_TESTS=ON \
-	      -S apu-app -B $(APUAPP_BUILD_DIR)
+	      -S $(APUAPP_DIR) -B $(APUAPP_BUILD_DIR)
 	$(MAKE) -C $(APUAPP_BUILD_DIR) -j all
 
 
@@ -218,6 +224,40 @@ rpu-app/clean: ## Remove RPU App build files
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
+
+
+# -----------------------------------------------------------------------------
+# Docker ----------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+.PHONY: docker
+docker: $(DOCKER_BUILD_DIR)/docker.ok ## Build the development docker image
+
+$(DOCKER_BUILD_DIR):
+	@mkdir -p $(DOCKER_BUILD_DIR)
+
+$(DOCKER_BUILD_DIR)/docker.ok: fw.dockerfile $(REGGEN_DIR)/requirements.txt | $(DOCKER_BUILD_DIR)
+	cp $(ROOT_DIR)/fw.dockerfile $(DOCKER_BUILD_DIR)/Dockerfile
+	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_DIR)
+	cd $(DOCKER_BUILD_DIR) && docker build \
+		--build-arg IMAGE_BASE="$(DOCKER_IMAGE_BASE)" \
+		--build-arg REPO_ROOT="$(PWD)" \
+		-t $(DOCKER_TAG) . && touch docker.ok
+
+
+# -----------------------------------------------------------------------------
+# Enter -----------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+.PHONY: enter
+enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
+	docker run \
+		--rm \
+		-v $(PWD):$(PWD) \
+		-v /etc/passwd:/etc/passwd \
+		-v /etc/group:/etc/group \
+		-u $(shell id -u):$(shell id -g) \
+		-h docker-container \
+		-w $(PWD) \
+		-it $(DOCKER_TAG) || true
 
 
 # -----------------------------------------------------------------------------
