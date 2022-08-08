@@ -1,5 +1,4 @@
 # Helper macros ---------------------------------------------------------------
-SHELL:=/bin/bash
 ROOT_DIR = $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
 NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
@@ -169,7 +168,9 @@ zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(WEST_CONFIG) $(WEST_YML) $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
+zephyr/setup: $(WEST_CONFIG)
+zephyr/setup: $(WEST_YML)
+zephyr/setup: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
@@ -188,13 +189,13 @@ $(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
 
 $(ZEPHYR_SOURCES):
-	$(RM) -r `west topdir`/.west 2>/dev/null || true
-	west init -l --mf $(WEST_YML) $(WEST_INIT_DIR)
-
 	# In case there are any connection issues, retry west update few times
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
 	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
 
+$(WEST_CONFIG):
+	$(RM) -r `west topdir`/.west 2>/dev/null || true
+	west init -l --mf $(WEST_YML) $(WEST_INIT_DIR)
 
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
@@ -229,6 +230,7 @@ rpu-app/clean: ## Remove RPU App build files
 
 # RPU App dependencies --------------------------------------------------------
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
+$(RPUAPP_ZEPHYR_ELF): $(WEST_CONFIG)
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
 
