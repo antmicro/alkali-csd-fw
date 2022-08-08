@@ -21,6 +21,7 @@ REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 DOCKER_DIR = $(ROOT_DIR)/docker
 DOCKER_BUILD_DIR = $(BUILD_DIR)/docker
+WEST_INIT_DIR ?= $(RPUAPP_DIR)
 
 
 # -----------------------------------------------------------------------------
@@ -173,8 +174,11 @@ zephyr/setup: $(WEST_CONFIG) $(WEST_YML) $(ZEPHYR_SOURCES) ## Install Zephyr dep
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
 	$(RM) -r $(BUILD_DIR)/zephyr*
+	$(RM) -r `west topdir`/.west 2>/dev/null || true
 
 # Zephyr dependencies ---------------------------------------------------------
+MAIN_DIR = $(abspath $(WEST_YML)/..)
+
 $(ZEPHYR_SDK_DOWNLOAD_PATH):
 	@mkdir -p $(BUILD_DIR)
 	wget -q $(ZEPHYR_SDK_DOWNLOAD_URL) -O $(ZEPHYR_SDK_DOWNLOAD_PATH)
@@ -184,6 +188,9 @@ $(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
 
 $(ZEPHYR_SOURCES):
+	$(RM) -r `west topdir`/.west 2>/dev/null || true
+	west init -l --mf $(WEST_YML) $(WEST_INIT_DIR)
+
 	# In case there are any connection issues, retry west update few times
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
 	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
@@ -192,9 +199,8 @@ $(ZEPHYR_SOURCES):
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-RPUAPP_APP_DIR ?= rpu-app
+RPUAPP_MAIN_DIR ?= rpu-app
 RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
-RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
 
@@ -206,7 +212,7 @@ IN_SDK_ENV = \
 
 CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
-WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) $(RPUAPP_APP_DIR) $(CMAKE_OPTS)
+WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) $(RPUAPP_MAIN_DIR) $(CMAKE_OPTS)
 
 # RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app

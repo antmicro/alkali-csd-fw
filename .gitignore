@@ -1,6 +1,7 @@
 *.o
 build/
 .cache/
+.west/
 
 # Ignore generated files
 br2-external/board/basalt/overlay/bin/apu-app
