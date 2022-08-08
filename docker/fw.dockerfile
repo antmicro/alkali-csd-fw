@@ -54,12 +54,3 @@ RUN wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/
 RUN ./zephyr-sdk-0.10.3-setup.run -- -d /zephyr-sdk-0.10.3
 RUN echo "export ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> /.zephyrrc
 RUN echo "export ZEPHYR_SDK_INSTALL_DIR=/zephyr-sdk-0.10.3" >> /.zephyrrc
-
-# Install Chisel dependencies
-RUN wget www.scala-lang.org/files/archive/scala-2.13.0.deb
-RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | tee /etc/apt/sources.list.d/sbt.list
-RUN echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee /etc/apt/sources.list.d/sbt_old.list
-RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add
-RUN apt update
-RUN dpkg -i scala*.deb
-RUN apt install -y sbt=1.4.9
