@@ -36,6 +36,7 @@ all: buildroot apu-app rpu-app ## Build all binaries (Buildroot, APU App, RPU Ap
 .PHONY: clean
 clean: ## Remove ALL build artifacts
 	$(RM) -r $(BUILD_DIR)
+	$(RM) -r $(WEST_DIR)
 
 
 # -----------------------------------------------------------------------------
@@ -123,7 +124,8 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-WEST_CONFIG ?= $(ROOT_DIR)/.west/config
+WEST_DIR ?= $(ROOT_DIR)/.west
+WEST_CONFIG ?= $(WEST_DIR)/config
 WEST_YML ?= $(RPUAPP_DIR)/west.yml
 ZEPHYR_SDK_VERSION = 0.10.3
 ZEPHYR_SDK_NAME = zephyr-sdk-$(ZEPHYR_SDK_VERSION)
@@ -168,18 +170,16 @@ zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(WEST_CONFIG)
 zephyr/setup: $(WEST_YML)
+zephyr/setup: $(WEST_CONFIG)
 zephyr/setup: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
 	$(RM) -r $(BUILD_DIR)/zephyr*
-	$(RM) -r `west topdir`/.west 2>/dev/null || true
+	$(RM) -r $(WEST_DIR)
 
 # Zephyr dependencies ---------------------------------------------------------
-MAIN_DIR = $(abspath $(WEST_YML)/..)
-
 $(ZEPHYR_SDK_DOWNLOAD_PATH):
 	@mkdir -p $(BUILD_DIR)
 	wget -q $(ZEPHYR_SDK_DOWNLOAD_URL) -O $(ZEPHYR_SDK_DOWNLOAD_PATH)
@@ -193,9 +193,20 @@ $(ZEPHYR_SOURCES):
 	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
 	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
 
+$(WEST_CONFIG): SHELL := /bin/bash
 $(WEST_CONFIG):
-	$(RM) -r `west topdir`/.west 2>/dev/null || true
-	west init -l --mf $(WEST_YML) $(WEST_INIT_DIR)
+	@if west init -l --mf $(WEST_YML) $(WEST_INIT_DIR); then \
+		echo "Done."; \
+	else \
+		echo ""; \
+		echo -e "\e[31mError:\e[0m West initialization failed. It might be caused by another west config instance"; \
+		echo -e "\e[31mError:\e[0m in a parent directory. Remove an existing '.west' and try again."; \
+		echo -e "\e[31mError:\e[0m "; \
+		echo -e "\e[31mError:\e[0m If you want to have west initialized in multiple directories of one tree you must"; \
+		echo -e "\e[31mError:\e[0m first initialize it in a directory that is lower in hierarchy."; \
+		echo ""; \
+		exit -1; \
+	fi;
 
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
@@ -255,6 +266,7 @@ $(DOCKER_BUILD_DIR)/docker.ok: $(DOCKER_DIR)/fw.dockerfile $(REGGEN_DIR)/require
 .PHONY: docker/clean
 docker/clean:
 	$(RM) -r $(DOCKER_BUILD_DIR)
+
 
 # -----------------------------------------------------------------------------
 # Enter -----------------------------------------------------------------------
