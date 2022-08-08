@@ -4,7 +4,7 @@ NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
 NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
 
 DOCKER_IMAGE_BASE ?= debian:bullseye
-DOCKER_TAG_NAME=hw:1.0
+DOCKER_TAG_NAME=fw:1.0
 DOCKER_TAG = $(DOCKER_IMAGE_PREFIX)$(DOCKER_TAG_NAME)
 
 # Build directories -----------------------------------------------------------
@@ -18,7 +18,6 @@ THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
 BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
-DOCKER_DIR = $(ROOT_DIR)/docker
 DOCKER_BUILD_DIR = $(BUILD_DIR)/docker
 WEST_INIT_DIR ?= $(RPUAPP_DIR)
 
@@ -252,15 +251,21 @@ $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 # -----------------------------------------------------------------------------
 # Docker ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
+REGGEN_REL_DIR=$(shell realpath --relative-to $(ROOT_DIR) $(REGGEN_DIR))
+DOCKER_BUILD_PYTHON_REQS_DIR=$(DOCKER_BUILD_DIR)/$(REGGEN_REL_DIR)
+
 .PHONY: docker
 docker: $(DOCKER_BUILD_DIR)/docker.ok ## Build the development docker image
 
 $(DOCKER_BUILD_DIR):
 	@mkdir -p $(DOCKER_BUILD_DIR)
 
-$(DOCKER_BUILD_DIR)/docker.ok: $(DOCKER_DIR)/fw.dockerfile $(REGGEN_DIR)/requirements.txt | $(DOCKER_BUILD_DIR)
-	cp $(DOCKER_DIR)/fw.dockerfile $(DOCKER_BUILD_DIR)/Dockerfile
-	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_DIR)
+$(DOCKER_BUILD_DIR)/docker.ok: fw.dockerfile requirements.txt $(REGGEN_DIR)/requirements.txt | $(DOCKER_BUILD_DIR)
+	cp $(ROOT_DIR)/fw.dockerfile $(DOCKER_BUILD_DIR)/Dockerfile
+	cp $(ROOT_DIR)/requirements.txt $(DOCKER_BUILD_DIR)/requirements.txt
+	mkdir -p $(DOCKER_BUILD_PYTHON_REQS_DIR)
+	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_PYTHON_REQS_DIR)/requirements.txt
 	cd $(DOCKER_BUILD_DIR) && docker build \
 		--build-arg IMAGE_BASE="$(DOCKER_IMAGE_BASE)" \
 		--build-arg REPO_ROOT="$(PWD)" \
