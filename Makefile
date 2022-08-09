@@ -127,7 +127,7 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-WEST_DIR ?= $(ROOT_DIR)/.west
+WEST_DIR = $(ROOT_DIR)/.west
 WEST_CONFIG ?= $(WEST_DIR)/config
 WEST_YML ?= $(RPUAPP_DIR)/west.yml
 ZEPHYR_SDK_VERSION = 0.10.3
@@ -298,16 +298,25 @@ enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
 # Help ------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 HELP_COLUMN_SPAN = 25
-HELP_FORMAT_STRING = "\033[36m%-$(HELP_COLUMN_SPAN)s\033[0m %s\n"
+HELP_FORMAT_STRING = "\033[36m%-$(HELP_COLUMN_SPAN)s\033[0m %s \033[34m%s\033[0m\n"
+USED_IN_BUILD_MESSAGE = (used to configure build inside 'alkali-csd-build')
 .PHONY: help
 help: ## Show this help message
 	@echo Here is the list of available targets:
 	@echo ""
-	@grep -E '^[^#[:blank:]]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf $(HELP_FORMAT_STRING), $$1, $$2}'
+	@grep -E '^[^#[:blank:]]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf $(HELP_FORMAT_STRING), $$1, $$2, ""}'
 	@echo ""
 	@echo "Additionally, you can use the following environment variables:"
 	@echo ""
-	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments to pass to container on 'make enter'"
+	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments to pass to container on 'make enter'" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_PREFIX" "Custom registry prefix with '/' at the end" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_BASE" "Custom docker image base" " "
+	@printf $(HELP_FORMAT_STRING) "BUILD_DIR" "Absolute path to desired build directory" "$(USED_IN_BUILD_MESSAGE)"
+	@printf $(HELP_FORMAT_STRING) "APUAPP_BUILD_TYPE" "APU application build type, Debug (default) or Release" "$(USED_IN_BUILD_MESSAGE)"
+	@printf $(HELP_FORMAT_STRING) "WEST_INIT_DIR" "Relative path to directory where west should be initialized" "$(USED_IN_BUILD_MESSAGE)"
+	@printf $(HELP_FORMAT_STRING) "WEST_CONFIG" "Absolute path to '.west/config' configuration file" "$(USED_IN_BUILD_MESSAGE)"
+	@printf $(HELP_FORMAT_STRING) "WEST_YML" "Absolute path to 'west.yml' manifest file" "$(USED_IN_BUILD_MESSAGE)"
+	@printf $(HELP_FORMAT_STRING) "RPUAPP_MAIN_DIR" "Absolute path to RPU application directory" "$(USED_IN_BUILD_MESSAGE)"
 	@echo ""
 
 .DEFAULT_GOAL := help
