@@ -189,8 +189,7 @@ $(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
 
 $(ZEPHYR_SOURCES):
-	# In case there are any connection issues, retry west update few times
-	bash -c "for i in {1..5}; do west update && break || sleep 1; done"
+	west update
 	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
 
 $(WEST_CONFIG): SHELL := /bin/bash
