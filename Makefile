@@ -289,19 +289,25 @@ enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
 		-u $(shell id -u):$(shell id -g) \
 		-h docker-container \
 		-w $(PWD) \
-		-it $(DOCKER_TAG) || true
+		-it \
+		$(DOCKER_RUN_EXTRA_ARGS) \
+		$(DOCKER_TAG)
 
 
 # -----------------------------------------------------------------------------
 # Help ------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-HELP_COLUMN_SPAN = 20
+HELP_COLUMN_SPAN = 25
 HELP_FORMAT_STRING = "\033[36m%-$(HELP_COLUMN_SPAN)s\033[0m %s\n"
 .PHONY: help
 help: ## Show this help message
 	@echo Here is the list of available targets:
 	@echo ""
 	@grep -E '^[^#[:blank:]]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf $(HELP_FORMAT_STRING), $$1, $$2}'
+	@echo ""
+	@echo "Additionally, you can use the following environment variables:"
+	@echo ""
+	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments to pass to container on 'make enter'"
 	@echo ""
 
 .DEFAULT_GOAL := help
