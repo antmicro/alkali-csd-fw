@@ -134,7 +134,7 @@ ZEPHYR_SDK_VERSION = 0.10.3
 ZEPHYR_SDK_NAME = zephyr-sdk-$(ZEPHYR_SDK_VERSION)
 ZEPHYR_SDK_DOWNLOAD_URL = https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v$(ZEPHYR_SDK_VERSION)/$(ZEPHYR_SDK_NAME)-setup.run
 ZEPHYR_SDK_DOWNLOAD_PATH = $(BUILD_DIR)/zephyr-sdk.run
-ZEPHYR_SDK_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_NAME)
+ZEPHYR_SDK_LOCAL_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_NAME)
 
 ZEPHYR_SOURCES= \
 	$(BUILD_DIR)/zephyr \
@@ -167,15 +167,15 @@ ZEPHYR_SOURCES= \
 
 # Zephyr rules ----------------------------------------------------------------
 .PHONY: zephyr/sdk
-zephyr/sdk: $(ZEPHYR_SDK_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
+zephyr/sdk: $(ZEPHYR_SDK_LOCAL_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "To use local installation of the toolchain set the following environment variables:"
 	@echo "  - ZEPHYR_TOOLCHAIN_VARIANT=zephyr"
-	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)"
+	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_LOCAL_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(WEST_YML)
+zephyr/setup: $(ZEPHYR_SOURCES)
+zephyr/setup: $(WEST_YML)  ## Install Zephyr dependencies and get Zephyr sources
 zephyr/setup: $(WEST_CONFIG)
-zephyr/setup: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
@@ -187,9 +187,9 @@ $(ZEPHYR_SDK_DOWNLOAD_PATH):
 	@mkdir -p $(BUILD_DIR)
 	wget -q $(ZEPHYR_SDK_DOWNLOAD_URL) -O $(ZEPHYR_SDK_DOWNLOAD_PATH)
 
-$(ZEPHYR_SDK_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
+$(ZEPHYR_SDK_LOCAL_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	chmod u+rwx $(ZEPHYR_SDK_DOWNLOAD_PATH)
-	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_INSTALL_DIR)
+	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_LOCAL_INSTALL_DIR)
 
 $(ZEPHYR_SOURCES):
 	west update
@@ -222,7 +222,7 @@ IN_ZEPHYR_ENV = source $(BUILD_DIR)/zephyr/zephyr-env.sh
 IN_SDK_ENV = \
 	source $(BUILD_DIR)/zephyr/zephyr-env.sh && \
 	export ZEPHYR_TOOLCHAIN_VARIANT=zephyr && \
-	export ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_INSTALL_DIR)
+	export ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_LOCAL_INSTALL_DIR)
 
 CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
