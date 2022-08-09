@@ -173,9 +173,8 @@ zephyr/sdk: $(ZEPHYR_SDK_LOCAL_INSTALL_DIR) ## Install Zephyr SDK locally (helpe
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_LOCAL_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(ZEPHYR_SOURCES)
-zephyr/setup: $(WEST_YML)  ## Install Zephyr dependencies and get Zephyr sources
-zephyr/setup: $(WEST_CONFIG)
+zephyr/setup: $(WEST_YML)
+zephyr/setup: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
@@ -191,13 +190,15 @@ $(ZEPHYR_SDK_LOCAL_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	chmod u+rwx $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_LOCAL_INSTALL_DIR)
 
-$(ZEPHYR_SOURCES):
-	west update
-	pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt
+$(ZEPHYR_SOURCES) &: $(WEST_CONFIG)
+	@:
 
 $(WEST_CONFIG): SHELL := /bin/bash
 $(WEST_CONFIG):
-	@if west init -l --mf $(WEST_YML) $(WEST_INIT_DIR); then \
+	@echo "Initialize west for Zephyr."; \
+	if west init -l --mf $(WEST_YML) $(WEST_INIT_DIR); then \
+		west update; \
+		pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt; \
 		echo "Done."; \
 	else \
 		echo ""; \
@@ -243,7 +244,6 @@ rpu-app/clean: ## Remove RPU App build files
 
 # RPU App dependencies --------------------------------------------------------
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
-$(RPUAPP_ZEPHYR_ELF): $(WEST_CONFIG)
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
 
