@@ -51,7 +51,7 @@ BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildro
 
 # Buildroot rules -------------------------------------------------------------
 .PHONY: buildroot
-buildroot: apu-app ## Build Buildroot
+buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
 	cp -r $(BR2_EXTERNAL_DIR) $(BUILDROOT_BUILD_DIR)
 	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BR2_BASALT_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
 	cp $(APUAPP_BUILD_DIR)/apu-app $(BR2_BASALT_OVERLAY_BUILD_DIR)/bin/apu-app
