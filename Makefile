@@ -214,7 +214,6 @@ $(WEST_CONFIG):
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-RPUAPP_MAIN_DIR ?= rpu-app
 RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
@@ -227,7 +226,7 @@ IN_SDK_ENV = \
 
 CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
-WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) $(RPUAPP_MAIN_DIR) $(CMAKE_OPTS)
+WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
 
 # RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app
@@ -316,7 +315,6 @@ help: ## Show this help message
 	@printf $(HELP_FORMAT_STRING) "WEST_INIT_DIR" "Relative path to directory where west should be initialized" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "WEST_CONFIG" "Absolute path to '.west/config' configuration file" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "WEST_YML" "Absolute path to 'west.yml' manifest file" "$(USED_IN_BUILD_MESSAGE)"
-	@printf $(HELP_FORMAT_STRING) "RPUAPP_MAIN_DIR" "Absolute path to RPU application directory" "$(USED_IN_BUILD_MESSAGE)"
 	@echo ""
 
 .DEFAULT_GOAL := help
