@@ -42,19 +42,23 @@ clean: ## Remove ALL build artifacts
 # Buildroot -------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 BR2_EXTERNAL_DIR = $(ROOT_DIR)/br2-external
-BR2_EXTERNAL_BUILD_DIR = $(BUILDROOT_BUILD_DIR)/br2-external
-BR2_BASALT_OVERLAY_BUILD_DIR = $(BR2_EXTERNAL_BUILD_DIR)/board/basalt/overlay
-BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL_BUILD_DIR)
+BR2_EXTERNAL_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/basalt/overlay
+BUILDROOT_BOARD_BUILD_DIR = $(BUILDROOT_BUILD_DIR)/board/basalt
+BUILDROOT_BOARD_OVERLAY_BUILD_DIR = $(BUILDROOT_BOARD_BUILD_DIR)/overlay
+BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL_DIR)
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = $(BUILD_DIR)/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildroot/toolchainfile.cmake
+APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
+
+$(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
+	mkdir -p $@
 
 # Buildroot rules -------------------------------------------------------------
 .PHONY: buildroot
 buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
-	cp -r $(BR2_EXTERNAL_DIR) $(BUILDROOT_BUILD_DIR)
-	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BR2_BASALT_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
-	cp $(APUAPP_BUILD_DIR)/apu-app $(BR2_BASALT_OVERLAY_BUILD_DIR)/bin/apu-app
+	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
+	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
 
@@ -76,9 +80,8 @@ buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buil
 $(BUILDROOT_TOOLCHAIN_CMAKE_FILE): $(BUILDROOT_TOOLCHAIN_TAR_FILE)
 	tar mxf $(BUILDROOT_TOOLCHAIN_TAR_FILE) -C $(BUILD_DIR)
 
-$(BUILDROOT_TOOLCHAIN_TAR_FILE):
-	mkdir -p $(BR2_EXTERNAL_BUILD_DIR)
-	cp -r $(BR2_EXTERNAL_DIR) $(BUILDROOT_BUILD_DIR)
+$(BUILDROOT_TOOLCHAIN_TAR_FILE): | $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)
+	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) sdk
 
@@ -89,7 +92,6 @@ $(BUILDROOT_TOOLCHAIN_TAR_FILE):
 APUAPP_DIR = $(ROOT_DIR)/apu-app
 APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
-APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
 APUAPP_BUILD_TYPE ?= Debug
 
 # APU App rules ---------------------------------------------------------------
