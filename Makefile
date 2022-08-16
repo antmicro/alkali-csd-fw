@@ -1,46 +1,57 @@
-# Helper macros ---------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Common settings -------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 ROOT_DIR = $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 NVME_SPEC_NAME = NVM-Express-1_4-2019.06.10-Ratified.pdf
-NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
+DOCKER_TAG_NAME=fw:1.0
+
+# Input settings -------------------------------------------------------------
 
 DOCKER_IMAGE_BASE ?= debian:bullseye
-DOCKER_TAG_NAME=fw:1.0
-DOCKER_TAG = $(DOCKER_IMAGE_PREFIX)$(DOCKER_TAG_NAME)
+DOCKER_TAG ?= $(DOCKER_IMAGE_PREFIX)$(DOCKER_TAG_NAME)
 
-# Build directories -----------------------------------------------------------
 BUILD_DIR ?= $(ROOT_DIR)/build
+WEST_INIT_DIR ?= $(RPUAPP_DIR)
+
+# Input paths ----------------------------------------------------------------
+
+THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
+REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
+RPUAPP_DIR = $(ROOT_DIR)/rpu-app
+BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
+
+# Output paths ----------------------------------------------------------------
+
 APUAPP_BUILD_DIR = $(BUILD_DIR)/apu-app
 RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
 BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
-
-# Helper directories ----------------------------------------------------------
-THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
-BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
-REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
-RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 DOCKER_BUILD_DIR = $(BUILD_DIR)/docker
-WEST_INIT_DIR ?= $(RPUAPP_DIR)
 
+# Helpers  --------------------------------------------------------------------
+
+NVME_SPEC_FILE = $(REGGEN_DIR)/$(NVME_SPEC_NAME)
 
 # -----------------------------------------------------------------------------
 # All -------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 .PHONY: all
 all: buildroot apu-app rpu-app ## Build all binaries (Buildroot, APU App, RPU App)
-
 
 # -----------------------------------------------------------------------------
 # Clean -----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 .PHONY: clean
 clean: ## Remove ALL build artifacts
 	$(RM) -r $(BUILD_DIR)
 	$(RM) -r $(WEST_DIR)
 
-
 # -----------------------------------------------------------------------------
 # Buildroot -------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 BR2_EXTERNAL_DIR = $(ROOT_DIR)/br2-external
 BR2_EXTERNAL_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/basalt/overlay
 BUILDROOT_BOARD_BUILD_DIR = $(BUILDROOT_BUILD_DIR)/board/basalt
@@ -54,7 +65,6 @@ APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-
 $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 	mkdir -p $@
 
-# Buildroot rules -------------------------------------------------------------
 .PHONY: buildroot
 buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
 	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
@@ -76,7 +86,6 @@ buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_DIR) ## Untar Buildroot toolchain (he
 buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buildroot//menuconfig`
 	$(MAKE) $(BUILDROOT_OPTS) $*
 
-# Buildroot dependencies-------------------------------------------------------
 $(BUILDROOT_TOOLCHAIN_CMAKE_FILE): $(BUILDROOT_TOOLCHAIN_TAR_FILE)
 	tar mxf $(BUILDROOT_TOOLCHAIN_TAR_FILE) -C $(BUILD_DIR)
 
@@ -85,16 +94,15 @@ $(BUILDROOT_TOOLCHAIN_TAR_FILE): | $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) sdk
 
-
 # -----------------------------------------------------------------------------
 # APU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 APUAPP_DIR = $(ROOT_DIR)/apu-app
 APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_BUILD_TYPE ?= Debug
 
-# APU App rules ---------------------------------------------------------------
 .PHONY: apu-app
 apu-app: $(APUAPP_OUTPUTS) ## Build APU App
 
@@ -102,7 +110,6 @@ apu-app: $(APUAPP_OUTPUTS) ## Build APU App
 apu-app/clean: ## Remove APU App build files
 	$(RM) -r $(APUAPP_BUILD_DIR)
 
-# APU App dependencies --------------------------------------------------------
 $(APUAPP_OUTPUTS): $(BUILDROOT_TOOLCHAIN_CMAKE_FILE)
 $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/*.cpp)
 $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/*.hpp)
@@ -125,10 +132,10 @@ $(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 	      -S $(APUAPP_DIR) -B $(APUAPP_BUILD_DIR)
 	$(MAKE) -C $(APUAPP_BUILD_DIR) -j all
 
-
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 WEST_DIR = $(ROOT_DIR)/.west
 WEST_CONFIG ?= $(WEST_DIR)/config
 WEST_YML ?= $(RPUAPP_DIR)/west.yml
@@ -167,7 +174,6 @@ ZEPHYR_SOURCES= \
 	$(BUILD_DIR)/modules/fs/littlefs \
 	$(BUILD_DIR)/modules/debug/mipi-sys-t
 
-# Zephyr rules ----------------------------------------------------------------
 .PHONY: zephyr/sdk
 zephyr/sdk: $(ZEPHYR_SDK_LOCAL_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
 	@echo "To use local installation of the toolchain set the following environment variables:"
@@ -175,15 +181,14 @@ zephyr/sdk: $(ZEPHYR_SDK_LOCAL_INSTALL_DIR) ## Install Zephyr SDK locally (helpe
 	@echo "  - ZEPHYR_SDK_INSTALL_DIR=$(ZEPHYR_SDK_LOCAL_INSTALL_DIR)"
 
 .PHONY: zephyr/setup
-zephyr/setup: $(WEST_YML)
-zephyr/setup: $(ZEPHYR_SOURCES) ## Install Zephyr dependencies and get Zephyr sources
+zephyr/setup: $(WEST_YML) ## Install Zephyr dependencies and get Zephyr sources
+zephyr/setup: $(ZEPHYR_SOURCES)
 
 .PHONY: zephyr/clean
 zephyr/clean: ## Remove Zephyr installed files
 	$(RM) -r $(BUILD_DIR)/zephyr*
 	$(RM) -r $(WEST_DIR)
 
-# Zephyr dependencies ---------------------------------------------------------
 $(ZEPHYR_SDK_DOWNLOAD_PATH):
 	@mkdir -p $(BUILD_DIR)
 	wget -q $(ZEPHYR_SDK_DOWNLOAD_URL) -O $(ZEPHYR_SDK_DOWNLOAD_PATH)
@@ -216,6 +221,7 @@ $(WEST_CONFIG):
 # -----------------------------------------------------------------------------
 # RPU App ---------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
@@ -230,24 +236,21 @@ CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) 
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
 WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
 
-# RPU App rules ---------------------------------------------------------------
 .PHONY: rpu-app
 rpu-app: $(RPUAPP_ZEPHYR_ELF) ## Build RPU App
 
 .PHONY: rpu-app/with-sdk
-rpu-app/with-sdk: SHELL:=/bin/bash
-rpu-app/with-sdk: zephyr/sdk zephyr/setup ## Build RPU App with local Zephyr SDK (helper)
+rpu-app/with-sdk: SHELL:=/bin/bash ## Build RPU App with local Zephyr SDK (helper)
+rpu-app/with-sdk: zephyr/sdk zephyr/setup
 	$(IN_SDK_ENV) && $(WEST_BUILD)
 
 .PHONY: rpu-app/clean
 rpu-app/clean: ## Remove RPU App build files
 	$(RM) -r $(RPUAPP_BUILD_DIR)
 
-# RPU App dependencies --------------------------------------------------------
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
-
 
 # -----------------------------------------------------------------------------
 # Docker ----------------------------------------------------------------------
@@ -276,10 +279,10 @@ $(DOCKER_BUILD_DIR)/docker.ok: fw.dockerfile requirements.txt $(REGGEN_DIR)/requ
 docker/clean:
 	$(RM) -r $(DOCKER_BUILD_DIR)
 
-
 # -----------------------------------------------------------------------------
 # Enter -----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 .PHONY: enter
 enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
 	docker run \
@@ -294,10 +297,10 @@ enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
 		$(DOCKER_RUN_EXTRA_ARGS) \
 		$(DOCKER_TAG)
 
-
 # -----------------------------------------------------------------------------
 # Help ------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 HELP_COLUMN_SPAN = 25
 HELP_FORMAT_STRING = "\033[36m%-$(HELP_COLUMN_SPAN)s\033[0m %s \033[34m%s\033[0m\n"
 USED_IN_BUILD_MESSAGE = (used to configure build inside 'alkali-csd-build')
@@ -310,8 +313,9 @@ help: ## Show this help message
 	@echo "Additionally, you can use the following environment variables:"
 	@echo ""
 	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments to pass to container on 'make enter'" " "
-	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_PREFIX" "Custom registry prefix with '/' at the end" " "
-	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_BASE" "Custom docker image base" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_PREFIX" "Registry prefix with '/' at the end" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_BASE" "Docker image base" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_TAG" "Docker tag for building and running images" " "
 	@printf $(HELP_FORMAT_STRING) "BUILD_DIR" "Absolute path to desired build directory" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "APUAPP_BUILD_TYPE" "APU application build type, Debug (default) or Release" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "WEST_INIT_DIR" "Relative path to directory where west should be initialized" "$(USED_IN_BUILD_MESSAGE)"
