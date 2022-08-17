@@ -74,44 +74,21 @@ includes the most important files and directories.
   repository. Type `make help` to display all the documented rules that can be
   used inside the project.
 
-
 # Prerequisites
 
-To build the whole APU and RPU software you don't need any oddly specific
-dependencies installed but there are few packages required. You might also need
-to install CMake in order to build Zephyr application.
-You can install them using the following commands:
-
-1. Install dependencies:
-```bash
-sudo apt update -y
-sudo apt install -y bc bison build-essential cpio curl default-jdk flex git \
-    gperf libcurl4-openssl-dev libelf-dev libffi-dev libjpeg-dev libpcre3-dev \
-    libssl-dev make ninja-build python3 python3-pip python3-sphinx rsync rustc \
-    unzip wget
+This repository contains the `fw.dockerfile` which can be used to simplify
+the process of installing dependencies. Before running other rules from
+this repository make sure that you build the docker image by using:
 ```
-
-2. Install CMake:
-```bash
-git clone -b v3.16.7 https://gitlab.kitware.com/cmake/cmake.git cmake
-cd cmake
-./bootstrap --system-curl
-make -j$(nproc)
-make install
+make docker
 ```
-
-After succesful installation you might want to delete not needed files with:
-```bash
-cd ..
-rm -rf cmake
-```
-
-3. Install required python packages:
-```bash
-pip3 install -r requirements.txt
-```
+In case you want to install all the prerequisites directly on your machine,
+follow the instructions from the `fw.dockerfile`.
 
 # Usage
+
+If you use docker workflow, use `make enter` to open the docker container
+before running other commands.
 
 To generate software for the alkali board you can simply use:
 ```bash
@@ -121,6 +98,7 @@ This will run all builds one by one in order `APU App`, `Linux system`, `RPU App
 However it might take a lot of time (~2 hours) so you can also choose which part
 would you like to build. Note that in order to build Linux system, you must build
 an APU App first.
+
 * Build APU App:
 ```bash
 make apu-app
@@ -131,8 +109,7 @@ make buildroot
 ```
 * Build RPU App:
 ```bash
-make rpu-app/with-sdk
+make rpu-app
 ```
-If you have Zephyr installed and configured already, you can also omit `/with-sdk` suffix.
 
 The final output files can be found in `build/` directory.
