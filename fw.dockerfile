@@ -67,3 +67,10 @@ RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E4
 RUN apt update
 RUN dpkg -i scala*.deb
 RUN apt install -y sbt=1.4.9
+
+# Install make 4.3
+RUN wget https://ftp.gnu.org/gnu/make/make-4.3.tar.gz
+RUN tar xf make-4.3.tar.gz && cd make-4.3 && ./configure && make -j$(nproc)
+RUN cp make-4.3/make /opt/.
+RUN rm -rf make-4.3*
+ENV PATH="/opt:${PATH}"
