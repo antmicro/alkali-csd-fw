@@ -8,7 +8,6 @@ DOCKER_TAG_NAME=fw:1.0
 
 # Input settings -------------------------------------------------------------
 
-DOCKER_IMAGE_BASE ?= debian:buster
 DOCKER_TAG ?= $(DOCKER_IMAGE_PREFIX)$(DOCKER_TAG_NAME)
 
 BUILD_DIR ?= $(ROOT_DIR)/build
@@ -259,21 +258,22 @@ $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 REGGEN_REL_DIR=$(shell realpath --relative-to $(ROOT_DIR) $(REGGEN_DIR))
 DOCKER_BUILD_PYTHON_REQS_DIR=$(DOCKER_BUILD_DIR)/$(REGGEN_REL_DIR)
 
-.PHONY: docker
-docker: $(DOCKER_BUILD_DIR)/docker.ok ## Build the development docker image
 
 $(DOCKER_BUILD_DIR):
 	@mkdir -p $(DOCKER_BUILD_DIR)
 
-$(DOCKER_BUILD_DIR)/docker.ok: fw.dockerfile requirements.txt $(REGGEN_DIR)/requirements.txt | $(DOCKER_BUILD_DIR)
+.PHONY: docker
+docker: fw.dockerfile ## Build the development docker image
+docker: requirements.txt
+docker: $(REGGEN_DIR)/requirements.txt
+docker: | $(DOCKER_BUILD_DIR)
 	cp $(ROOT_DIR)/fw.dockerfile $(DOCKER_BUILD_DIR)/Dockerfile
 	cp $(ROOT_DIR)/requirements.txt $(DOCKER_BUILD_DIR)/requirements.txt
 	mkdir -p $(DOCKER_BUILD_PYTHON_REQS_DIR)
 	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_PYTHON_REQS_DIR)/requirements.txt
 	cd $(DOCKER_BUILD_DIR) && docker build \
-		--build-arg IMAGE_BASE="$(DOCKER_IMAGE_BASE)" \
-		--build-arg REPO_ROOT="$(PWD)" \
-		-t $(DOCKER_TAG) . && touch docker.ok
+		$(DOCKER_BUILD_EXTRA_ARGS) \
+		-t $(DOCKER_TAG) .
 
 .PHONY: docker/clean
 docker/clean:
@@ -314,8 +314,9 @@ help: ## Show this help message
 	@echo ""
 	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments to pass to container on 'make enter'" " "
 	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_PREFIX" "Registry prefix with '/' at the end" " "
-	@printf $(HELP_FORMAT_STRING) "DOCKER_IMAGE_BASE" "Docker image base" " "
 	@printf $(HELP_FORMAT_STRING) "DOCKER_TAG" "Docker tag for building and running images" " "
+	@printf $(HELP_FORMAT_STRING) "DOCKER_RUN_EXTRA_ARGS" "Extra arguments for running docker container"
+	@printf $(HELP_FORMAT_STRING) "DOCKER_BUILD_EXTRA_ARGS" "Extra arguments for building docker"
 	@printf $(HELP_FORMAT_STRING) "BUILD_DIR" "Absolute path to desired build directory" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "APUAPP_BUILD_TYPE" "APU application build type, Debug (default) or Release" "$(USED_IN_BUILD_MESSAGE)"
 	@printf $(HELP_FORMAT_STRING) "WEST_INIT_DIR" "Relative path to directory where west should be initialized" "$(USED_IN_BUILD_MESSAGE)"
