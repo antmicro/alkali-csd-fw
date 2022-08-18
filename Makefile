@@ -204,7 +204,6 @@ $(WEST_CONFIG):
 	@echo "Initialize west for Zephyr."; \
 	if west init -l --mf $(WEST_YML) $(WEST_INIT_DIR); then \
 		west update; \
-		pip3 install -r $(BUILD_DIR)/zephyr/scripts/requirements.txt; \
 		echo "Done."; \
 	else \
 		echo ""; \
