@@ -67,6 +67,7 @@ $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 
 .PHONY: buildroot
 buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
+	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
 	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
 	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
@@ -89,7 +90,7 @@ buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buil
 $(BUILDROOT_TOOLCHAIN_CMAKE_FILE): $(BUILDROOT_TOOLCHAIN_TAR_FILE)
 	tar mxf $(BUILDROOT_TOOLCHAIN_TAR_FILE) -C $(BUILD_DIR)
 
-$(BUILDROOT_TOOLCHAIN_TAR_FILE):
+$(BUILDROOT_TOOLCHAIN_TAR_FILE): | $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) sdk
 
