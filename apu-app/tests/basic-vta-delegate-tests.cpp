@@ -18,6 +18,8 @@ TEST(BasicVTADelegateTests, ModelLoadingCPU)
     tflite::InterpreterBuilder(*model, resolver)(&interpreter);
 
     interpreter->AllocateTensors();
+
+    interpreter->Invoke();
 }
 
 TEST(BasicVTADelegateTests, ModelLoadingVTA)
@@ -33,4 +35,6 @@ TEST(BasicVTADelegateTests, ModelLoadingVTA)
     interpreter->ModifyGraphWithDelegate(std::move(delegate));
 
     interpreter->AllocateTensors();
+
+    interpreter->Invoke();
 }

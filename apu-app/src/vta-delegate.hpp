@@ -90,57 +90,7 @@ private:
     const SimpleDelegateInterface::Options options; ///< delegate's options
 };
 
-/**
- * Represents implementation of TFLite operation in VTA accelerator.
- */
-class VTAOp
-{
-    public:
-        VTAOp(std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
-
-        std::string name;
-        int tfliteop = 0; ///< builtin code for the TFLite operation corresponding to this op
-
-        std::vector<int> inputs; ///< indices to vector of inputs (and weights) from the context
-        std::vector<int> outputs; ///< indices to vector of outputs
-
-        /**
-         * Provides VTA commands for executing the given operation.
-         */
-        virtual TfLiteStatus getComputeOps() = 0;
-
-        virtual ~VTAOp() = 0;
-};
-
-/**
- * Wrapper for ALU operations on VTA.
- */
-class VTAALUOp : public VTAOp
-{
-    public:
-        VTAALUOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
-
-        int opcode = VTA_ALU_OPCODE_ADD;
-        TfLiteStatus getComputeOps() override;
-        ~VTAALUOp();
-
-    private:
-        TfLiteStatus getAddOps();
-};
-
-/**
- * Wrapper for GEMM operations on VTA.
- */
-class VTAGEMMOp : public VTAOp
-{
-    public:
-        VTAGEMMOp(int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
-        TfLiteStatus getComputeOps() override;
-        ~VTAGEMMOp();
-
-    private:
-        TfLiteStatus getConv2dOps();
-};
+class VTAOp;
 
 /**
  * A TensorFlow Lite Delegate Kernel for VTA accelerator.
@@ -179,21 +129,187 @@ public:
      * @param node node to compute
      */
     TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) override;
+
+    TfLiteContext *context = nullptr;
 private:
-    TfLiteStatus ComputeResult(
-            TfLiteContext* context, int builtin_code,
-            const TfLiteTensor* input_tensor_1,
-            const TfLiteTensor* input_tensor_2,
-            TfLiteTensor* output_tensor);
-
     std::vector<std::shared_ptr<VTAOp>> ops;
+};
 
-    std::vector<std::vector<int>> inputs_, outputs_;
-    std::vector<int> builtin_code_;
+/**
+ * Represents implementation of TFLite operation in VTA accelerator.
+ */
+class VTAOp
+{
+    public:
+        /**
+         * Base constructor for VTAOp.
+         *
+         * It holds indexes to inputs and outputs of the operator, its TFLite opcode and the parent delegate kernel.
+         *
+         * @param parent pointer to the owning VTADelegateKernel
+         * @param name name of the operator
+         * @param tfliteop opcode for the TFLite operation
+         * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
+         * @param tfliteoutputs vector of indexes to tensors with output data for the operator
+         */
+        VTAOp(VTADelegateKernel *parent, std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+
+        VTADelegateKernel *parent; ///< owning VTADelegateKernel
+
+        std::string name; ///< user-friendly name of the operator/subnode
+        int tfliteop = 0; ///< builtin code for the TFLite operation corresponding to this op
+
+        std::vector<int> inputs; ///< indices to vector of inputs (and weights) from the context
+        std::vector<int> outputs; ///< indices to vector of outputs
+
+        /**
+         * Provides VTA commands for executing the given operation.
+         *
+         * @return status of execution
+         */
+        virtual TfLiteStatus compute() = 0;
+
+        /**
+         * Virtual abstract destructor.
+         */
+        virtual ~VTAOp() = 0;
+};
+
+/**
+ * Wrapper for ALU operations on VTA.
+ */
+class VTAALUOp : public VTAOp
+{
+    public:
+        /**
+         * Constructor for ALU operations in VTA.
+         *
+         * @param parent pointer to the owning VTADelegateKernel
+         * @param tfliteop opcode for the TFLite operation
+         * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
+         * @param tfliteoutputs vector of indexes to tensors with output data for the operator
+         */
+        VTAALUOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+
+        int opcode = VTA_ALU_OPCODE_ADD; ///< VTA opcode, used in ALU instruction
+        TfLiteStatus compute() override;
+        ~VTAALUOp();
+
+    private:
+        /**
+         * Performs ALU ADD operation
+         */
+        TfLiteStatus aluAdd();
+};
+
+/**
+ * Wrapper for GEMM operations on VTA.
+ */
+class VTAGEMMOp : public VTAOp
+{
+    public:
+        /**
+         * Constructor for GEMM operations in VTA.
+         *
+         * @param parent pointer to the owning VTADelegateKernel
+         * @param tfliteop opcode for the TFLite operation
+         * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
+         * @param tfliteoutputs vector of indexes to tensors with output data for the operator
+         */
+        VTAGEMMOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+        TfLiteStatus compute() override;
+        ~VTAGEMMOp();
+
+    private:
+        /**
+         * Performs 2D convolution.
+         */
+        TfLiteStatus gemmConv2D();
+
+        /**
+         * Map holding dimensions for GEMM data
+         * CONV2D:
+         *     Input, weights and bias dimensions
+         *         N - batch size
+         *         H - input height
+         *         W - input width
+         *         I - input channels
+         *
+         *         Ho - output height
+         *         Wo - output width
+         *         O - output channels
+         *
+         *         Hk - kernel height
+         *         Wk - kernel width
+         *     Computed dimensions
+         *         No - outer batch size (N / VTA_BATCH)
+         *         Io - outer input channels (I / VTA_BLOCK_IN)
+         *         Oo - outer output channels (O / VTA_BLOCK_OUT)
+         *     Walking dimensions
+         *         paddingH - height padding
+         *         paddingW - width padding
+         *         strideH - stride along height axis
+         *         strideW - stride along width axis
+         */
+        std::unordered_map<std::string, int> dims;
+
+        /**
+         * Resets the dim map.
+         */
+        void resetDims();
+
+        /**
+         * Sets the dimension of given name to a given value.
+         *
+         * @param dimname name of the dimension
+         * @param dimsize size of the dimension
+         */
+        void setDim(std::string dimname, int dimsize);
+
+        /**
+         * Computes step for particular axis in a given layout.
+         *
+         * @param layout array of strings representing layout of the array (dimensions are stored in dims)
+         * @param axis axis for which to compute the step
+         */
+        int getDimStep(const std::vector<std::string> &layout, const std::string &axis);
+
+        /**
+         * Returns size of given dimension.
+         *
+         * @param dimname name of dimension
+         */
+        int dim(std::string dimname);
+
+        /**
+         * Permutes dimensions based on given layouts.
+         *
+         * @param inplayout input layout
+         * @param outlayout output layout
+         * @param inparray input array
+         * @param outarray output array
+         * @param elemsize size of a single element in array
+         */
+        void permuteDims(
+            const std::vector<std::string> &inplayout,
+            const std::vector<std::string> &outlayout,
+            uint8_t *inparray,
+            uint8_t *outarray,
+            const size_t elemsize
+        );
+
+        /**
+         * Returns number of elements for tensor with given layout.
+         * @param layout layout of the tensor
+         * @return size of the tensor in elements
+         */
+        int tensorElements(const std::vector<std::string> &layout);
 };
 
 /**
  * Returns default VTA delegate options.
+ *
+ * @return default VTA delegate options
  */
 tflite::SimpleDelegateInterface::Options TfLiteVTADelegateOptionsDefault();
 
@@ -212,6 +328,15 @@ TfLiteDelegate *TfLiteVTADelegateCreate(const SimpleDelegateInterface::Options *
  */
 void TfLiteVTADelegateDelete(TfLiteDelegate *delegate);
 
+/**
+ * Creates a VTA Delegate.
+ *
+ * @param options_keys list of options' names
+ * @param options_values list of options' values
+ * @param num_options number of options
+ *
+ * @return pointer to the VTA delegate
+ */
 TfLiteDelegate *CreateVTADelegateFromOptions(char **options_keys, char **options_values, size_t num_options);
 };
 
