@@ -67,7 +67,7 @@ $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 .PHONY: buildroot
 buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
 	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
-	cp $(APUAPP_BUILD_DIR)/libvta-delegate.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/libvta-delegate.so
+	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
 	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
