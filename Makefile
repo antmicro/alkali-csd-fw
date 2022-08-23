@@ -65,9 +65,12 @@ $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 	mkdir -p $@
 
 .PHONY: buildroot
-buildroot: $(APUAPP_OUTPUTS) ## Build Buildroot
+buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
 	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
+	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware
 	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
+	cp $(RPUAPP_ZEPHYR_ELF) $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware/zephyr.elf
+	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin
 	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/apu-app
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
