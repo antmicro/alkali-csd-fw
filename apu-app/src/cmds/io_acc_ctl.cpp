@@ -41,7 +41,7 @@ void io_cmd_acc_ctl(payload_t *recv)
 			a->stop();
 			break;
 		case ACC_IO_OP_SET_FW:
-			a->addFirmware(*fw_map[fw_id]);
+			a->addFirmware(fw_map[fw_id]);
 			break;
 		default:
 			printf("Unsupported operation! (%d)\n", op);

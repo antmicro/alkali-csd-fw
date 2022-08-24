@@ -52,6 +52,6 @@ public:
 };
 
 extern std::vector<Acc*> accelerators;
-extern std::map<unsigned int, std::vector<unsigned char>*> fw_map;
+extern std::map<unsigned int, std::vector<unsigned char>> fw_map;
 
 #endif

@@ -5,7 +5,7 @@
 
 #include "acc.h"
 
-std::map<unsigned int, std::vector<unsigned char>*> fw_map;
+std::map<unsigned int, std::vector<unsigned char>> fw_map;
 
 typedef struct cmd_sq {
 	nvme_sq_entry_base_t base;
@@ -31,14 +31,12 @@ void io_cmd_send_fw(payload_t *recv, unsigned char *buf)
 	printf("\n");
 
 	printf("Map keys: ");
-
 	for(auto it = fw_map.begin(); it != fw_map.end(); it++) {
 		printf("%d ", it->first);
 	}
 
 	printf("\n");
 #endif
-	std::vector<unsigned char> *fw = new std::vector<unsigned char>(buf, buf+recv->buf_len);
-
-	fw_map[id] = fw;
+	std::vector<unsigned char> fw(buf, buf+recv->buf_len);
+	fw_map[id] = std::move(fw);
 }
