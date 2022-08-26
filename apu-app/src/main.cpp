@@ -28,6 +28,7 @@ static void init(void)
 	setup_acc();
 	setup_identify();
 	setup_status();
+	cma_init();
 }
 
 int main(int argc, char *argv[])
