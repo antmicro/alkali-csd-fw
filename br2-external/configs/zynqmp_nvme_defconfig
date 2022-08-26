@@ -16,7 +16,7 @@ BR2_LINUX_KERNEL_DEFCONFIG="zynqmp_nvme"
 BR2_LINUX_KERNEL_IMAGE=y
 BR2_LINUX_KERNEL_GZIP=y
 BR2_LINUX_KERNEL_DTS_SUPPORT=y
-BR2_LINUX_KERNEL_CUSTOM_DTS_PATH="${BR2_EXTERNAL_NVME_FIRMWARE_PATH}/board/basalt/kernel/zynqmp-basalt-nvme.dts ${BR2_EXTERNAL_NVME_FIRMWARE_PATH}/board/basalt/kernel/zynqmp.dtsi ${BR2_EXTERNAL_NVME_FIRMWARE_PATH}/board/basalt/kernel/zynqmp-clk-ccf.dtsi"
+BR2_LINUX_KERNEL_INTREE_DTS_NAME="xilinx/zynqmp-zcu106-nvme xilinx/zynqmp-basalt-nvme"
 
 # Bootloaders
 
