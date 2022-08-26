@@ -287,7 +287,7 @@ docker/clean:
 # -----------------------------------------------------------------------------
 
 .PHONY: enter
-enter: $(DOCKER_BUILD_DIR)/docker.ok ## enter the development docker image
+enter: ## enter the development docker image
 	docker run \
 		--rm \
 		-v $(PWD):$(PWD) \
