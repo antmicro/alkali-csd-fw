@@ -59,7 +59,7 @@ BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = $(BUILD_DIR)/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildroot/toolchainfile.cmake
-APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app
+APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app $(APUAPP_BUILD_DIR)/tflite-delegate-test
 
 $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 	mkdir -p $@
@@ -71,7 +71,8 @@ buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
 	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
 	cp $(RPUAPP_ZEPHYR_ELF) $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware/zephyr.elf
 	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin
-	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/apu-app
+	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
+	cp $(APUAPP_BUILD_DIR)/tflite-delegate-test $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
 
