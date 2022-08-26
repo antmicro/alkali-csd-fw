@@ -9,6 +9,8 @@
 #include <sys/printk.h>
 #include <string.h>
 
+#define DEBUG
+
 typedef struct nvme_dma_priv {
 	mem_addr_t base;
 
@@ -170,6 +172,7 @@ int nvme_dma_xfer_host_to_mem(void* arg, uint64_t src, uint32_t dst, uint32_t le
 	nvme_dma_xfer_def_t *desc = nvme_dma_xfer_fill_desc(priv, src, dst, len, 0xAA, cb, cb_arg);
 	unsigned long long lock;
 
+	printk("%s\n", __FUNCTION__);
 	if(desc) {
 		lock = irq_lock();
 		k_fifo_put(&priv->rx_fifo, desc);

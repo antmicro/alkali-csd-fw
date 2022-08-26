@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <math.h>
+#define DEBUG
 
 static nvme_tc_priv_t p_tc = {0};
 
@@ -134,6 +135,7 @@ static void nvme_tc_tail_handler(nvme_tc_priv_t *priv, const int qid)
 	uint32_t tail = sys_read32(priv->base + DOORBELL_TAIL(qid));
 
 	priv->sq_tail[qid] = tail;
+	printk("%s\n", __FUNCTION__);
 
 	while(priv->sq_tail[qid] != priv->sq_head[qid]) {
 		uint64_t host_addr = nvme_tc_get_sq_addr(priv, qid);
@@ -161,6 +163,7 @@ static void nvme_tc_irq_handler(void *arg)
 	nvme_tc_priv_t *priv = (nvme_tc_priv_t*)arg;
 	bool io_queue_handled = false;
 
+	printk("%s\n", __FUNCTION__);
 	while(sys_read32(priv->base + NVME_TC_REG_IRQ_STA)) {
 		uint16_t reg = sys_read32(priv->base + NVME_TC_REG_IRQ_DAT) * 4;
 #ifdef DEBUG
@@ -168,30 +171,39 @@ static void nvme_tc_irq_handler(void *arg)
 #endif
 		switch(reg) {
 			case NVME_TC_REG_CC:
+				printk("NVME_TC_REG_CC\n");
 				nvme_tc_cc_handler(priv);
 				break;
 			case NVME_TC_REG_AQA:
+				printk("NVME_TC_REG_AQA\n");
 				nvme_tc_aqa_handler(priv);
 				break;
 			case NVME_TC_REG_ASQ_0:
+				printk("NVME_TC_REG_ASQ_0\n");
 				/* This will be handled in ASQ_1 handler */
 				break;
 			case NVME_TC_REG_ASQ_1:
+				printk("NVME_TC_REG_ASQ_1\n");
 				nvme_tc_asq_handler(priv);
 				break;
 			case NVME_TC_REG_ACQ_0:
+				printk("NVME_TC_REG_ACQ_0\n");
 				/* This will be handled in ACQ_1 handler */
 				break;
 			case NVME_TC_REG_ACQ_1:
+				printk("NVME_TC_REG_ACQ_1\n");
 				nvme_tc_acq_handler(priv);
 				break;
 			case NVME_TC_REG_ADM_TAIL:
+				printk("NVME_TC_REG_ADM_TAIL\n");
 				nvme_tc_tail_handler(priv, ADM_QUEUE_ID);
 				break;
 			case NVME_TC_REG_ADM_HEAD:
+				printk("NVME_TC_REG_ADM_HEAD\n");
 				nvme_tc_head_handler(priv, ADM_QUEUE_ID);
 				break;
 			default:
+				printk("DEFAULT\n");
 				for(int i = 0; i < QUEUES; i++) {
 					if(reg == NVME_TC_REG_IO_TAIL(i)) {
 						nvme_tc_tail_handler(priv, i + 1);

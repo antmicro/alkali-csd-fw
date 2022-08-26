@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "acc.h"
+#define DEBUG
 
 std::map<unsigned int, std::vector<unsigned char>> fw_map;
 

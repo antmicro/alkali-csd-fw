@@ -101,6 +101,7 @@ void nvme_cmd_handler(void *cmd_priv, void *buf)
 	nvme_cmd_priv_t *priv = (nvme_cmd_priv_t*)cmd_priv;
 
 	fill_cq_resp(priv);
+	printk("NVME CMD handler\n");
 
 	if(priv->qid == ADM_QUEUE_ID)
 		handle_adm(priv);
