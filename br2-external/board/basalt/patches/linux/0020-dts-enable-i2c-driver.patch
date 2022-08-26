@@ -1,0 +1,28 @@
+From 7667286de6a8cdb64ba603e8d0afaed9c05e0cee Mon Sep 17 00:00:00 2001
+From: joychauhan-sudo <jyotindrasinh.chauhan@aumraj.com>
+Date: Wed, 24 Aug 2022 18:18:19 +0530
+Subject: [PATCH 20/20] dts: enable i2c driver
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+index fcc23ef1e9a2..e3cc3ef0ca7d 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+@@ -261,6 +261,11 @@
+ 	status = "okay";
+ };
+ 
++&i2c1 {
++	status = "okay";
++	pinctrl-names = "default";
++};
++
+ &uart0 {
+ 	status = "okay";
+ 	pinctrl-names = "default";
+-- 
+2.25.1
+

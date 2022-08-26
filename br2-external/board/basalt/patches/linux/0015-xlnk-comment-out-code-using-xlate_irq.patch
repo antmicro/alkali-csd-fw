@@ -1,0 +1,32 @@
+From 70ccd277e7e9715f561b51c4175011e899e0f6ac Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Mon, 25 Oct 2021 10:33:46 +0200
+Subject: [PATCH 15/20] xlnk: comment out code using xlate_irq
+
+---
+ drivers/staging/apf/xlnk.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/staging/apf/xlnk.c b/drivers/staging/apf/xlnk.c
+index 4701898cc5ec..f1e1a044fae0 100644
+--- a/drivers/staging/apf/xlnk.c
++++ b/drivers/staging/apf/xlnk.c
+@@ -1118,6 +1118,7 @@ static irqreturn_t xlnk_accel_isr(int irq, void *arg)
+ static int xlnk_irq_register_ioctl(struct file *filp, unsigned int code,
+ 				   unsigned long args)
+ {
++	/*
+ 	union xlnk_args temp_args;
+ 	int status;
+ 	int i;
+@@ -1189,6 +1190,7 @@ static int xlnk_irq_register_ioctl(struct file *filp, unsigned int code,
+ 			      sizeof(temp_args.irqregister));
+ 
+ 	return status;
++	*/
+ }
+ 
+ static int xlnk_irq_unregister_ioctl(struct file *filp, unsigned int code,
+-- 
+2.25.1
+

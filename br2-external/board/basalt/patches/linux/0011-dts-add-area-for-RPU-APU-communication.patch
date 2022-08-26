@@ -1,0 +1,39 @@
+From 51e9288ef21c9c9cf47b14cd5882534847ab5355 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Mon, 24 May 2021 16:29:21 +0200
+Subject: [PATCH 11/20] dts: add area for RPU-APU communication
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index 6bdf2a06c1ce..47200b45c7b5 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -51,7 +51,12 @@
+ 		ranges;
+ 		rproc_0_reserved: rproc@60000000 {
+ 			no-map;
+-			reg = <0x0 0x60000000 0x0 0x20000000>;
++			reg = <0x0 0x60000000 0x0 0x1ff00000>;
++		};
++		rproc_0_dma: rproc@7ff00000 {
++			compatible = "shared-dma-pool";
++			no-map;
++			reg = <0x0 0x7ff00000 0x0 0x100000>;
+ 		};
+ 	};
+ 
+@@ -81,7 +86,7 @@
+ 			#address-cells = <0x2>;
+ 			#size-cells = <0x2>;
+ 			ranges;
+-			memory-region = <&rproc_0_reserved>;
++			memory-region = <&rproc_0_reserved>, <&rproc_0_dma>;
+ 			pnode-id = <0x7>;
+ 			mboxes = <&ipi_mailbox_rpu0 0>,
+ 					<&ipi_mailbox_rpu0 1>;
+-- 
+2.25.1
+

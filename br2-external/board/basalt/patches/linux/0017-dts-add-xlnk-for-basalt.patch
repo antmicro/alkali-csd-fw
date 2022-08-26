@@ -1,0 +1,27 @@
+From 412e6716086c3fb3707964605abe3e7b14a4de91 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Tue, 16 Nov 2021 15:08:44 +0100
+Subject: [PATCH 17/20] dts: add xlnk for basalt
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+index 5b08c2476d19..6d4f87195180 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+@@ -67,6 +67,10 @@
+ 		};
+ 	};
+ 
++	xlnk {
++		compatible = "xlnx,xlnk-1.0";
++	};
++
+ 	zynqmp_rpu: zynqmp_rpu {
+ 		compatible = "xlnx,zynqmp-r5-remoteproc-1.0";
+ 		core_conf = "split";
+-- 
+2.25.1
+

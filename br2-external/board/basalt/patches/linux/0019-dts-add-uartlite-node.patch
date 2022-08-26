@@ -1,0 +1,67 @@
+From 6599a604b6418b65040f8818a79ceefbfff8b9c5 Mon Sep 17 00:00:00 2001
+From: joychauhan-sudo <jyotindrasinh.chauhan@aumraj.com>
+Date: Sat, 25 Jun 2022 10:15:20 +0530
+Subject: [PATCH 19/20] dts: add uartlite node
+
+---
+ .../boot/dts/xilinx/zynqmp-basalt-nvme.dts    | 33 +++++++++++++++++--
+ 1 file changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+index ade8da8f5033..fcc23ef1e9a2 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+@@ -24,12 +24,13 @@
+ 		rtc0 = &rtc;
+ 		serial0 = &uart0;
+ 		serial1 = &uart1;
++		serial2 = "/amba_pl/serial@b0090000";
+ 		spi0 = &qspi;
+ 	};
+ 
+ 	chosen {
+-		bootargs = "earlycon";
+-		stdout-path = "serial1:115200n8";
++		bootargs = "earlycon console=ttyUL0,115200 clk_ignore_unused";
++		stdout-path = "serial2:115200n8";
+ 	};
+ 
+ 	memory@0 {
+@@ -123,6 +124,34 @@
+ 			xlnx,ipi-id = <1>;
+ 		};
+ 	};
++
++	amba_pl {
++                #address-cells = <0x2>;
++                #size-cells = <0x2>;
++                compatible = "simple-bus";
++                ranges;
++
++                serial@b0090000 {
++                        clock-names = "s_axi_aclk";
++                        clocks = <0x38>;
++                        compatible = "xlnx,axi-uartlite-2.0", "xlnx,xps-uartlite-1.00.a";
++                        current-speed = <0x1c200>;
++                        device_type = "serial";
++                        interrupt-names = "interrupt";
++			interrupt-parent = <0x4>;
++			interrupts = <0x0 0x5b 0x4>;
++			port-number = <0x0>;
++                        reg = <0x0 0xb0090000 0x0 0x10000>;
++                        xlnx,baudrate = <0x1c200>;
++                        xlnx,data-bits = <0x8>;
++                        xlnx,odd-parity = <0x0>;
++                        xlnx,s-axi-aclk-freq-hz-d = "250.0";
++                        xlnx,use-parity = <0x0>;
++                        phandle = <0xa9>;
++			status = "okay";
++                };
++        };
++
+ };
+ 
+ &qspi {
+-- 
+2.25.1
+

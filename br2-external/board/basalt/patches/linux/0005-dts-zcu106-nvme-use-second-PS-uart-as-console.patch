@@ -1,0 +1,25 @@
+From 99e87b83b9233e3dabccb9a8087c8c14761626ca Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Fri, 26 Mar 2021 09:18:51 +0100
+Subject: [PATCH 05/20] dts: zcu106-nvme: use second PS uart as console
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index 3d387ba5c7cb..ea0324425026 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -36,7 +36,7 @@
+ 
+ 	chosen {
+ 		bootargs = "earlycon";
+-		stdout-path = "serial0:115200n8";
++		stdout-path = "serial1:115200n8";
+ 		xlnx,eeprom = &eeprom;
+ 	};
+ 
+-- 
+2.25.1
+

@@ -1,0 +1,25 @@
+From d05ec3617faab4d886fa453ce1e9fca24bbe797f Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Thu, 25 Mar 2021 12:05:53 +0100
+Subject: [PATCH 02/20] scripts: fix issue with building using gcc10
+
+---
+ scripts/dtc/dtc-lexer.l | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/dtc/dtc-lexer.l b/scripts/dtc/dtc-lexer.l
+index 615b7ec6588f..a26c7636c704 100644
+--- a/scripts/dtc/dtc-lexer.l
++++ b/scripts/dtc/dtc-lexer.l
+@@ -38,7 +38,7 @@ LINECOMMENT	"//".*\n
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++extern YYLTYPE yylloc;
+ extern bool treesource_error;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
+-- 
+2.25.1
+

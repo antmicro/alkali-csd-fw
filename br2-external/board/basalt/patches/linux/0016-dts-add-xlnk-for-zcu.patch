@@ -1,0 +1,27 @@
+From 28736c7c8e966f86d22e2d97e330e663b1e471a0 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Mon, 25 Oct 2021 15:09:31 +0200
+Subject: [PATCH 16/20] dts: add xlnk for zcu
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index 47200b45c7b5..1e723ea8538f 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -75,6 +75,10 @@
+ 		};
+ 	};
+ 
++	xlnk {
++		compatible = "xlnx,xlnk-1.0";
++	};
++
+ 	zynqmp_rpu: zynqmp_rpu {
+ 		compatible = "xlnx,zynqmp-r5-remoteproc-1.0";
+ 		core_conf = "split";
+-- 
+2.25.1
+

@@ -1,0 +1,79 @@
+From f7ba900553cba6044eb52868e360af0db731dfce Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Mon, 29 Mar 2021 18:11:17 +0200
+Subject: [PATCH 07/20] dts: nvme: update config to match OpenAMP xilinx
+ examples
+
+---
+ .../boot/dts/xilinx/zynqmp-zcu106-nvme.dts    | 27 ++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index ea0324425026..450271d1ca74 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -69,8 +69,8 @@
+ 			ranges;
+ 			memory-region = <&rproc_0_fw_reserved>;
+ 			pnode-id = <0x7>;
+-			mboxes = <&ipi_mailbox_rpu0 0>, <&ipi_mailbox_rpu0 1>;
+-			mbox-names = "tx", "rx";
++			//mboxes = <&ipi_mailbox_rpu0 0>, <&ipi_mailbox_rpu0 1>;
++			//mbox-names = "tx", "rx";
+ 			tcm_a: tcm@0 {
+ 				reg = <0x0 0xFFE00000 0x0 0x10000>;
+ 				pnode-id = <0xf>;
+@@ -82,6 +82,21 @@
+ 		};
+ 	};
+ 
++	amba {
++		shm0: shm@0 {
++			compatible = "shm_uio";
++			reg = <0x0 0x3ed80000 0x0 0x1000000>;
++		};
++
++		ipi_amp: ipi@ff340000 {
++			compatible = "ipi_uio";
++			reg = <0x0 0xff340000 0x0 0x1000>;
++			interrupt-parent = <&gic>;
++			interrupts = <0 29 4>;
++		};
++	};
++
++	/*
+ 	zynqmp-ipi {
+ 		compatible = "xlnx,zynqmp-ipi-mailbox";
+ 		interrupt-parent = <&gic>;
+@@ -91,7 +106,7 @@
+ 		#size-cells = <1>;
+ 		ranges;
+ 
+-		/* APU<->RPU0 IPI mailbox controller */
++		//APU<->RPU0 IPI mailbox controller
+ 		ipi_mailbox_rpu0: mailbox@ff90600 {
+ 			reg = <0xff990600 0x20>,
+ 			      <0xff990620 0x20>,
+@@ -105,6 +120,7 @@
+ 			xlnx,ipi-id = <1>;
+ 		};
+ 	};
++	*/
+ 
+ 	gpio-keys {
+ 		compatible = "gpio-keys";
+@@ -128,6 +144,11 @@
+ 	};
+ };
+ 
++&ttc0 {
++	compatible = "ttc0";
++	status = "okay";
++};
++
+ &can1 {
+ 	status = "okay";
+ 	pinctrl-names = "default";
+-- 
+2.25.1
+

@@ -1,0 +1,44 @@
+From 90f26c6e7702eea552a4674b756731179ef92eed Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Mon, 5 Jul 2021 13:19:29 +0200
+Subject: [PATCH 13/20] dts: add qspi for basalt
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+index 8756e70707ba..5b08c2476d19 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+@@ -24,6 +24,7 @@
+ 		rtc0 = &rtc;
+ 		serial0 = &uart0;
+ 		serial1 = &uart1;
++		spi0 = &qspi;
+ 	};
+ 
+ 	chosen {
+@@ -120,6 +121,19 @@
+ 	};
+ };
+ 
++&qspi {
++	status = "okay";
++	flash@0 {
++		compatible = "m25p80", "jedec,spi-nor";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		reg = <0x0>;
++		spi-tx-bus-width = <1>;
++		spi-rx-bus-width = <4>;
++		spi-max-frequency = <108000000>;
++	};
++};
++
+ &ttc0 {
+ 	compatible = "ttc0";
+ 	status = "okay";
+-- 
+2.25.1
+

@@ -1,0 +1,24 @@
+From 15623eed20badb784cef9d1e8571a1f6769a5959 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Wed, 24 Mar 2021 17:31:06 +0100
+Subject: [PATCH 01/20] dts: fix AR#73079 SD card bug
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-zcu106-revA.dts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-revA.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-revA.dts
+index 32c35869a1a9..a71dc8373d2c 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-revA.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-revA.dts
+@@ -828,6 +828,7 @@
+ 	pinctrl-0 = <&pinctrl_sdhci1_default>;
+ 	no-1-8-v;
+ 	xlnx,mio_bank = <1>;
++	no-1-8-v;
+ };
+ 
+ &serdes {
+-- 
+2.25.1
+

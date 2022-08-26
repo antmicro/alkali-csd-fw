@@ -1,0 +1,260 @@
+From dadff518f0a1b07f0abd6af1c145984cea991c3e Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Tue, 8 Jun 2021 18:52:45 +0200
+Subject: [PATCH 12/20] dts: add basalt support
+
+---
+ arch/arm64/boot/dts/xilinx/Makefile           |   1 +
+ .../boot/dts/xilinx/zynqmp-basalt-nvme.dts    | 231 ++++++++++++++++++
+ 2 files changed, 232 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+
+diff --git a/arch/arm64/boot/dts/xilinx/Makefile b/arch/arm64/boot/dts/xilinx/Makefile
+index 87f468838a4b..de1547a6686e 100644
+--- a/arch/arm64/boot/dts/xilinx/Makefile
++++ b/arch/arm64/boot/dts/xilinx/Makefile
+@@ -19,3 +19,4 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu106-revA.dtb
+ dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu106-nvme.dtb
+ dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu111-revA.dtb
+ dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu1285-revA.dtb
++dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-basalt-nvme.dtb
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+new file mode 100644
+index 000000000000..8756e70707ba
+--- /dev/null
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+@@ -0,0 +1,231 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * dts file for Xilinx ZynqMP ZCU106
++ *
++ * (C) Copyright 2016, Xilinx, Inc.
++ *
++ * Michal Simek <michal.simek@xilinx.com>
++ */
++
++/dts-v1/;
++
++#include "zynqmp.dtsi"
++#include "zynqmp-clk-ccf.dtsi"
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/pinctrl-zynqmp.h>
++#include <dt-bindings/phy/phy.h>
++
++/ {
++	model = "ZynqMP Basalt (NVMe)";
++	compatible = "xlnx,zynqmp";
++
++	aliases {
++		rtc0 = &rtc;
++		serial0 = &uart0;
++		serial1 = &uart1;
++	};
++
++	chosen {
++		bootargs = "earlycon";
++		stdout-path = "serial1:115200n8";
++	};
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x0 0x0 0x0 0x80000000>, <0x8 0x00000000 0x0 0x80000000>;
++	};
++
++	reserved-memory {
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++		rproc_0_reserved: rproc@60000000 {
++			no-map;
++			reg = <0x0 0x60000000 0x0 0x1ff00000>;
++		};
++		rproc_0_dma: rproc@7ff00000 {
++			compatible = "shared-dma-pool";
++			no-map;
++			reg = <0x0 0x7ff00000 0x0 0x100000>;
++		};
++	};
++
++	power-domains {
++		pd_r5_0: pd_r5_0 {
++			#power-domain-cells = <0x0>;
++			pd-id = <0x7>;
++		};
++		pd_tcm_0_a: pd_tcm_0_a {
++			#power-domain-cells = <0x0>;
++			pd-id = <0xf>;
++		};
++		pd_tcm_0_b: pd_tcm_0_b {
++			#power-domain-cells = <0x0>;
++			pd-id = <0x10>;
++		};
++	};
++
++	zynqmp_rpu: zynqmp_rpu {
++		compatible = "xlnx,zynqmp-r5-remoteproc-1.0";
++		core_conf = "split";
++		#address-cells = <0x2>;
++		#size-cells = <0x2>;
++		ranges;
++
++		r5_0: r5@0 {
++			#address-cells = <0x2>;
++			#size-cells = <0x2>;
++			ranges;
++			memory-region = <&rproc_0_reserved>, <&rproc_0_dma>;
++			pnode-id = <0x7>;
++			mboxes = <&ipi_mailbox_rpu0 0>,
++					<&ipi_mailbox_rpu0 1>;
++			mbox-names = "tx", "rx";
++
++			r5_0_tcm_a: tcm@ffe00000 {
++				reg = <0 0xFFE00000 0x0 0x10000>;
++				pnode-id = <0xf>;
++			};
++			r5_0_tcm_b: tcm@ffe20000 {
++				reg = <0 0xFFE20000 0x0 0x10000>;
++				pnode-id = <0x10>;
++		};
++	};
++
++	} ;
++
++	zynqmp_ipi {
++		compatible = "xlnx,zynqmp-ipi-mailbox";
++		interrupt-parent = <&gic>;
++		interrupts = <0 29 4>;
++		xlnx,ipi-id = <0x7>;
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges;
++
++		/* APU<->RPU0 IPI mailbox controller */
++		ipi_mailbox_rpu0: mailbox@ff990600 {
++			reg = <0xff990600 0x20>,
++			<0xff990620 0x20>,
++			<0xff9900c0 0x20>,
++			<0xff9900e0 0x20>;
++			reg-names = "local_request_region",
++					"local_response_region",
++					"remote_request_region",
++					"remote_response_region";
++			#mbox-cells = <1>;
++			xlnx,ipi-id = <1>;
++		};
++	};
++};
++
++&ttc0 {
++	compatible = "ttc0";
++	status = "okay";
++};
++
++&fpd_dma_chan1 {
++	status = "okay";
++};
++
++&fpd_dma_chan2 {
++	status = "okay";
++};
++
++&fpd_dma_chan3 {
++	status = "okay";
++};
++
++&fpd_dma_chan4 {
++	status = "okay";
++};
++
++&fpd_dma_chan5 {
++	status = "okay";
++};
++
++&fpd_dma_chan6 {
++	status = "okay";
++};
++
++&fpd_dma_chan7 {
++	status = "okay";
++};
++
++&fpd_dma_chan8 {
++	status = "okay";
++};
++
++&gpu {
++	status = "okay";
++};
++
++&pinctrl0 {
++	status = "okay";
++	pinctrl_uart0_default: uart0-default {
++		mux {
++			groups = "uart0_4_grp";
++			function = "uart0";
++		};
++
++		conf {
++			groups = "uart0_4_grp";
++			slew-rate = <SLEW_RATE_SLOW>;
++			io-standard = <IO_STANDARD_LVCMOS18>;
++		};
++
++		conf-rx {
++			pins = "MIO18";
++			bias-high-impedance;
++		};
++
++		conf-tx {
++			pins = "MIO19";
++			bias-disable;
++		};
++	};
++
++	pinctrl_uart1_default: uart1-default {
++		mux {
++			groups = "uart1_5_grp";
++			function = "uart1";
++		};
++
++		conf {
++			groups = "uart1_5_grp";
++			slew-rate = <SLEW_RATE_SLOW>;
++			io-standard = <IO_STANDARD_LVCMOS18>;
++		};
++
++		conf-rx {
++			pins = "MIO21";
++			bias-high-impedance;
++		};
++
++		conf-tx {
++			pins = "MIO20";
++			bias-disable;
++		};
++	};
++};
++
++&rtc {
++	status = "okay";
++};
++
++&uart0 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart0_default>;
++};
++
++&uart1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1_default>;
++};
++
++&watchdog0 {
++	status = "okay";
++};
+-- 
+2.25.1
+

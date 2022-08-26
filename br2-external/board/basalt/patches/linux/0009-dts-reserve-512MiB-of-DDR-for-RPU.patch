@@ -1,0 +1,35 @@
+From d16b0acb3f06723df3ddb8e1c1a1b1d54c795d55 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Tue, 11 May 2021 09:44:42 +0200
+Subject: [PATCH 09/20] dts: reserve 512MiB of DDR for RPU
+
+---
+ arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index 67b9b85568cd..518730d874de 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -49,14 +49,14 @@
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+ 		ranges;
+-		rproc_0_reserved: rproc@3ed000000 {
++		rproc_0_reserved: rproc@60000000 {
+ 			no-map;
+-			reg = <0x0 0x3ed00000 0x0 0x40000>;
++			reg = <0x0 0x60000000 0x0 0x1000000>;
+ 		};
+-		rproc_0_dma: rproc@3ed40000 {
++		rproc_0_dma: rproc@61000000 {
+ 			compatible = "shared-dma-pool";
+ 			no-map;
+-			reg = <0x0 0x3ed40000 0x0 0x100000>;
++			reg = <0x0 0x61000000 0x0 0x1e000000>;
+ 		};
+ 	};
+ 
+-- 
+2.25.1
+

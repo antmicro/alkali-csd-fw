@@ -1,0 +1,175 @@
+From 9a182738d2455eb2803b6406259beeee976569ff Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Tue, 20 Apr 2021 17:02:25 +0200
+Subject: [PATCH 08/20] rebase to 2019.1
+
+---
+ .../boot/dts/xilinx/zynqmp-zcu106-nvme.dts    | 88 ++++++++++---------
+ arch/arm64/configs/zynqmp_nvme_defconfig      |  7 +-
+ 2 files changed, 52 insertions(+), 43 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+index 450271d1ca74..67b9b85568cd 100644
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-zcu106-nvme.dts
+@@ -49,78 +49,84 @@
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+ 		ranges;
+-		/* R5 0 firmware memory in DDR */
+-		rproc_0_fw_reserved: rproc@3ed000000 {
++		rproc_0_reserved: rproc@3ed000000 {
+ 			no-map;
+-			reg = <0x0 0x3ed00000 0x0 0x2000000>;
++			reg = <0x0 0x3ed00000 0x0 0x40000>;
++		};
++		rproc_0_dma: rproc@3ed40000 {
++			compatible = "shared-dma-pool";
++			no-map;
++			reg = <0x0 0x3ed40000 0x0 0x100000>;
+ 		};
+ 	};
+ 
++	power-domains {
++		pd_r5_0: pd_r5_0 {
++			#power-domain-cells = <0x0>;
++			pd-id = <0x7>;
++		};
++		pd_tcm_0_a: pd_tcm_0_a {
++			#power-domain-cells = <0x0>;
++			pd-id = <0xf>;
++		};
++		pd_tcm_0_b: pd_tcm_0_b {
++			#power-domain-cells = <0x0>;
++			pd-id = <0x10>;
++		};
++	};
+ 
+-	zynqmp-rpu {
++	zynqmp_rpu: zynqmp_rpu {
+ 		compatible = "xlnx,zynqmp-r5-remoteproc-1.0";
+ 		core_conf = "split";
+-		#address-cells = <2>;
+-		#size-cells = <2>;
++		#address-cells = <0x2>;
++		#size-cells = <0x2>;
+ 		ranges;
++
+ 		r5_0: r5@0 {
+-			#address-cells = <2>;
+-			#size-cells = <2>;
++			#address-cells = <0x2>;
++			#size-cells = <0x2>;
+ 			ranges;
+-			memory-region = <&rproc_0_fw_reserved>;
++			memory-region = <&rproc_0_reserved>, <&rproc_0_dma>;
+ 			pnode-id = <0x7>;
+-			//mboxes = <&ipi_mailbox_rpu0 0>, <&ipi_mailbox_rpu0 1>;
+-			//mbox-names = "tx", "rx";
+-			tcm_a: tcm@0 {
+-				reg = <0x0 0xFFE00000 0x0 0x10000>;
++			mboxes = <&ipi_mailbox_rpu0 0>,
++					<&ipi_mailbox_rpu0 1>;
++			mbox-names = "tx", "rx";
++
++			r5_0_tcm_a: tcm@ffe00000 {
++				reg = <0 0xFFE00000 0x0 0x10000>;
+ 				pnode-id = <0xf>;
+ 			};
+-			tcm_b: tcm@1 {
+-				reg = <0x0 0xFFE20000 0x0 0x10000>;
++			r5_0_tcm_b: tcm@ffe20000 {
++				reg = <0 0xFFE20000 0x0 0x10000>;
+ 				pnode-id = <0x10>;
+-			};
+ 		};
+ 	};
+ 
+-	amba {
+-		shm0: shm@0 {
+-			compatible = "shm_uio";
+-			reg = <0x0 0x3ed80000 0x0 0x1000000>;
+-		};
+-
+-		ipi_amp: ipi@ff340000 {
+-			compatible = "ipi_uio";
+-			reg = <0x0 0xff340000 0x0 0x1000>;
+-			interrupt-parent = <&gic>;
+-			interrupts = <0 29 4>;
+-		};
+-	};
++	} ;
+ 
+-	/*
+-	zynqmp-ipi {
++	zynqmp_ipi {
+ 		compatible = "xlnx,zynqmp-ipi-mailbox";
+ 		interrupt-parent = <&gic>;
+ 		interrupts = <0 29 4>;
+-		xlnx,ipi-id = <7>;
++		xlnx,ipi-id = <0x7>;
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges;
+ 
+-		//APU<->RPU0 IPI mailbox controller
+-		ipi_mailbox_rpu0: mailbox@ff90600 {
++		/* APU<->RPU0 IPI mailbox controller */
++		ipi_mailbox_rpu0: mailbox@ff990600 {
+ 			reg = <0xff990600 0x20>,
+-			      <0xff990620 0x20>,
+-			      <0xff9900c0 0x20>,
+-			      <0xff9900e0 0x20>;
++			<0xff990620 0x20>,
++			<0xff9900c0 0x20>,
++			<0xff9900e0 0x20>;
+ 			reg-names = "local_request_region",
+-				    "local_response_region",
+-				    "remote_request_region",
+-				    "remote_response_region";
++					"local_response_region",
++					"remote_request_region",
++					"remote_response_region";
+ 			#mbox-cells = <1>;
+ 			xlnx,ipi-id = <1>;
+ 		};
+ 	};
+-	*/
+ 
+ 	gpio-keys {
+ 		compatible = "gpio-keys";
+diff --git a/arch/arm64/configs/zynqmp_nvme_defconfig b/arch/arm64/configs/zynqmp_nvme_defconfig
+index b676e5d9e996..911ab426caf9 100644
+--- a/arch/arm64/configs/zynqmp_nvme_defconfig
++++ b/arch/arm64/configs/zynqmp_nvme_defconfig
+@@ -315,6 +315,8 @@ CONFIG_EDAC_SYNOPSYS=y
+ CONFIG_EDAC_ZYNQMP_OCM=y
+ CONFIG_RTC_CLASS=y
+ CONFIG_RTC_DRV_ZYNQMP=y
++CONFIG_DMADEVICES=y
++CONFIG_XILINX_DMA_ENGINES=y
+ CONFIG_XILINX_DMA=y
+ CONFIG_XILINX_ZYNQMP_DMA=y
+ CONFIG_DMATEST=y
+@@ -338,8 +340,8 @@ CONFIG_COMMON_CLK_SI5324=y
+ CONFIG_COMMON_CLK_ZYNQMP=y
+ CONFIG_ARM_SMMU=y
+ CONFIG_REMOTEPROC=y
+-CONFIG_ZYNQMP_R5_REMOTEPROC=m
+-CONFIG_RPMSG_CHAR=m
++CONFIG_ZYNQMP_R5_REMOTEPROC=y
++CONFIG_RPMSG_CHAR=y
+ CONFIG_XILINX_VCU=m
+ CONFIG_IIO=y
+ CONFIG_XILINX_XADC=y
+@@ -356,6 +358,7 @@ CONFIG_XILINX_PR_DECOUPLER=y
+ CONFIG_FPGA_REGION=y
+ CONFIG_OF_FPGA_REGION=y
+ CONFIG_FPGA_MGR_ZYNQMP_FPGA=y
++CONFIG_EXT2_FS=y
+ CONFIG_EXT3_FS=y
+ CONFIG_EXT4_FS_POSIX_ACL=y
+ CONFIG_EXT4_FS_SECURITY=y
+-- 
+2.25.1
+
