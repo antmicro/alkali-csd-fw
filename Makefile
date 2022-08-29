@@ -105,6 +105,16 @@ APUAPP_DIR = $(ROOT_DIR)/apu-app
 APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_BUILD_TYPE ?= Debug
+APUAPP_SOURCES = \
+	$(wildcard $(APUAPP_SRC_DIR)/*.cpp) \
+	$(wildcard $(APUAPP_SRC_DIR)/*.hpp) \
+	$(wildcard $(APUAPP_SRC_DIR)/*.h) \
+	$(wildcard $(APUAPP_SRC_DIR)/vm/*.cpp) \
+	$(wildcard $(APUAPP_SRC_DIR)/cmd/*.cpp) \
+	$(wildcard $(APUAPP_SRC_DIR)/vta/*.cc) \
+	$(wildcard $(APUAPP_SRC_DIR)/vta/*.cpp) \
+	$(wildcard $(APUAPP_SRC_DIR)/vta/*.h) \
+	$(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
 
 .PHONY: apu-app
 apu-app: $(APUAPP_OUTPUTS) ## Build APU App
@@ -113,16 +123,7 @@ apu-app: $(APUAPP_OUTPUTS) ## Build APU App
 apu-app/clean: ## Remove APU App build files
 	$(RM) -r $(APUAPP_BUILD_DIR)
 
-$(APUAPP_OUTPUTS): $(BUILDROOT_TOOLCHAIN_CMAKE_FILE)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/*.cpp)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/*.hpp)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/*.h)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vm/*.cpp)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/cmd/*.cpp)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.cc)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.cpp)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.h)
-$(APUAPP_OUTPUTS): $(wildcard $(APUAPP_SRC_DIR)/vta/*.hpp)
+$(APUAPP_OUTPUTS) &: $(BUILDROOT_TOOLCHAIN_CMAKE_FILE) $(APUAPP_SOURCES)
 	@mkdir -p $(APUAPP_BUILD_DIR)
 	cmake \
 	      -DCMAKE_TOOLCHAIN_FILE=$(BUILDROOT_TOOLCHAIN_CMAKE_FILE) \
