@@ -34,20 +34,17 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
 	// Resize input tensors, if desired.
 	interpreter->AllocateTensors();
 
-	// Check if buffer sizes are correct
-	auto in = interpreter->input_tensor(0);
-	auto out = interpreter->output_tensor(0);
-	if(input_len != in->bytes)
-		printf("Input buffer length mismatch: %d != %d\n", input_len, in->bytes);
-	if(output_len != out->bytes)
-		printf("Output buffer length mismatch: %d != %d\n", output_len, out->bytes);
-
-	void *input_tensor = (void*)interpreter->typed_input_tensor<int8_t>(0);
-	if(!input_tensor)
-		input_tensor = (void*)interpreter->typed_input_tensor<float>(0);
-
-	// ... pass input data to the input array
-	std::copy(input_buf, input_buf+input_len, (char*)input_tensor);
+	size_t offset = 0;
+	for (unsigned int i = 0; i < interpreter->inputs().size(); i++)
+	{
+		auto in = interpreter->input_tensor(i);
+		if (offset + in->bytes > input_len)
+		{
+			printf("Input buffer length mismatch: %d != %d\n", input_len, offset + in->bytes);
+		}
+		std::copy(input_buf + offset, input_buf + offset + in->bytes, interpreter->typed_input_tensor<int8_t>(i));
+		offset += in->bytes;
+	}
 
 	timespec_get(&ts[0], TIME_UTC);
 	interpreter->Invoke();
@@ -58,12 +55,17 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
 	printf("Model processing took %llu ns\n", duration);
 #endif
 
-	// get pointer to outputs
-	void *output_tensor = interpreter->typed_output_tensor<int8_t>(0);
-	if(!output_tensor)
-		output_tensor = interpreter->typed_output_tensor<float>(0);
-
-	std::copy((char*)output_tensor, ((char*)output_tensor) + output_len, output_buf);
+	offset = 0;
+	for (unsigned int i = 0; i < interpreter->outputs().size(); i++)
+	{
+		auto out = interpreter->output_tensor(i);
+		if (offset + out->bytes > output_len)
+		{
+			printf("Output buffer length mismatch: %d != %d\n", output_len, offset + out->bytes);
+		}
+		std::copy(interpreter->typed_output_tensor<int8_t>(i), interpreter->typed_output_tensor<int8_t>(i) + out->bytes, output_buf + offset);
+		offset += out->bytes;
+	}
 }
 
 void vm_tflite_apu(char *ibuf, char *obuf, int isize, int osize, int model_size)
