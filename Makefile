@@ -74,7 +74,7 @@ buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
 	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
 	cp $(APUAPP_BUILD_DIR)/tflite-delegate-test $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
-	$(MAKE) $(BUILDROOT_OPTS) -j$(nproc)
+	$(MAKE) $(BUILDROOT_OPTS) -j`nproc`
 
 .PHONY: buildroot/distclean
 buildroot/distclean: ## Remove Buildroot build
@@ -134,7 +134,7 @@ $(APUAPP_OUTPUTS) &: $(BUILDROOT_TOOLCHAIN_CMAKE_FILE) $(APUAPP_SOURCES)
 	      -DNO_HARDWARE=OFF \
 	      -DBUILD_TESTS=ON \
 	      -S $(APUAPP_DIR) -B $(APUAPP_BUILD_DIR)
-	$(MAKE) -C $(APUAPP_BUILD_DIR) -j all
+	$(MAKE) -C $(APUAPP_BUILD_DIR) -j`nproc` all
 
 # -----------------------------------------------------------------------------
 # Zephyr ----------------------------------------------------------------------
