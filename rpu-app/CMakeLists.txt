@@ -1,3 +1,8 @@
+# Copyright 2021-2022 Western Digital Corporation or its affiliates
+# Copyright 2021-2022 Antmicro
+
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.13.1)
 
 set(DTC_OVERLAY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/nvme.overlay")

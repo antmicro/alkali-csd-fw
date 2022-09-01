@@ -1,3 +1,8 @@
+# Copyright 2021-2022 Western Digital Corporation or its affiliates
+# Copyright 2021-2022 Antmicro
+#
+# SPDX-License-Identifier: Apache-2.0
+
 connect -url TCP:localhost:6000
 
 source /opt/Xilinx/Vitis/2019.2/scripts/vitis/util/zynqmp_utils.tcl
