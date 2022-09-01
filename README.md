@@ -2,7 +2,7 @@
 
 This repository contains firmware sources of the Alkali project, which can be
 used to generate the bitstream for the Western Digital NVMe accelerator test
-platform (Basalt board). The project includes Linux built with Buildroot that
+platform (AN300 board). The project includes Linux built with Buildroot that
 contains application for APU and there is a separate Zephyrproject application
 for RPU.
 
@@ -26,7 +26,7 @@ includes the most important files and directories.
 │   └── third-party -> ../third-party
 ├── br2-external
 │   ├── board
-│   │   └── basalt
+│   │   └── an300
 │   │       └── ...
 │   ├── configs
 │   │   └── zynqmp_nvme_defconfig

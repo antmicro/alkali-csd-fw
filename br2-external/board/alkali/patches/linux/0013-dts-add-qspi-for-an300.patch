@@ -1,16 +1,16 @@
-From 90f26c6e7702eea552a4674b756731179ef92eed Mon Sep 17 00:00:00 2001
+From dc31cc66282f56bfe2d71d9abd6173644ecb3daf Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Mon, 5 Jul 2021 13:19:29 +0200
-Subject: [PATCH 13/20] dts: add qspi for basalt
+Subject: [PATCH 13/20] dts: add qspi for an300
 
 ---
- arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts | 14 ++++++++++++++
+ arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts | 14 ++++++++++++++
  1 file changed, 14 insertions(+)
 
-diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 index 8756e70707ba..5b08c2476d19 100644
---- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
-+++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 @@ -24,6 +24,7 @@
  		rtc0 = &rtc;
  		serial0 = &uart0;

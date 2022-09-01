@@ -1,4 +1,4 @@
-From 28736c7c8e966f86d22e2d97e330e663b1e471a0 Mon Sep 17 00:00:00 2001
+From 0689b8ec58afa6b20b32dcc2e4e38216da50e32f Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Mon, 25 Oct 2021 15:09:31 +0200
 Subject: [PATCH 16/20] dts: add xlnk for zcu

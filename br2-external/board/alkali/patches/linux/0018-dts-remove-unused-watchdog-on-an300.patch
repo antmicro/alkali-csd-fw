@@ -1,16 +1,16 @@
-From 9198d87be7656d27c150231719529f8ca1683b2c Mon Sep 17 00:00:00 2001
+From 7884fea5a2bd82f69ba226a3b0559ebc96d8066a Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Tue, 30 Nov 2021 11:41:43 +0100
-Subject: [PATCH 18/20] dts: remove unused watchdog on basalt
+Subject: [PATCH 18/20] dts: remove unused watchdog on an300
 
 ---
- arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts | 8 ++------
+ arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts | 8 ++------
  1 file changed, 2 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 index 6d4f87195180..ade8da8f5033 100644
---- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
-+++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 @@ -95,10 +95,10 @@
  			r5_0_tcm_b: tcm@ffe20000 {
  				reg = <0 0xFFE20000 0x0 0x10000>;

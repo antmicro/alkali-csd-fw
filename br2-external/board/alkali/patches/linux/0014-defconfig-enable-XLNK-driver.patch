@@ -1,4 +1,4 @@
-From 73a67485b5bae8dbcb88b67b82415e5addac6866 Mon Sep 17 00:00:00 2001
+From 8674bdac108057ba6ea7c2190f4c3c03da7ba4a7 Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Wed, 20 Oct 2021 16:01:15 +0200
 Subject: [PATCH 14/20] defconfig: enable XLNK driver

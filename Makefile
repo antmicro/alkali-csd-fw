@@ -52,8 +52,8 @@ clean: ## Remove ALL build artifacts
 # -----------------------------------------------------------------------------
 
 BR2_EXTERNAL_DIR = $(ROOT_DIR)/br2-external
-BR2_EXTERNAL_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/basalt/overlay
-BUILDROOT_BOARD_BUILD_DIR = $(BUILDROOT_BUILD_DIR)/board/basalt
+BR2_EXTERNAL_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/alkali/overlay
+BUILDROOT_BOARD_BUILD_DIR = $(BUILDROOT_BUILD_DIR)/board/alkali
 BUILDROOT_BOARD_OVERLAY_BUILD_DIR = $(BUILDROOT_BOARD_BUILD_DIR)/overlay
 BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL_DIR)
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz

@@ -1,16 +1,16 @@
-From 6599a604b6418b65040f8818a79ceefbfff8b9c5 Mon Sep 17 00:00:00 2001
+From ed3ebad9e804108cf15e6bce1b3de438b50f5746 Mon Sep 17 00:00:00 2001
 From: joychauhan-sudo <jyotindrasinh.chauhan@aumraj.com>
 Date: Sat, 25 Jun 2022 10:15:20 +0530
 Subject: [PATCH 19/20] dts: add uartlite node
 
 ---
- .../boot/dts/xilinx/zynqmp-basalt-nvme.dts    | 33 +++++++++++++++++--
+ .../boot/dts/xilinx/zynqmp-an300-nvme.dts     | 33 +++++++++++++++++--
  1 file changed, 31 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 index ade8da8f5033..fcc23ef1e9a2 100644
---- a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
-+++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+--- a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 @@ -24,12 +24,13 @@
  		rtc0 = &rtc;
  		serial0 = &uart0;

@@ -1,28 +1,28 @@
-From dadff518f0a1b07f0abd6af1c145984cea991c3e Mon Sep 17 00:00:00 2001
+From c46b0fb48c5a0667ab80c8a1dbbb1cf9f2e8d929 Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
-Date: Tue, 8 Jun 2021 18:52:45 +0200
-Subject: [PATCH 12/20] dts: add basalt support
+Date: Thu, 1 Sep 2022 13:27:45 +0200
+Subject: [PATCH 12/20] dts: add an300 support
 
 ---
  arch/arm64/boot/dts/xilinx/Makefile           |   1 +
- .../boot/dts/xilinx/zynqmp-basalt-nvme.dts    | 231 ++++++++++++++++++
+ .../boot/dts/xilinx/zynqmp-an300-nvme.dts     | 231 ++++++++++++++++++
  2 files changed, 232 insertions(+)
- create mode 100644 arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
+ create mode 100644 arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 
 diff --git a/arch/arm64/boot/dts/xilinx/Makefile b/arch/arm64/boot/dts/xilinx/Makefile
-index 87f468838a4b..de1547a6686e 100644
+index 87f468838a4b..703eaae9ee39 100644
 --- a/arch/arm64/boot/dts/xilinx/Makefile
 +++ b/arch/arm64/boot/dts/xilinx/Makefile
 @@ -19,3 +19,4 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu106-revA.dtb
  dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu106-nvme.dtb
  dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu111-revA.dtb
  dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-zcu1285-revA.dtb
-+dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-basalt-nvme.dtb
-diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++dtb-$(CONFIG_ARCH_ZYNQMP) += zynqmp-an300-nvme.dtb
+diff --git a/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 new file mode 100644
 index 000000000000..8756e70707ba
 --- /dev/null
-+++ b/arch/arm64/boot/dts/xilinx/zynqmp-basalt-nvme.dts
++++ b/arch/arm64/boot/dts/xilinx/zynqmp-an300-nvme.dts
 @@ -0,0 +1,231 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
@@ -43,7 +43,7 @@ index 000000000000..8756e70707ba
 +#include <dt-bindings/phy/phy.h>
 +
 +/ {
-+	model = "ZynqMP Basalt (NVMe)";
++	model = "ZynqMP AN300 (NVMe)";
 +	compatible = "xlnx,zynqmp";
 +
 +	aliases {
