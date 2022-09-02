@@ -113,3 +113,35 @@ make rpu-app
 ```
 
 The final output files can be found in `build/` directory.
+
+# Managing Subprojects
+
+The projects available in this repository use different build systems
+which are all together managed by the main `Makefile`. To extend the existing
+project with add new files one has to understand how they are organized.
+
+* `apu-app` uses `CMake` to manage its dependencies. To add sources to
+  the project, include the new files in the proper list of either
+  [library](https://cmake.org/cmake/help/latest/command/add_library.html) or
+  [executable](https://cmake.org/cmake/help/latest/command/add_executable.html)
+  targets inside the `apu-app/CMakeLists.txt` file. For details about
+  the CMake file format check [CMake documentation](https://cmake.org/cmake/help/latest/)
+
+* rpu-app uses `west` and `CMake` to manage its dependencies. To add sources
+  to the application extend the list of
+  [target_sources (https://cmake.org/cmake/help/latest/command/target_sources.html)
+  in the `rpu-app/CMakeLists.txt`. For details about the CMake file format check
+  [CMake documentation](https://cmake.org/cmake/help/latest/) All the changes
+  related to the device tree settings should be applied to
+  `rpu-app/nvme.overlay` file. The list of the Zephyr subprojects used to build
+  the app is managed by `west` and is contained in the `rpu-app/west.yml` file.
+  For details about the West check [West documentation](https://docs.zephyrproject.org/latest/develop/west/index.html)
+
+* Buildroot uses `make` and `Kconfig` for building the projects with
+  the given configuration. The most important part of the project includes
+  the configuration located in the `br2-external/configs/zynqmp_nvme_defconfig`
+  which is used to select all the components of the system including U-Boot,
+  Linux kernel, ARM trusted firmware, and root file system. Besides the packages
+  specified in the config, all the files from the `br2-external/board/alkali`
+  directory are copied to the final root file system. Details about
+  the Buildroot may be found in the [Buildroot's documentation](https://buildroot.org/downloads/manual/manual.html)
