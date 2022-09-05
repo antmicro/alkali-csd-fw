@@ -205,13 +205,12 @@ $(ZEPHYR_SDK_LOCAL_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_LOCAL_INSTALL_DIR)
 
 $(ZEPHYR_SOURCES) &: $(WEST_CONFIG)
-	@:
+	west update
 
 $(WEST_CONFIG): SHELL := /bin/bash
 $(WEST_CONFIG):
 	@echo "Initialize west for Zephyr."; \
 	if west init -l --mf $(WEST_YML) $(WEST_INIT_DIR); then \
-		west update; \
 		echo "Done."; \
 	else \
 		echo ""; \
