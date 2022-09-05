@@ -48,8 +48,11 @@ clean: ## Remove ALL build artifacts
 	$(RM) -r $(WEST_DIR)
 
 # -----------------------------------------------------------------------------
-# Buildroot -------------------------------------------------------------------
+# Buildroot SDK ---------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
+# NOTE: The targets related to building a complete rootfs are located
+#       after those related to APU app, zephyr and RPU app
 
 BR2_EXTERNAL_DIR = $(ROOT_DIR)/br2-external
 BR2_EXTERNAL_OVERLAY_DIR = $(BR2_EXTERNAL_DIR)/board/alkali/overlay
@@ -59,7 +62,6 @@ BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = $(BUILD_DIR)/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildroot/toolchainfile.cmake
-APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app $(APUAPP_BUILD_DIR)/tflite-delegate-test
 
 $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 	mkdir -p $@
@@ -105,6 +107,7 @@ APUAPP_DIR = $(ROOT_DIR)/apu-app
 APUAPP_SRC_DIR = $(ROOT_DIR)/apu-app/src
 APUAPP_INSTALL_DIR = $(BUILD_DIR)/apu-app/install
 APUAPP_BUILD_TYPE ?= Debug
+APUAPP_OUTPUTS = $(APUAPP_BUILD_DIR)/libvta-delegate.so $(APUAPP_BUILD_DIR)/apu-app $(APUAPP_BUILD_DIR)/tflite-delegate-test
 APUAPP_SOURCES = \
 	$(wildcard $(APUAPP_SRC_DIR)/*.cpp) \
 	$(wildcard $(APUAPP_SRC_DIR)/*.hpp) \
@@ -254,6 +257,33 @@ rpu-app/clean: ## Remove RPU App build files
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
+
+# -----------------------------------------------------------------------------
+# Buildroot -------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+#
+# NOTE: The targets related to building a Buildroot SDK together with all the
+#       configuration variables are located above, after all and clean targets.
+
+.PHONY: buildroot
+buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
+	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
+	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware
+	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
+	cp $(RPUAPP_ZEPHYR_ELF) $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware/zephyr.elf
+	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin
+	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
+	cp $(APUAPP_BUILD_DIR)/tflite-delegate-test $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
+	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
+	$(MAKE) $(BUILDROOT_OPTS) -j`nproc`
+
+.PHONY: buildroot/distclean
+buildroot/distclean: ## Remove Buildroot build
+	$(MAKE) $(BUILDROOT_OPTS) distclean
+
+.PHONY: buildroot//%
+buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buildroot//menuconfig`
+	$(MAKE) $(BUILDROOT_OPTS) $*
 
 # -----------------------------------------------------------------------------
 # Docker ----------------------------------------------------------------------
