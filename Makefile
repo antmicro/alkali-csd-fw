@@ -324,6 +324,7 @@ enter: ## enter the development docker image
 		-v $(PWD):$(PWD) \
 		-v /etc/passwd:/etc/passwd \
 		-v /etc/group:/etc/group \
+		-e CCACHE_DISABLE=1 \
 		-u $(shell id -u):$(shell id -g) \
 		-h docker-container \
 		-w $(PWD) \
