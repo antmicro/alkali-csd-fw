@@ -1,0 +1,93 @@
+From 962e6e6925decb54c6f1c3b59bc0cfe8d4ffd8de Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Tue, 27 Apr 2021 13:03:20 +0200
+Subject: [PATCH 15/16] linker: add support for running from shared DDR memory
+
+---
+ arch/arm/core/cortex_r/Kconfig              |  6 ++++
+ include/arch/arm/cortex_r/scripts/linker.ld | 31 +++++++++++++++++++++
+ 2 files changed, 37 insertions(+)
+
+diff --git a/arch/arm/core/cortex_r/Kconfig b/arch/arm/core/cortex_r/Kconfig
+index cae6523fc1..0bdbc3a7d3 100644
+--- a/arch/arm/core/cortex_r/Kconfig
++++ b/arch/arm/core/cortex_r/Kconfig
+@@ -92,6 +92,12 @@ config DISABLE_TCM_ECC
+ 	help
+ 	  This option disables ECC checks on Tightly Coupled Memory.
+ 
++config VECTOR_TABLE_IN_TCM
++	bool
++	default y
++	help
++	  This option moves vector table to TCM memory located at 0x0.
++
+ endif # CPU_CORTEX_R
+ 
+ endif # CPU_CORTEX_R
+diff --git a/include/arch/arm/cortex_r/scripts/linker.ld b/include/arch/arm/cortex_r/scripts/linker.ld
+index dc08d6c3bf..fabae83c14 100644
+--- a/include/arch/arm/cortex_r/scripts/linker.ld
++++ b/include/arch/arm/cortex_r/scripts/linker.ld
+@@ -102,6 +102,9 @@ MEMORY
+ #ifdef CONFIG_BT_STM32_IPM
+     SRAM1                 (rw) : ORIGIN = RAM1_ADDR, LENGTH = RAM1_SIZE
+     SRAM2                 (rw) : ORIGIN = RAM2_ADDR, LENGTH = RAM2_SIZE
++#endif
++#ifdef CONFIG_VECTOR_TABLE_IN_TCM
++    TCM                   (wx) : ORIGIN = 0x0, LENGTH = 4K
+ #endif
+     /* Used by and documented in include/linker/intlist.ld */
+     IDT_LIST  (wx)      : ORIGIN = (RAM_ADDR + RAM_SIZE), LENGTH = 2K
+@@ -128,6 +131,32 @@ SECTIONS
+ 	*(.iplt)
+ 	}
+ 
++#ifdef CONFIG_VECTOR_TABLE_IN_TCM
++    SECTION_PROLOGUE(.vect,,)
++	{
++	. = 0x0;
++
++	_vector_start = .;
++	KEEP(*(.exc_vector_table))
++	KEEP(*(".exc_vector_table.*"))
++
++	KEEP(*(IRQ_VECTOR_TABLE))
++
++	KEEP(*(.vectors))
++
++	KEEP(*(.openocd_dbg))
++	KEEP(*(".openocd_dbg.*"))
++
++	/* Kinetis has to write 16 bytes at 0x400 */
++	SKIP_TO_KINETIS_FLASH_CONFIG
++	KEEP(*(.kinetis_flash_config))
++	KEEP(*(".kinetis_flash_config.*"))
++
++	_vector_end = .;
++	} > TCM
++
++#endif
++
+     GROUP_START(ROMABLE_REGION)
+ 
+ 	_image_rom_start = ROM_ADDR;
+@@ -160,6 +189,7 @@ SECTIONS
+ 	KEEP(*(".vector_relay_handler.*"))
+ #endif
+ 
++#ifndef CONFIG_VECTOR_TABLE_IN_TCM
+ 	_vector_start = .;
+ 	KEEP(*(.exc_vector_table))
+ 	KEEP(*(".exc_vector_table.*"))
+@@ -177,6 +207,7 @@ SECTIONS
+ 	KEEP(*(".kinetis_flash_config.*"))
+ 
+ 	_vector_end = .;
++#endif
+ 	} GROUP_LINK_IN(ROMABLE_REGION)
+ 
+ #ifdef CONFIG_CODE_DATA_RELOCATION
+-- 
+2.25.1
+

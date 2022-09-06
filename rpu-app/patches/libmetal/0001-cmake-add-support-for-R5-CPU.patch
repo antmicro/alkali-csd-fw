@@ -1,0 +1,24 @@
+From c8944fe5af45f1a20e657f14806b78535f8c6b02 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Fri, 26 Mar 2021 14:35:19 +0100
+Subject: [PATCH] cmake: add support for R5 CPU
+
+---
+ libmetal/cmake/syscheck.cmake | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/libmetal/cmake/syscheck.cmake b/libmetal/cmake/syscheck.cmake
+index 1ff4a12..3c18407 100644
+--- a/libmetal/cmake/syscheck.cmake
++++ b/libmetal/cmake/syscheck.cmake
+@@ -10,4 +10,7 @@ if (WITH_ZEPHYR)
+   if (CONFIG_CPU_CORTEX_M)
+     set (MACHINE "cortexm" CACHE STRING "")
+   endif (CONFIG_CPU_CORTEX_M)
++  if (CONFIG_CPU_CORTEX_R5)
++    set (MACHINE "cortexm" CACHE STRING "")
++  endif (CONFIG_CPU_CORTEX_R5)
+ endif (WITH_ZEPHYR)
+-- 
+2.25.1
+

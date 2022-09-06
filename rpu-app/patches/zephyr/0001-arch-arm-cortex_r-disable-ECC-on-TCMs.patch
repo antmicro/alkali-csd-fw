@@ -1,0 +1,144 @@
+From 9ad08c1529650da9473097f85d37bca9e3fa7d6b Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Thu, 29 Aug 2019 13:22:42 +0200
+Subject: [PATCH 01/16] arch: arm: cortex_r: disable ECC on TCMs
+
+This commit adds possibility to disable ECC in Tightly Coupled
+Memory in Cortex-R.
+Linker scripts places stacks in this memory and marks it as
+.noinit section. With ECC enabled, stack read accesses without
+previous write result in Data Abort Exception.
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ arch/arm/core/cortex_r/CMakeLists.txt |  1 +
+ arch/arm/core/cortex_r/Kconfig        |  6 ++++
+ arch/arm/core/cortex_r/reset.S        |  5 +++
+ arch/arm/core/cortex_r/tcm.c          | 14 +++++++++
+ arch/arm/include/cortex_r/tcm.h       | 45 +++++++++++++++++++++++++++
+ 5 files changed, 71 insertions(+)
+ create mode 100644 arch/arm/core/cortex_r/tcm.c
+ create mode 100644 arch/arm/include/cortex_r/tcm.h
+
+diff --git a/arch/arm/core/cortex_r/CMakeLists.txt b/arch/arm/core/cortex_r/CMakeLists.txt
+index a1154a3efb..d74d161a82 100644
+--- a/arch/arm/core/cortex_r/CMakeLists.txt
++++ b/arch/arm/core/cortex_r/CMakeLists.txt
+@@ -8,4 +8,5 @@ zephyr_library_sources(
+   fault.c
+   reboot.c
+   stacks.c
++  tcm.c
+   )
+diff --git a/arch/arm/core/cortex_r/Kconfig b/arch/arm/core/cortex_r/Kconfig
+index a543b5dd9d..cae6523fc1 100644
+--- a/arch/arm/core/cortex_r/Kconfig
++++ b/arch/arm/core/cortex_r/Kconfig
+@@ -86,6 +86,12 @@ config GEN_ISR_TABLES
+ config GEN_IRQ_VECTOR_TABLE
+ 	default n
+ 
++config DISABLE_TCM_ECC
++	bool
++	default n
++	help
++	  This option disables ECC checks on Tightly Coupled Memory.
++
+ endif # CPU_CORTEX_R
+ 
+ endif # CPU_CORTEX_R
+diff --git a/arch/arm/core/cortex_r/reset.S b/arch/arm/core/cortex_r/reset.S
+index d88a9e2eca..747e399b52 100644
+--- a/arch/arm/core/cortex_r/reset.S
++++ b/arch/arm/core/cortex_r/reset.S
+@@ -15,6 +15,7 @@
+ #include <linker/sections.h>
+ #include <arch/cpu.h>
+ #include <offsets_short.h>
++#include <cortex_r/tcm.h>
+ #include "vector_table.h"
+ 
+ _ASM_FILE_PROLOGUE
+@@ -99,4 +100,8 @@ SECTION_SUBSEC_FUNC(TEXT,_reset_section,__start)
+ 	bl z_arm_watchdog_init
+ #endif
+ 
++#if defined(CONFIG_DISABLE_TCM_ECC)
++	bl disable_ecc
++#endif
++
+ 	b z_arm_prep_c
+diff --git a/arch/arm/core/cortex_r/tcm.c b/arch/arm/core/cortex_r/tcm.c
+new file mode 100644
+index 0000000000..5b54950e9a
+--- /dev/null
++++ b/arch/arm/core/cortex_r/tcm.c
+@@ -0,0 +1,14 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++void disable_ecc(void)
++{
++	__asm__(
++		"mrc p15, 0, r0, c1, c0, 1\n\t" /* read ACTLR */
++		"bic r0, r0, #0xe000000\n\t"  /* disable ecc */
++		"mcr p15, 0, r0, c1, c0, 1\n\t" /* write ACTLR */
++	);
++}
+diff --git a/arch/arm/include/cortex_r/tcm.h b/arch/arm/include/cortex_r/tcm.h
+new file mode 100644
+index 0000000000..b16f3ef536
+--- /dev/null
++++ b/arch/arm/include/cortex_r/tcm.h
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++/**
++ * @file
++ * @brief Management for Tightly Coupled Memory
++ *
++ */
++
++#ifndef ZEPHYR_ARCH_ARM_INCLUDE_CORTEX_R_TCM_H_
++#define ZEPHYR_ARCH_ARM_INCLUDE_CORTEX_R_TCM_H_
++
++#ifdef _ASMLANGUAGE
++
++/* nothing */
++
++#else
++
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/**
++ *
++ * @brief Disable ECC on Tightly Coupled Memory Banks
++ *
++ * Notes:
++ *
++ * This function shall only be called in Privileged mode.
++ *
++ * @return N/A
++ */
++void disable_ecc(void);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* _ASMLANGUAGE */
++
++#endif /* ZEPHYR_ARCH_ARM_INCLUDE_CORTEX_R_TCM_H_ */
+-- 
+2.25.1
+

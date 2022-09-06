@@ -1,0 +1,214 @@
+From 07bdcf4be91c43a779b2511c2d1db6e6b45b5050 Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Thu, 29 Aug 2019 13:32:16 +0200
+Subject: [PATCH 04/16] boards: arm: add suport for Enclustra Mercury XU boards
+
+This commit adds support for Enclustra's boards with ZynqMP SoC
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ boards/arm/mercury_xu/CMakeLists.txt          |  4 +++
+ boards/arm/mercury_xu/Kconfig.board           |  6 ++++
+ boards/arm/mercury_xu/Kconfig.defconfig       | 19 ++++++++++++
+ boards/arm/mercury_xu/board.c                 | 30 +++++++++++++++++++
+ boards/arm/mercury_xu/board.h                 | 10 +++++++
+ boards/arm/mercury_xu/mercury_xu_board.dts    | 30 +++++++++++++++++++
+ boards/arm/mercury_xu/mercury_xu_board.yaml   | 18 +++++++++++
+ .../arm/mercury_xu/mercury_xu_board_defconfig | 19 ++++++++++++
+ 8 files changed, 136 insertions(+)
+ create mode 100644 boards/arm/mercury_xu/CMakeLists.txt
+ create mode 100644 boards/arm/mercury_xu/Kconfig.board
+ create mode 100644 boards/arm/mercury_xu/Kconfig.defconfig
+ create mode 100644 boards/arm/mercury_xu/board.c
+ create mode 100644 boards/arm/mercury_xu/board.h
+ create mode 100644 boards/arm/mercury_xu/mercury_xu_board.dts
+ create mode 100644 boards/arm/mercury_xu/mercury_xu_board.yaml
+ create mode 100644 boards/arm/mercury_xu/mercury_xu_board_defconfig
+
+diff --git a/boards/arm/mercury_xu/CMakeLists.txt b/boards/arm/mercury_xu/CMakeLists.txt
+new file mode 100644
+index 0000000000..2c0a08544f
+--- /dev/null
++++ b/boards/arm/mercury_xu/CMakeLists.txt
+@@ -0,0 +1,4 @@
++# Copyright (c) 2019, Antmicro
++# SPDX-License-Identifier: Apache-2.0
++zephyr_library()
++zephyr_library_sources(board.c)
+diff --git a/boards/arm/mercury_xu/Kconfig.board b/boards/arm/mercury_xu/Kconfig.board
+new file mode 100644
+index 0000000000..d5b6c84434
+--- /dev/null
++++ b/boards/arm/mercury_xu/Kconfig.board
+@@ -0,0 +1,6 @@
++# Copyright (c) 2019, Antmicro
++# SPDX-License-Identifier: Apache-2.0
++config BOARD_MERCURY_XU_BOARD
++	bool "Mercury XU Board"
++	depends on SOC_XILINX_ZYNQMP
++	select DISABLE_TCM_ECC
+diff --git a/boards/arm/mercury_xu/Kconfig.defconfig b/boards/arm/mercury_xu/Kconfig.defconfig
+new file mode 100644
+index 0000000000..971062a2c5
+--- /dev/null
++++ b/boards/arm/mercury_xu/Kconfig.defconfig
+@@ -0,0 +1,19 @@
++# Copyright (c) 2019, Antmicro
++# SPDX-License-Identifier: Apache-2.0
++
++if BOARD_MERCURY_XU_BOARD
++
++config BOARD
++	default "mercury_xu_board"
++
++config BUILD_OUTPUT_STRIPPED
++	def_bool y
++
++config FLASH_SIZE
++	int
++	default 64
++
++config FLASH_BASE_ADDRESS
++	default 0x08000000
++
++endif
+diff --git a/boards/arm/mercury_xu/board.c b/boards/arm/mercury_xu/board.c
+new file mode 100644
+index 0000000000..93223f3011
+--- /dev/null
++++ b/boards/arm/mercury_xu/board.c
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++#include <init.h>
++#define MIO_PIN_18	0xff180048
++#define MIO_PIN_19	0xff18004c
++#define MIO_PIN_38	0xff180098
++#define MIO_PIN_39	0xff18009c
++
++#define MIO_DEFAULT	0x0
++#define MIO_UART0	0xc0
++
++static int mercury_xu_board_init(struct device *port)
++{
++	/* pinmux settings for uart */
++	sys_write32(MIO_UART0, MIO_PIN_38);
++	sys_write32(MIO_UART0, MIO_PIN_39);
++
++	/* disable misleading pinmux */
++	sys_write32(MIO_DEFAULT, MIO_PIN_18);
++	sys_write32(MIO_DEFAULT, MIO_PIN_19);
++
++	ARG_UNUSED(port);
++	return 0;
++}
++
++SYS_INIT(mercury_xu_board_init, PRE_KERNEL_2,
++		CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+diff --git a/boards/arm/mercury_xu/board.h b/boards/arm/mercury_xu/board.h
+new file mode 100644
+index 0000000000..bd50e5950c
+--- /dev/null
++++ b/boards/arm/mercury_xu/board.h
+@@ -0,0 +1,10 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++#ifndef __INC_BOARD_H
++#define __INC_BOARD_H
++
++
++#endif /* __INC_BOARD_H */
+diff --git a/boards/arm/mercury_xu/mercury_xu_board.dts b/boards/arm/mercury_xu/mercury_xu_board.dts
+new file mode 100644
+index 0000000000..7d16c2a00c
+--- /dev/null
++++ b/boards/arm/mercury_xu/mercury_xu_board.dts
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++/dts-v1/;
++#include <arm/xilinx/zynqmp.dtsi>
++
++/ {
++	model = "Mercury XU";
++	compatible = "xlnx,zynqmp";
++
++	chosen {
++		zephyr,console = &uart0;
++		zephyr,sram = &sram0;
++		zephyr,flash = &flash0;
++	};
++};
++
++&uart0 {
++	status = "okay";
++	current-speed = <115200>;
++	clock-frequency = <100000000>;
++};
++
++&ttc0 {
++	status = "okay";
++	clock-frequency = <100000000>;
++};
+diff --git a/boards/arm/mercury_xu/mercury_xu_board.yaml b/boards/arm/mercury_xu/mercury_xu_board.yaml
+new file mode 100644
+index 0000000000..2980d3c392
+--- /dev/null
++++ b/boards/arm/mercury_xu/mercury_xu_board.yaml
+@@ -0,0 +1,18 @@
++# Copyright (c) 2019, Antmicro
++identifier: mercury_xu_board
++name: MERCURY-XU-BOARD
++type: mcu
++arch: arm
++toolchain:
++  - zephyr
++  - gccarmemb
++ram: 64
++testing:
++  ignore_tags:
++   - nmi
++   - benchmark
++   - interrupt
++   - bluetooth
++   - socket
++   - crypto
++   - net
+diff --git a/boards/arm/mercury_xu/mercury_xu_board_defconfig b/boards/arm/mercury_xu/mercury_xu_board_defconfig
+new file mode 100644
+index 0000000000..402a16eb94
+--- /dev/null
++++ b/boards/arm/mercury_xu/mercury_xu_board_defconfig
+@@ -0,0 +1,19 @@
++# Copyright (c) 2019, Antmicro
++CONFIG_ARM=y
++CONFIG_SOC_XILINX_ZYNQMP=y
++CONFIG_BOARD_MERCURY_XU_BOARD=y
++
++CONFIG_ISR_STACK_SIZE=1024
++CONFIG_THREAD_STACK_INFO=y
++
++# enable uart driver
++CONFIG_SERIAL=y
++CONFIG_UART_XLNX_PS=y
++
++# enable console
++CONFIG_CONSOLE=y
++CONFIG_UART_CONSOLE=y
++
++# enable timer
++CONFIG_XLNX_PSTTC_TIMER=y
++CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000
+-- 
+2.25.1
+

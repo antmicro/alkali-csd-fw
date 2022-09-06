@@ -1,0 +1,53 @@
+From 0036a9591c423beaf529e59a649f60d606de2fda Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Fri, 18 Oct 2019 10:27:40 +0200
+Subject: [PATCH 06/16] soc: zynqmp: add devicetree entry for mailbox
+
+Signed-Off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ dts/arm/xilinx/zynqmp.dtsi        | 17 +++++++++++++++++
+ soc/arm/xilinx_zynqmp/dts_fixup.h |  4 ++++
+ 2 files changed, 21 insertions(+)
+
+diff --git a/dts/arm/xilinx/zynqmp.dtsi b/dts/arm/xilinx/zynqmp.dtsi
+index b52be3e8b1..d6a71f2e3c 100644
+--- a/dts/arm/xilinx/zynqmp.dtsi
++++ b/dts/arm/xilinx/zynqmp.dtsi
+@@ -95,5 +95,22 @@
+ 			reg = <0xff140000 0x1000>;
+ 			label = "ttc3";
+ 		};
++
++		/* RPU <-> APU */
++		mailbox: mailbox@ff9900c0 {
++			compatible = "xlnx,zynqmp-mailbox";
++			reg = <0xff9900c0 0x20>,
++			      <0xff9900e0 0x20>,
++			      <0xff990600 0x20>,
++			      <0xff990620 0x20>;
++			reg-names = "local_request_region",
++				"local_response_region",
++				"remote_request_region",
++				"remote_response_region";
++			interrupts = <33 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
++			interrupt-names = "ipi";
++			status = "disabled";
++			label = "MAILBOX_0";
++		};
+ 	};
+ };
+diff --git a/soc/arm/xilinx_zynqmp/dts_fixup.h b/soc/arm/xilinx_zynqmp/dts_fixup.h
+index 70b231a114..4a60342271 100644
+--- a/soc/arm/xilinx_zynqmp/dts_fixup.h
++++ b/soc/arm/xilinx_zynqmp/dts_fixup.h
+@@ -14,3 +14,7 @@
+ #define DT_INST_0_CDNS_TTC_IRQ_1	((DT_INST_0_CDNS_TTC_IRQ_IRQ_1 + 1) << 8)
+ #undef DT_INST_0_CDNS_TTC_IRQ_2
+ #define DT_INST_0_CDNS_TTC_IRQ_2	((DT_INST_0_CDNS_TTC_IRQ_IRQ_2 + 1) << 8)
++
++#undef DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0
++#define DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0 \
++	((DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_IPI + 1) << 8)
+-- 
+2.25.1
+

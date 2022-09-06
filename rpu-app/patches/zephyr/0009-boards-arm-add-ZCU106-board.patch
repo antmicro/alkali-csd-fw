@@ -1,0 +1,125 @@
+From 65866aa0b0f96eb814025810855982ad6a38def6 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Thu, 25 Mar 2021 15:03:12 +0100
+Subject: [PATCH 09/16] boards: arm: add ZCU106 board
+
+---
+ boards/arm/zcu106/Kconfig.board     |  5 +++++
+ boards/arm/zcu106/Kconfig.defconfig | 16 +++++++++++++++
+ boards/arm/zcu106/zcu106.dts        | 30 +++++++++++++++++++++++++++++
+ boards/arm/zcu106/zcu106.yaml       |  8 ++++++++
+ boards/arm/zcu106/zcu106_defconfig  | 15 +++++++++++++++
+ 5 files changed, 74 insertions(+)
+ create mode 100644 boards/arm/zcu106/Kconfig.board
+ create mode 100644 boards/arm/zcu106/Kconfig.defconfig
+ create mode 100644 boards/arm/zcu106/zcu106.dts
+ create mode 100644 boards/arm/zcu106/zcu106.yaml
+ create mode 100644 boards/arm/zcu106/zcu106_defconfig
+
+diff --git a/boards/arm/zcu106/Kconfig.board b/boards/arm/zcu106/Kconfig.board
+new file mode 100644
+index 0000000000..6d19744d37
+--- /dev/null
++++ b/boards/arm/zcu106/Kconfig.board
+@@ -0,0 +1,5 @@
++# Copyright (c) 2021, Antmicro
++# SPDX-License-Identifier: Apache-2.0
++config BOARD_ZCU106
++	bool "ZCU106 Board"
++	depends on SOC_XILINX_ZYNQMP_RPU
+diff --git a/boards/arm/zcu106/Kconfig.defconfig b/boards/arm/zcu106/Kconfig.defconfig
+new file mode 100644
+index 0000000000..81c4dea17a
+--- /dev/null
++++ b/boards/arm/zcu106/Kconfig.defconfig
+@@ -0,0 +1,16 @@
++# Copyright (c) 2021, Antmicro
++# SPDX-License-Identifier: Apache-2.0
++
++if BOARD_ZCU106
++
++config BOARD
++	default "zcu106"
++
++config FLASH_SIZE
++	int
++	default 64
++
++config FLASH_BASE_ADDRESS
++	default 0x08000000
++
++endif
+diff --git a/boards/arm/zcu106/zcu106.dts b/boards/arm/zcu106/zcu106.dts
+new file mode 100644
+index 0000000000..be8267e174
+--- /dev/null
++++ b/boards/arm/zcu106/zcu106.dts
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (c) 2021, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++/dts-v1/;
++#include <arm/xilinx/zynqmp_rpu.dtsi>
++
++/ {
++	model = "ZCU106";
++	compatible = "xlnx,zynqmp";
++
++	chosen {
++		zephyr,console = &uart0;
++		zephyr,sram = &sram0;
++		zephyr,flash = &flash0;
++	};
++};
++
++&uart0 {
++	status = "okay";
++	current-speed = <115200>;
++	clock-frequency = <99999901>;
++};
++
++&ttc0 {
++	status = "okay";
++	clock-frequency = <5000000>;
++};
+diff --git a/boards/arm/zcu106/zcu106.yaml b/boards/arm/zcu106/zcu106.yaml
+new file mode 100644
+index 0000000000..135f8c74cf
+--- /dev/null
++++ b/boards/arm/zcu106/zcu106.yaml
+@@ -0,0 +1,8 @@
++# Copyright (c) 2021, Antmicro
++identifier: zcu106
++name: ZCU106
++type: mcu
++arch: arm
++toolchain:
++  - zephyr
++  - gnuarmemb
+diff --git a/boards/arm/zcu106/zcu106_defconfig b/boards/arm/zcu106/zcu106_defconfig
+new file mode 100644
+index 0000000000..87ccc6c57e
+--- /dev/null
++++ b/boards/arm/zcu106/zcu106_defconfig
+@@ -0,0 +1,15 @@
++# Copyright (c) 2021, Antmicro
++CONFIG_SOC_XILINX_ZYNQMP_RPU=y
++CONFIG_BOARD_ZCU106=y
++
++# enable uart driver
++CONFIG_SERIAL=y
++CONFIG_UART_XLNX_PS=y
++
++# enable console
++CONFIG_CONSOLE=y
++CONFIG_UART_CONSOLE=y
++
++# enable timer
++CONFIG_XLNX_PSTTC_TIMER=y
++CONFIG_SYS_CLOCK_TICKS_PER_SEC=100
+-- 
+2.25.1
+

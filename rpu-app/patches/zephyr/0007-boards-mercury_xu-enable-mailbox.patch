@@ -1,0 +1,28 @@
+From 1fec865db9ca7d5f2a21d2d2170e00eb504f1e0e Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Tue, 22 Oct 2019 13:46:33 +0200
+Subject: [PATCH 07/16] boards: mercury_xu: enable mailbox
+
+This enables mailbox node in devicetree
+and selects IPM driver for mercury XU
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ boards/arm/mercury_xu/mercury_xu_board.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/boards/arm/mercury_xu/mercury_xu_board.dts b/boards/arm/mercury_xu/mercury_xu_board.dts
+index 7d16c2a00c..7364ff3b1d 100644
+--- a/boards/arm/mercury_xu/mercury_xu_board.dts
++++ b/boards/arm/mercury_xu/mercury_xu_board.dts
+@@ -28,3 +28,7 @@
+ 	status = "okay";
+ 	clock-frequency = <100000000>;
+ };
++
++&mailbox {
++	status = "okay";
++};
+-- 
+2.25.1
+

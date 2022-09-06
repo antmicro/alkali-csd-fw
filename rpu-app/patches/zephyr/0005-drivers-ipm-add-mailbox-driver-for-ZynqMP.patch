@@ -1,0 +1,363 @@
+From 23949d8da0fc097a090fbe3cbe34839a2135727d Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Fri, 18 Oct 2019 10:19:04 +0200
+Subject: [PATCH 05/16] drivers: ipm: add mailbox driver for ZynqMP
+
+This adds a driver for inter-processor communication.
+Two devices are created for one mailbox instance
+to make it compliant with the ipi driver in Linux,
+which uses two two-way channels.
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ drivers/ipm/CMakeLists.txt                |   1 +
+ drivers/ipm/Kconfig                       |   7 +
+ drivers/ipm/ipm_xlnx_zynqmp.c             | 217 ++++++++++++++++++++++
+ drivers/ipm/ipm_xlnx_zynqmp.h             |  53 ++++++
+ dts/bindings/ipm/xlnx,zynqmp-mailbox.yaml |  21 +++
+ 5 files changed, 299 insertions(+)
+ create mode 100644 drivers/ipm/ipm_xlnx_zynqmp.c
+ create mode 100644 drivers/ipm/ipm_xlnx_zynqmp.h
+ create mode 100644 dts/bindings/ipm/xlnx,zynqmp-mailbox.yaml
+
+diff --git a/drivers/ipm/CMakeLists.txt b/drivers/ipm/CMakeLists.txt
+index b753bb7a61..8e91f90e1f 100644
+--- a/drivers/ipm/CMakeLists.txt
++++ b/drivers/ipm/CMakeLists.txt
+@@ -7,5 +7,6 @@ zephyr_library_sources_ifdef(CONFIG_IPM_IMX ipm_imx.c)
+ zephyr_library_sources_ifdef(CONFIG_IPM_MHU ipm_mhu.c)
+ zephyr_library_sources_ifdef(CONFIG_IPM_STM32_IPCC ipm_stm32_ipcc.c)
+ zephyr_library_sources_ifdef(CONFIG_IPM_NRFX ipm_nrfx_ipc.c)
++zephyr_library_sources_ifdef(CONFIG_IPM_XLNX_ZYNQMP ipm_xlnx_zynqmp.c)
+ 
+ zephyr_library_sources_ifdef(CONFIG_USERSPACE   ipm_handlers.c)
+diff --git a/drivers/ipm/Kconfig b/drivers/ipm/Kconfig
+index 1af8251a61..fed1eff835 100644
+--- a/drivers/ipm/Kconfig
++++ b/drivers/ipm/Kconfig
+@@ -91,6 +91,13 @@ config IPM_STM32_IPCC
+ 	help
+ 	  Driver for stm32 IPCC mailboxes
+ 
++config IPM_XLNX_ZYNQMP
++	bool "Xilinx ZynqMP mailbox driver"
++	depends on IPM
++	help
++	  This option selects Xilinx ZynqMP mailbox driver
++	  for Inter Processor Communication
++
+ config IPM_STM32_IPCC_PROCID
+ 	int "STM32 IPCC Processor ID"
+ 	default 2
+diff --git a/drivers/ipm/ipm_xlnx_zynqmp.c b/drivers/ipm/ipm_xlnx_zynqmp.c
+new file mode 100644
+index 0000000000..504c4d7c0c
+--- /dev/null
++++ b/drivers/ipm/ipm_xlnx_zynqmp.c
+@@ -0,0 +1,217 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <kernel.h>
++#include <drivers/ipm.h>
++#include <device.h>
++#include <string.h>
++#include <logging/log.h>
++#include "ipm_xlnx_zynqmp.h"
++
++#define IPI_TARGET	IPI_TARGET_CH7
++#define TIMEOUT	K_MSEC(3000)
++#define DELAY	K_MSEC(200)
++
++LOG_MODULE_DECLARE(ipm_xlnx, LOG_LEVEL_DBG);
++
++struct ipm_zynqmp_data {
++	ipm_callback_t callback;
++	void *callback_ctx;
++};
++
++struct ipm_zynqmp_config {
++	u8_t *request_buf;
++	u8_t *response_buf;
++	u32_t chan_type;
++	void (*irq_config_func)(struct device *dev);
++};
++
++static void trigger_ipi(struct device *dev)
++{
++	(void)dev;
++	sys_write32(IPI_TARGET, IPI_BASE + CHx_TRIG);
++}
++
++/* checks if last message was received by the other side */
++static u32_t last_tx_done(struct device *dev)
++{
++	const struct ipm_zynqmp_config *config =
++		(const struct ipm_zynqmp_config * const)
++			dev->config->config_info;
++	if (config->chan_type == CH_TYPE_RX) {
++		return 1;
++	}
++	return !(sys_read32(IPI_BASE + CHx_OBS) & IPI_TARGET);
++}
++
++static int ipm_zynqmp_send(struct device *dev, int wait, u32_t id,
++		const void *data, int size)
++{
++	(void)id;
++
++	const struct ipm_zynqmp_config *config =
++		(const struct ipm_zynqmp_config * const)
++			dev->config->config_info;
++	u32_t timeout = TIMEOUT;
++
++	if (size > MAX_DATA_SIZE) {
++		return -EMSGSIZE;
++	}
++
++	/* do not overwrite the mbox
++	 * until the ipi is acked by the other side
++	 *
++	 * if `wait` is nonzero, wait without timeout
++	 */
++	while (!last_tx_done(dev)) {
++		k_sleep(DELAY);
++		timeout -= DELAY;
++		if (timeout <= 0 && !wait) {
++			return -EBUSY;
++		}
++	}
++
++	/* clear the buffer */
++	memset(config->request_buf, 0, MAX_DATA_SIZE);
++	/* write the message */
++	if (data)
++		memcpy(config->request_buf, data, size);
++
++	trigger_ipi(dev);
++	return 0;
++}
++
++static void ipm_zynqmp_register_cb(struct device *dev,
++				  ipm_callback_t cb,
++				  void *context)
++{
++	struct ipm_zynqmp_data *data =
++		(struct ipm_zynqmp_data *)dev->driver_data;
++
++	data->callback = cb;
++	data->callback_ctx = context;
++}
++
++static int ipm_zynqmp_max_data_size_get(struct device *dev)
++{
++	return MBOX_BUF_SIZE;
++}
++
++static u32_t ipm_zynqmp_max_id_val_get(struct device *dev)
++{
++	return MAX_CPU_ID;
++}
++
++static void ipm_zynqmp_isr(void *arg)
++{
++	struct device *d = arg;
++	struct ipm_zynqmp_data *driver_data =
++		(struct ipm_zynqmp_data *)d->driver_data;
++	const struct ipm_zynqmp_config *config =
++		(const struct ipm_zynqmp_config * const) d->config->config_info;
++	u8_t *request_buf = config->request_buf;
++
++	u8_t request[MBOX_BUF_SIZE];
++	u32_t status;
++
++	status = sys_read32(IPI_BASE + CHx_ISR);
++	if (!driver_data->callback) {
++		LOG_ERR("isr: no callback registered");
++		return;
++	}
++	if (!(status & IPI_TARGET)) {
++		LOG_ERR("isr: ipi from unknown channel");
++		sys_write32(status, IPI_BASE + CHx_ISR);
++		return;
++	}
++
++	memcpy(request, request_buf, MBOX_BUF_SIZE);
++
++	if (status & IPI_TARGET) {
++		/* id is 0 - use only one rx mailbox */
++		driver_data->callback(driver_data->callback_ctx, 0, request);
++
++		/* reset mailbox value */
++		memset(request_buf, MBOX_RESET_VAL, MBOX_BUF_SIZE);
++
++		/* ack the ipi */
++		sys_write32(IPI_TARGET, IPI_BASE + CHx_ISR);
++	}
++}
++
++static int ipm_zynqmp_set_enabled(struct device *dev, int enable)
++{
++	/* mask/unmask ipi */
++	if (enable) {
++		sys_write32(IPI_ALL, IPI_BASE + CHx_IER);
++	} else {
++		sys_write32(IPI_ALL, IPI_BASE + CHx_IDR);
++	}
++	return 0;
++}
++
++static int ipm_zynqmp_init(struct device *dev)
++{
++	const struct ipm_zynqmp_config *config =
++		(const struct ipm_zynqmp_config * const)
++			dev->config->config_info;
++	config->irq_config_func(dev);
++	return 0;
++}
++
++static const struct ipm_driver_api ipm_zynqmp_driver_api = {
++	.send = ipm_zynqmp_send,
++	.register_callback = ipm_zynqmp_register_cb,
++	.max_data_size_get = ipm_zynqmp_max_data_size_get,
++	.max_id_val_get = ipm_zynqmp_max_id_val_get,
++	.set_enabled = ipm_zynqmp_set_enabled,
++};
++
++static void ipm_zynqmp_irq_config(struct device *dev);
++
++static struct ipm_zynqmp_config ipm_config_0 = {
++	.request_buf = (u8_t *) MBOX_LOCAL_REQ,
++	.response_buf = (u8_t *) MBOX_REMOTE_RES,
++	.chan_type = CH_TYPE_TX,
++	.irq_config_func = ipm_zynqmp_irq_config,
++};
++
++static struct ipm_zynqmp_config ipm_config_1 = {
++	.request_buf = (u8_t *) MBOX_REMOTE_REQ,
++	.response_buf = (u8_t *) MBOX_LOCAL_RES,
++	.chan_type = CH_TYPE_RX,
++	.irq_config_func = ipm_zynqmp_irq_config,
++};
++
++static struct ipm_zynqmp_data ipm_data_0 = {
++	.callback = NULL,
++	.callback_ctx = NULL,
++};
++
++static struct ipm_zynqmp_data ipm_data_1 = {
++	.callback = NULL,
++	.callback_ctx = NULL,
++};
++
++/* TX */
++DEVICE_AND_API_INIT(mailbox_0, MAILBOX_LABEL_0,
++		ipm_zynqmp_init, &ipm_data_0, &ipm_config_0,
++		POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
++		&ipm_zynqmp_driver_api);
++
++/* RX */
++DEVICE_AND_API_INIT(mailbox_1, MAILBOX_LABEL_1,
++		ipm_zynqmp_init, &ipm_data_1, &ipm_config_1,
++		POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
++		&ipm_zynqmp_driver_api);
++
++static void ipm_zynqmp_irq_config(struct device *dev)
++{
++	(void)dev;
++	IRQ_CONNECT(IPI_IRQ, IPI_IRQ_PRIO, ipm_zynqmp_isr,
++			DEVICE_GET(mailbox_1), IPI_IRQ_FLAGS);
++	irq_enable(IPI_IRQ);
++}
+diff --git a/drivers/ipm/ipm_xlnx_zynqmp.h b/drivers/ipm/ipm_xlnx_zynqmp.h
+new file mode 100644
+index 0000000000..65de988c9f
+--- /dev/null
++++ b/drivers/ipm/ipm_xlnx_zynqmp.h
+@@ -0,0 +1,53 @@
++/*
++ * Copyright (c) 2019, Antmicro
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#define MBOX_RESET_VAL	0x0
++#define IPI_ALL		0xffffffff
++
++#define CH_TYPE_TX	1
++#define CH_TYPE_RX	2
++
++#define MAX_ID_VAL 1
++#define MAX_DATA_SIZE 32
++
++#define IPI_BASE	0xff310000 /* CH1 */
++
++#define MAILBOX_LABEL_0	DT_INST_0_XLNX_ZYNQMP_MAILBOX_LABEL
++#define MAILBOX_LABEL_1 "MAILBOX_1"
++
++#define IPI_IRQ	DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0 /* id of interrupt */
++#define IPI_IRQ_PRIO	DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0_PRIORITY
++#define IPI_IRQ_FLAGS	DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0_FLAGS
++
++/* message buffers */
++#define MBOX_LOCAL_REQ	(DT_INST_0_XLNX_ZYNQMP_MAILBOX_BASE_ADDRESS_0)
++#define MBOX_LOCAL_RES	(DT_INST_0_XLNX_ZYNQMP_MAILBOX_BASE_ADDRESS_1)
++#define MBOX_REMOTE_REQ	(DT_INST_0_XLNX_ZYNQMP_MAILBOX_BASE_ADDRESS_2)
++#define MBOX_REMOTE_RES	(DT_INST_0_XLNX_ZYNQMP_MAILBOX_BASE_ADDRESS_3)
++
++/* registers offsets */
++#define CHx_TRIG	0x0
++#define CHx_OBS		0x4
++#define CHx_ISR		0x10
++#define CHx_IMR		0x14
++#define CHx_IER		0x18
++#define CHx_IDR		0x1c
++
++/* register values to trigger an ipi */
++#define IPI_TARGET_CH0		0x1
++#define IPI_TARGET_CH1		0x100
++#define IPI_TARGET_CH2		0x200
++#define IPI_TARGET_PMU_0	0x10000
++#define IPI_TARGET_PMU_1	0x20000
++#define IPI_TARGET_PMU_2	0x40000
++#define IPI_TARGET_PMU_3	0x80000
++#define IPI_TARGET_CH7		0x1000000
++#define IPI_TARGET_CH8		0x2000000
++#define IPI_TARGET_CH9		0x4000000
++#define IPI_TARGET_CH10	0x8000000
++
++#define MBOX_BUF_SIZE	0x20
++#define MAX_CPU_ID	10
+diff --git a/dts/bindings/ipm/xlnx,zynqmp-mailbox.yaml b/dts/bindings/ipm/xlnx,zynqmp-mailbox.yaml
+new file mode 100644
+index 0000000000..cc5721b16a
+--- /dev/null
++++ b/dts/bindings/ipm/xlnx,zynqmp-mailbox.yaml
+@@ -0,0 +1,21 @@
++#
++# Copyright (c) 2019, Antmicro
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++title: XILINX ZynqMP MAILBOX
++
++description: >
++  This binding gives a base representation of the ZynqMP IPI
++
++compatible: "xlnx,zynqmp-mailbox"
++
++include: base.yaml
++
++properties:
++  reg:
++    required: true
++
++  interrupts:
++    required: true
+-- 
+2.25.1
+

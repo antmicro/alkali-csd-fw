@@ -1,0 +1,99 @@
+From 2fafc31f18ab5ae3a16abd861b3703c33874a943 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Fri, 26 Mar 2021 14:53:24 +0100
+Subject: [PATCH 10/16] zcu106: modify code to match mercury target
+
+---
+ boards/arm/zcu106/Kconfig.board     |  3 ++-
+ boards/arm/zcu106/Kconfig.defconfig |  3 +++
+ boards/arm/zcu106/zcu106.dts        |  6 +++++-
+ boards/arm/zcu106/zcu106.yaml       | 12 +++++++++++-
+ boards/arm/zcu106/zcu106_defconfig  |  6 +++++-
+ 5 files changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/boards/arm/zcu106/Kconfig.board b/boards/arm/zcu106/Kconfig.board
+index 6d19744d37..e533c92b23 100644
+--- a/boards/arm/zcu106/Kconfig.board
++++ b/boards/arm/zcu106/Kconfig.board
+@@ -2,4 +2,5 @@
+ # SPDX-License-Identifier: Apache-2.0
+ config BOARD_ZCU106
+ 	bool "ZCU106 Board"
+-	depends on SOC_XILINX_ZYNQMP_RPU
++	depends on SOC_XILINX_ZYNQMP
++	select DISABLE_TCM_ECC
+diff --git a/boards/arm/zcu106/Kconfig.defconfig b/boards/arm/zcu106/Kconfig.defconfig
+index 81c4dea17a..cac8e9dc2d 100644
+--- a/boards/arm/zcu106/Kconfig.defconfig
++++ b/boards/arm/zcu106/Kconfig.defconfig
+@@ -6,6 +6,9 @@ if BOARD_ZCU106
+ config BOARD
+ 	default "zcu106"
+ 
++config BUILD_OUTPUT_STRIPPED
++	def_bool y
++
+ config FLASH_SIZE
+ 	int
+ 	default 64
+diff --git a/boards/arm/zcu106/zcu106.dts b/boards/arm/zcu106/zcu106.dts
+index be8267e174..80575d5b89 100644
+--- a/boards/arm/zcu106/zcu106.dts
++++ b/boards/arm/zcu106/zcu106.dts
+@@ -5,7 +5,7 @@
+  */
+ 
+ /dts-v1/;
+-#include <arm/xilinx/zynqmp_rpu.dtsi>
++#include <arm/xilinx/zynqmp.dtsi>
+ 
+ / {
+ 	model = "ZCU106";
+@@ -28,3 +28,7 @@
+ 	status = "okay";
+ 	clock-frequency = <5000000>;
+ };
++
++&mailbox {
++	status = "okay";
++};
+diff --git a/boards/arm/zcu106/zcu106.yaml b/boards/arm/zcu106/zcu106.yaml
+index 135f8c74cf..a097f6bcef 100644
+--- a/boards/arm/zcu106/zcu106.yaml
++++ b/boards/arm/zcu106/zcu106.yaml
+@@ -5,4 +5,14 @@ type: mcu
+ arch: arm
+ toolchain:
+   - zephyr
+-  - gnuarmemb
++  - gccarmemb
++ram: 64
++testing:
++  ignore_tags:
++   - nmi
++   - benchmark
++   - interrupt
++   - bluetooth
++   - socket
++   - crypto
++   - net
+diff --git a/boards/arm/zcu106/zcu106_defconfig b/boards/arm/zcu106/zcu106_defconfig
+index 87ccc6c57e..11a511f9ff 100644
+--- a/boards/arm/zcu106/zcu106_defconfig
++++ b/boards/arm/zcu106/zcu106_defconfig
+@@ -1,7 +1,11 @@
+ # Copyright (c) 2021, Antmicro
+-CONFIG_SOC_XILINX_ZYNQMP_RPU=y
++CONFIG_ARM=y
++CONFIG_SOC_XILINX_ZYNQMP=y
+ CONFIG_BOARD_ZCU106=y
+ 
++CONFIG_ISR_STACK_SIZE=1024
++CONFIG_THREAD_STACK_INFO=y
++
+ # enable uart driver
+ CONFIG_SERIAL=y
+ CONFIG_UART_XLNX_PS=y
+-- 
+2.25.1
+

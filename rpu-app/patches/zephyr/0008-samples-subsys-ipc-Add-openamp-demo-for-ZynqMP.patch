@@ -1,0 +1,757 @@
+From b1427a0d95e2f72ca38ab167ddabed160d04c07e Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Fri, 22 Nov 2019 16:57:16 +0100
+Subject: [PATCH 08/16] samples: subsys: ipc: Add openamp demo for ZynqMP
+
+This adds an AMP demo for Cortex R5 on Xilinx UltraScale+
+
+Signed-Off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ .../subsys/ipc/openamp_zynqmp/CMakeLists.txt  |  12 ++
+ samples/subsys/ipc/openamp_zynqmp/README.rst  |  24 +++
+ samples/subsys/ipc/openamp_zynqmp/prj.conf    |   4 +
+ samples/subsys/ipc/openamp_zynqmp/src/main.c  | 106 ++++++++++
+ .../ipc/openamp_zynqmp/src/platform_info.c    | 198 ++++++++++++++++++
+ .../ipc/openamp_zynqmp/src/platform_info.h    |  79 +++++++
+ .../subsys/ipc/openamp_zynqmp/src/rsc_table.c |  66 ++++++
+ .../subsys/ipc/openamp_zynqmp/src/rsc_table.h |  44 ++++
+ .../openamp_zynqmp/src/zynqmp_r5_a53_rproc.c  | 138 ++++++++++++
+ 9 files changed, 671 insertions(+)
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/README.rst
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/prj.conf
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/main.c
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/platform_info.c
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/platform_info.h
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/rsc_table.c
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/rsc_table.h
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/src/zynqmp_r5_a53_rproc.c
+
+diff --git a/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt b/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
+new file mode 100644
+index 0000000000..f408a92f80
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
+@@ -0,0 +1,12 @@
++# SPDX-License-Identifier: Apache-2.0
++
++cmake_minimum_required(VERSION 3.13.1)
++
++include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
++project(openamp_zynqmp)
++
++target_sources(app PRIVATE src/main.c)
++target_sources(app PRIVATE src/platform_info.c)
++target_sources(app PRIVATE src/rsc_table.c)
++target_sources(app PRIVATE src/zynqmp_r5_a53_rproc.c)
++
+diff --git a/samples/subsys/ipc/openamp_zynqmp/README.rst b/samples/subsys/ipc/openamp_zynqmp/README.rst
+new file mode 100644
+index 0000000000..14d4b71c17
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/README.rst
+@@ -0,0 +1,24 @@
++.. _openAMP_ZynqMP_sample:
++
++OpenAMP Demo for Cortex R5 on ZynqMP
++
++Overview
++********
++
++This application is Xilinx baremetal demo ported to Zephyr.
++It uses OpenAMP and IPM driver for Inter Processor Communication.
++The app was tested on mercury_xu_board
++
++Building the application
++************************
++
++.. zephyr-app-commands::
++        :zephyr-app: samples/subsys/ipc/openamp_zynqmp
++        :board: mercury_xu_board
++        :goals: build
++
++Building and running the demo for Linux
++**************************************
++
++Please refer to `Libmetal and OpenAMP User Guide`
++in order to build rpmsg_echo application for Linux.
+diff --git a/samples/subsys/ipc/openamp_zynqmp/prj.conf b/samples/subsys/ipc/openamp_zynqmp/prj.conf
+new file mode 100644
+index 0000000000..09ae73a660
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/prj.conf
+@@ -0,0 +1,4 @@
++CONFIG_OPENAMP=y
++CONFIG_HEAP_MEM_POOL_SIZE=4096
++CONFIG_IPM=y
++CONFIG_IPM_XLNX_ZYNQMP=y
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/main.c b/samples/subsys/ipc/openamp_zynqmp/src/main.c
+new file mode 100644
+index 0000000000..43aba0c2f0
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/main.c
+@@ -0,0 +1,106 @@
++#include <zephyr.h>
++#include <sys/printk.h>
++#include <openamp/open_amp.h>
++#include <metal/device.h>
++#include <metal/sys.h>
++#include <metal/log.h>
++#include <metal/irq.h>
++#include <drivers/ipm.h>
++#include "platform_info.h"
++
++#define RPMSG_SERVICE_NAME         "rpmsg-openamp-demo-channel"
++
++
++static struct device *ipm_dev_tx;
++static struct device *ipm_dev_rx;
++static struct rpmsg_endpoint lept;
++static int shutdown_req;
++
++static int rpmsg_endpoint_cb(struct rpmsg_endpoint *ept, void *data, size_t len,
++		u32_t src, void *priv)
++{
++	if (rpmsg_send(ept, data, len) < 0) {
++		printk("rpsmg_send failed\n");
++	}
++	return RPMSG_SUCCESS;
++}
++
++static void rpmsg_service_unbind(struct rpmsg_endpoint *ept)
++{
++	printk("rpmsg endpoint destroyed\n");
++}
++
++int app(struct rpmsg_device *rdev, void *priv)
++{
++	int ret;
++
++	if (!rdev) {
++		printk("rdev pointer is null\n");
++	}
++	if (!priv) {
++		printk("priv pointer is null\n");
++	}
++
++	/* Initialize RPMSG framework */
++	ret = rpmsg_create_ept(&lept, rdev, RPMSG_SERVICE_NAME,
++			       0, RPMSG_ADDR_ANY, rpmsg_endpoint_cb,
++			       rpmsg_service_unbind);
++	if (ret) {
++		printk("Failed to create endpoint.\n");
++		return -1;
++	}
++
++	printk("Successfully created rpmsg endpoint.\n");
++	while (1) {
++		platform_poll(priv);
++		/* we got a shutdown request, exit */
++		if (shutdown_req) {
++			break;
++		}
++	}
++	rpmsg_destroy_ept(&lept);
++
++	return 0;
++}
++
++static void ipi_callback(void *context, u32_t cpu_id,
++		volatile void *data)
++{
++	irq_handler(cpu_id);
++}
++
++void main(void)
++{
++	void *platform;
++	struct rpmsg_device *rpdev;
++	int ret;
++
++	/* Initialize HW system components */
++	struct metal_init_params metal_param = METAL_INIT_DEFAULTS;
++
++	/* Low level abstraction layer for openamp initialization */
++	metal_init(&metal_param);
++
++
++	/* mailbox init */
++	ipm_dev_tx = device_get_binding("MAILBOX_0");
++	ipm_dev_rx = device_get_binding("MAILBOX_1");
++
++	if (!ipm_dev_tx || !ipm_dev_rx) {
++		printk("mailbox binding failed\n");
++	}
++
++	ipm_register_callback(ipm_dev_rx, ipi_callback, ipm_dev_rx);
++
++	ret = platform_init(&platform);
++	if (ret) {
++		printk("failed to initialize platform\n");
++		return;
++	}
++	rpdev = platform_create_rpmsg_vdev(platform, 0,
++			VIRTIO_DEV_SLAVE,
++			NULL, NULL);
++
++	app(rpdev, platform);
++	platform_cleanup(platform);
++}
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/platform_info.c b/samples/subsys/ipc/openamp_zynqmp/src/platform_info.c
+new file mode 100644
+index 0000000000..6c45ee9c81
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/platform_info.c
+@@ -0,0 +1,198 @@
++#include <errno.h>
++#include <metal/atomic.h>
++#include <metal/assert.h>
++#include <metal/device.h>
++#include <metal/sys.h>
++#include <metal/irq.h>
++#include <metal/utilities.h>
++#include <openamp/rpmsg_virtio.h>
++#include "platform_info.h"
++#include "rsc_table.h"
++
++/* Cortex R5 memory attributes */
++#define DEVICE_SHARED		0x00000001U /* device, shareable */
++#define DEVICE_NONSHARED	0x00000010U /* device, non shareable */
++#define NORM_NSHARED_NCACHE	0x00000008U /* Non cacheable  non shareable */
++#define NORM_SHARED_NCACHE	0x0000000CU /* Non cacheable shareable */
++#define	PRIV_RW_USER_RW		(0x00000003U<<8U) /* Full Access */
++
++#if XPAR_CPU_ID == 0
++#define SHARED_MEM_PA  0x3ED40000UL
++#else
++#define SHARED_MEM_PA  0x3EF40000UL
++#endif /* XPAR_CPU_ID */
++#define SHARED_MEM_SIZE 0x100000UL
++#define SHARED_BUF_OFFSET 0x8000UL
++
++#define _rproc_wait() ({ \
++		__asm volatile("wfi"); \
++	})
++
++static struct remoteproc_priv rproc_priv;
++
++static struct remoteproc rproc_inst;
++
++/* processor operations from r5 to a53. It defines
++ * notification operation and remote processor managementi operations.
++ */
++extern struct remoteproc_ops zynqmp_r5_a53_proc_ops;
++
++/* RPMsg virtio shared buffer pool */
++static struct rpmsg_virtio_shm_pool shpool;
++
++static struct remoteproc *
++platform_create_proc(int proc_index, int rsc_index)
++{
++	void *rsc_table;
++	int rsc_size;
++	int ret;
++	metal_phys_addr_t pa;
++
++	(void) proc_index;
++	rsc_table = get_resource_table(rsc_index, &rsc_size);
++
++	/* Initialize remoteproc instance */
++	if (!remoteproc_init(&rproc_inst, &zynqmp_r5_a53_proc_ops,
++				&rproc_priv)) {
++		printk("returned null\n");
++		return NULL;
++	}
++
++	/*
++	 * Mmap shared memories
++	 * Or shall we constraint that they will be set as carved out
++	 * in the resource table?
++	 */
++	/* mmap resource table */
++	pa = (metal_phys_addr_t)rsc_table;
++	(void *)remoteproc_mmap(&rproc_inst, &pa,
++				NULL, rsc_size,
++				NORM_NSHARED_NCACHE|PRIV_RW_USER_RW,
++				&rproc_inst.rsc_io);
++	/* mmap shared memory */
++	pa = SHARED_MEM_PA;
++	(void *)remoteproc_mmap(&rproc_inst, &pa,
++				NULL, SHARED_MEM_SIZE,
++				NORM_NSHARED_NCACHE|PRIV_RW_USER_RW,
++				NULL);
++
++	/* parse resource table to remoteproc */
++	ret = remoteproc_set_rsc_table(&rproc_inst, rsc_table, rsc_size);
++	if (ret) {
++		printk("Failed to initialize remoteproc\n");
++		remoteproc_remove(&rproc_inst);
++		return NULL;
++	}
++	printk("Initialize remoteproc successfully.\n");
++
++	return &rproc_inst;
++}
++
++int platform_init(void **platform)
++{
++	unsigned long proc_id = 0;
++	unsigned long rsc_id = 0;
++	struct remoteproc *rproc;
++
++	if (!platform) {
++		printk("Failed to initialize platform: NULL pointer to store platform data.\n");
++		return -1;
++	}
++	rproc = platform_create_proc(proc_id, rsc_id);
++	if (!rproc) {
++		printk("Failed to create remoteproc device.\n");
++		return -EINVAL;
++	}
++	*platform = rproc;
++	return 0;
++}
++
++struct  rpmsg_device *
++platform_create_rpmsg_vdev(void *platform, unsigned int vdev_index,
++			   unsigned int role,
++			   void (*rst_cb)(struct virtio_device *vdev),
++			   rpmsg_ns_bind_cb ns_bind_cb)
++{
++	struct remoteproc *rproc = platform;
++	struct rpmsg_virtio_device *rpmsg_vdev;
++	struct virtio_device *vdev;
++	void *shbuf;
++	struct metal_io_region *shbuf_io;
++	int ret;
++
++	rpmsg_vdev = metal_allocate_memory(sizeof(*rpmsg_vdev));
++	printk("allocated memory for rpmsg_vdev\n");
++	if (!rpmsg_vdev)
++		return NULL;
++	shbuf_io = remoteproc_get_io_with_pa(rproc, SHARED_MEM_PA);
++	if (!shbuf_io)
++		return NULL;
++	shbuf = metal_io_phys_to_virt(shbuf_io,
++				      SHARED_MEM_PA + SHARED_BUF_OFFSET);
++
++	printk("creating remoteproc virtio\n");
++	vdev = remoteproc_create_virtio(rproc, vdev_index, role, rst_cb);
++	if (!vdev) {
++		printk("failed remoteproc_create_virtio\n");
++		goto err1;
++	}
++
++	printk("initializing rpmsg shared buffer pool\n");
++	/* Only RPMsg virtio master needs to initialize
++	 * the shared buffers pool
++	 */
++	rpmsg_virtio_init_shm_pool(&shpool, shbuf,
++				   (SHARED_MEM_SIZE - SHARED_BUF_OFFSET));
++
++	printk("initializing rpmsg vdev\n");
++	/* RPMsg virtio slave can set shared buffers pool argument to NULL */
++	ret =  rpmsg_init_vdev(rpmsg_vdev, vdev, ns_bind_cb,
++			       shbuf_io,
++			       &shpool);
++	if (ret) {
++		printk("failed rpmsg_init_vdev\n");
++		goto err2;
++	}
++	printk("initializing rpmsg vdev\n");
++	return rpmsg_virtio_get_rpmsg_device(rpmsg_vdev);
++err2:
++	remoteproc_remove_virtio(rproc, vdev);
++err1:
++	metal_free_memory(rpmsg_vdev);
++	return NULL;
++}
++
++int platform_poll(void *priv)
++{
++	struct remoteproc *rproc = priv;
++	struct remoteproc_priv *prproc;
++	unsigned int flags;
++
++	prproc = rproc->priv;
++	while (1) {
++		flags = metal_irq_save_disable();
++		if (!(atomic_flag_test_and_set(&prproc->ipi_nokick))) {
++			metal_irq_restore_enable(flags);
++			remoteproc_get_notification(rproc, RSC_NOTIFY_ID_ANY);
++			break;
++		}
++		_rproc_wait(); /* wait for interrupt */
++		metal_irq_restore_enable(flags);
++	}
++	return 0;
++}
++
++void platform_cleanup(void *platform)
++{
++	struct remoteproc *rproc = platform;
++
++	if (rproc)
++		remoteproc_remove(rproc);
++}
++
++extern int zynqmp_r5_a53_proc_irq_handler(int, void *);
++
++int irq_handler(int cpu_id)
++{
++	return zynqmp_r5_a53_proc_irq_handler(cpu_id, &rproc_inst);
++}
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/platform_info.h b/samples/subsys/ipc/openamp_zynqmp/src/platform_info.h
+new file mode 100644
+index 0000000000..226bf1cecf
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/platform_info.h
+@@ -0,0 +1,79 @@
++#ifndef PLATFORM_INFO_H_
++#define PLATFORM_INFO_H_
++
++#include <openamp/remoteproc.h>
++#include <openamp/virtio.h>
++#include <openamp/rpmsg.h>
++
++#if defined __cplusplus
++extern "C" {
++#endif
++
++/* Cortex R5 memory attributes */
++#define DEVICE_SHARED       0x00000001U /* device, shareable */
++#define DEVICE_NONSHARED    0x00000010U /* device, non shareable */
++#define NORM_NSHARED_NCACHE 0x00000008U /* Non cacheable  non shareable */
++#define NORM_SHARED_NCACHE  0x0000000CU /* Non cacheable shareable */
++#define PRIV_RW_USER_RW     (0x00000003U<<8U) /* Full Access */
++
++struct remoteproc_priv {
++	atomic_int ipi_nokick;
++};
++
++/**
++ * platform_init - initialize the platform
++ *
++ * It will initialize the platform.
++ *
++ * @argc: number of arguments
++ * @argv: array of the input arguments
++ * @platform: pointer to store the platform data pointer
++ *
++ * return 0 for success or negative value for failure
++ */
++int platform_init(void **platform);
++
++/**
++ * platform_create_rpmsg_vdev - create rpmsg vdev
++ *
++ * It will create rpmsg virtio device, and returns the rpmsg virtio
++ * device pointer.
++ *
++ * @platform: pointer to the private data
++ * @vdev_index: index of the virtio device, there can more than one vdev
++ *              on the platform.
++ * @role: virtio master or virtio slave of the vdev
++ * @rst_cb: virtio device reset callback
++ * @ns_bind_cb: rpmsg name service bind callback
++ *
++ * return pointer to the rpmsg virtio device
++ */
++struct rpmsg_device *
++platform_create_rpmsg_vdev(void *platform, unsigned int vdev_index,
++			   unsigned int role,
++			   void (*rst_cb)(struct virtio_device *vdev),
++			   rpmsg_ns_bind_cb ns_bind_cb);
++
++/**
++ * platform_poll - platform poll function
++ *
++ * @platform: pointer to the platform
++ *
++ * return negative value for errors, otherwise 0.
++ */
++int platform_poll(void *platform);
++
++/**
++ * platform_cleanup - clean up the platform resource
++ *
++ * @platform: pointer to the platform
++ */
++void platform_cleanup(void *platform);
++
++int irq_handler(int cpu_id);
++
++#if defined __cplusplus
++}
++#endif
++
++#endif /* PLATFORM_INFO_H_ */
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.c b/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.c
+new file mode 100644
+index 0000000000..e4a81933e0
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.c
+@@ -0,0 +1,66 @@
++/*
++ * Copyright (c) 2014, Mentor Graphics Corporation
++ * All rights reserved.
++ * Copyright (c) 2015 Xilinx, Inc. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++/* This file populates resource table for BM remote
++ * for use by the Linux Master
++ */
++
++#include <openamp/open_amp.h>
++#include "rsc_table.h"
++
++/* Place resource table in special ELF section */
++#define __section_t(S)          __attribute__((__section__(#S)))
++#define __resource              __section_t(.resource_table)
++
++#define RPMSG_IPU_C0_FEATURES        1
++
++/* VirtIO rpmsg device id */
++#define VIRTIO_ID_RPMSG_             7
++
++/* Remote supports Name Service announcement */
++#define VIRTIO_RPMSG_F_NS           0
++
++#define NUM_VRINGS                  0x02
++#define VRING_ALIGN                 0x1000
++#define RING_TX                     FW_RSC_U32_ADDR_ANY
++#define RING_RX                     FW_RSC_U32_ADDR_ANY
++#define VRING_SIZE                  256
++
++#define NUM_TABLE_ENTRIES           1
++
++struct remote_resource_table __resource resources = {
++	/* Version */
++	1,
++
++	/* NUmber of table entries */
++	NUM_TABLE_ENTRIES,
++	/* reserved fields */
++	{0, 0,},
++
++	/* Offsets of rsc entries */
++	{
++	 offsetof(struct remote_resource_table, rpmsg_vdev),
++	 },
++
++	/* Virtio device entry */
++	{
++	 RSC_VDEV, VIRTIO_ID_RPMSG_, 0, RPMSG_IPU_C0_FEATURES, 0, 0, 0,
++	 NUM_VRINGS, {0, 0},
++	 },
++
++	/* Vring rsc entry - part of vdev rsc entry */
++	{RING_TX, VRING_ALIGN, VRING_SIZE, 1, 0},
++	{RING_RX, VRING_ALIGN, VRING_SIZE, 2, 0},
++};
++
++void *get_resource_table(int rsc_id, int *len)
++{
++	(void) rsc_id;
++	*len = sizeof(resources);
++	return &resources;
++}
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.h b/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.h
+new file mode 100644
+index 0000000000..a87ac7ac38
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/rsc_table.h
+@@ -0,0 +1,44 @@
++/*
++ * Copyright (c) 2014, Mentor Graphics Corporation
++ * All rights reserved.
++ *
++ * Copyright (C) 2015 Xilinx, Inc.  All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++/* This file populates resource table for BM remote
++ * for use by the Linux Master
++ */
++
++#ifndef RSC_TABLE_H_
++#define RSC_TABLE_H_
++
++#include <stddef.h>
++#include <openamp/open_amp.h>
++
++#if defined __cplusplus
++extern "C" {
++#endif
++
++#define NO_RESOURCE_ENTRIES         8
++
++/* Resource table for the given remote */
++struct remote_resource_table {
++	unsigned int version;
++	unsigned int num;
++	unsigned int reserved[2];
++	unsigned int offset[NO_RESOURCE_ENTRIES];
++	/* rpmsg vdev entry */
++	struct fw_rsc_vdev rpmsg_vdev;
++	struct fw_rsc_vdev_vring rpmsg_vring0;
++	struct fw_rsc_vdev_vring rpmsg_vring1;
++} __packed __aligned(0x100);
++
++void *get_resource_table(int rsc_id, int *len);
++
++#if defined __cplusplus
++}
++#endif
++
++#endif /* RSC_TABLE_H_ */
+diff --git a/samples/subsys/ipc/openamp_zynqmp/src/zynqmp_r5_a53_rproc.c b/samples/subsys/ipc/openamp_zynqmp/src/zynqmp_r5_a53_rproc.c
+new file mode 100644
+index 0000000000..f7c2b27515
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/src/zynqmp_r5_a53_rproc.c
+@@ -0,0 +1,138 @@
++/*
++ * Copyright (c) 2014, Mentor Graphics Corporation
++ * All rights reserved.
++ * Copyright (c) 2017 Xilinx, Inc.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++/**************************************************************************
++ * FILE NAME
++ *
++ *       zynqmp_r5_a53_rproc.c
++ *
++ * DESCRIPTION
++ *
++ *       This file define Xilinx ZynqMP R5 to A53 platform specific
++ *       remoteproc implementation.
++ *
++ **************************************************************************/
++
++#include <metal/atomic.h>
++#include <metal/assert.h>
++#include <metal/device.h>
++#include <metal/irq.h>
++#include <metal/utilities.h>
++#include <openamp/rpmsg_virtio.h>
++#include <drivers/ipm.h>
++#include "platform_info.h"
++
++
++static struct device *ipm_dev_tx;
++static struct device *ipm_dev_rx;
++
++int zynqmp_r5_a53_proc_irq_handler(int cpu_id, void *data)
++{
++	(void) cpu_id;
++	struct remoteproc *rproc = data;
++	struct remoteproc_priv *prproc;
++
++	if (!rproc)
++		return METAL_IRQ_NOT_HANDLED;
++
++	prproc = rproc->priv;
++	atomic_flag_clear(&prproc->ipi_nokick);
++
++	return METAL_IRQ_HANDLED;
++}
++
++static struct remoteproc *
++zynqmp_r5_a53_proc_init(struct remoteproc *rproc,
++		struct remoteproc_ops *ops, void *arg)
++{
++	struct remoteproc_priv *prproc = arg;
++
++	printk("remoteproc init\n");
++
++	ipm_dev_tx = device_get_binding("MAILBOX_0");
++	ipm_dev_rx = device_get_binding("MAILBOX_1");
++
++	ipm_set_enabled(ipm_dev_rx, 1);
++
++	if (!rproc || !prproc || !ops)
++		return NULL;
++
++	rproc->priv = prproc;
++
++	atomic_store(&prproc->ipi_nokick, 1);
++	rproc->ops = ops;
++
++	return rproc;
++}
++
++static void zynqmp_r5_a53_proc_remove(struct remoteproc *rproc)
++{
++	ipm_set_enabled(ipm_dev_rx, 0);
++}
++
++static void *
++zynqmp_r5_a53_proc_mmap(struct remoteproc *rproc, metal_phys_addr_t *pa,
++			metal_phys_addr_t *da, size_t size,
++			unsigned int attribute, struct metal_io_region **io)
++{
++	struct remoteproc_mem *mem;
++	metal_phys_addr_t lpa, lda;
++	struct metal_io_region *tmpio;
++
++	lpa = *pa;
++	lda = *da;
++
++	if (lpa == METAL_BAD_PHYS && lda == METAL_BAD_PHYS)
++		return NULL;
++	if (lpa == METAL_BAD_PHYS)
++		lpa = lda;
++	if (lda == METAL_BAD_PHYS)
++		lda = lpa;
++
++	if (!attribute)
++		attribute = NORM_SHARED_NCACHE | PRIV_RW_USER_RW;
++	mem = metal_allocate_memory(sizeof(*mem));
++	if (!mem)
++		return NULL;
++	tmpio = metal_allocate_memory(sizeof(*tmpio));
++	if (!tmpio) {
++		metal_free_memory(mem);
++		return NULL;
++	}
++	remoteproc_init_mem(mem, NULL, lpa, lda, size, tmpio);
++	/* va is the same as pa in this platform */
++	metal_io_init(tmpio, (void *)lpa, &mem->pa, size,
++			  sizeof(metal_phys_addr_t)<<3, attribute, NULL);
++	remoteproc_add_mem(rproc, mem);
++	*pa = lpa;
++	*da = lda;
++	if (io)
++		*io = tmpio;
++	return metal_io_phys_to_virt(tmpio, mem->pa);
++}
++
++static int zynqmp_r5_a53_proc_notify(struct remoteproc *rproc, uint32_t id)
++{
++	if (ipm_dev_tx) {
++		ipm_send(ipm_dev_tx, 0, 0, NULL, 0);
++	}
++	return 0;
++}
++
++/* processor operations from r5 to a53. It defines
++ * notification operation and remote processor managementi operations.
++ */
++struct remoteproc_ops zynqmp_r5_a53_proc_ops = {
++	.init = zynqmp_r5_a53_proc_init,
++	.remove = zynqmp_r5_a53_proc_remove,
++	.mmap = zynqmp_r5_a53_proc_mmap,
++	.notify = zynqmp_r5_a53_proc_notify,
++	.start = NULL,
++	.stop = NULL,
++	.shutdown = NULL,
++};
+-- 
+2.25.1
+

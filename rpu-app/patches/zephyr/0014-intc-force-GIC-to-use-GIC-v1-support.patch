@@ -1,0 +1,26 @@
+From f1390ea13bacf8f16dc11c799eb3b8efdb0b2a8f Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Thu, 22 Apr 2021 13:54:13 +0200
+Subject: [PATCH 14/16] intc: force GIC to use GIC v1 support
+
+This driver was backported and we need to manually select the correct GIC version
+---
+ drivers/interrupt_controller/intc_gic.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/interrupt_controller/intc_gic.c b/drivers/interrupt_controller/intc_gic.c
+index c495b36570..0a5b36e631 100644
+--- a/drivers/interrupt_controller/intc_gic.c
++++ b/drivers/interrupt_controller/intc_gic.c
+@@ -21,6 +21,8 @@
+ #error "GICv3 and above are not supported"
+ #endif
+ 
++#define CONFIG_GIC_V1
++
+ struct gic_ictl_config {
+ 	u32_t isr_table_offset;
+ };
+-- 
+2.25.1
+

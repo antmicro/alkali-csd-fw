@@ -1,0 +1,36 @@
+From c7e74ea5e81b21ff3fb2cebd735c7113a881e387 Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Thu, 29 Aug 2019 13:23:40 +0200
+Subject: [PATCH 02/16] dts: arm: fix addresses of zynqmp gic
+
+The addresses are incorrect. According to the ZynqMP's TRM
+0xF9010000 is the base address of an interrupt controller for
+Cortex-A53 and 0xF9000000 is the address of interrupt controller
+for Cortex-R5
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ dts/arm/xilinx/zynqmp.dtsi | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/dts/arm/xilinx/zynqmp.dtsi b/dts/arm/xilinx/zynqmp.dtsi
+index f984d7aeaa..b52be3e8b1 100644
+--- a/dts/arm/xilinx/zynqmp.dtsi
++++ b/dts/arm/xilinx/zynqmp.dtsi
+@@ -23,10 +23,10 @@
+ 	soc {
+ 		interrupt-parent = <&gic>;
+ 
+-		gic: interrupt-controller@f9010000  {
++		gic: interrupt-controller@f9000000  {
+ 			compatible = "arm,gic";
+-			reg = <0xf9010000 0x1000>,
+-					<0xf9020000 0x100>;
++			reg = <0xf9000000 0x1000>,
++					<0xf9001000 0x1000>;
+ 			interrupt-controller;
+ 			#interrupt-cells = <3>;
+ 			label = "GIC";
+-- 
+2.25.1
+

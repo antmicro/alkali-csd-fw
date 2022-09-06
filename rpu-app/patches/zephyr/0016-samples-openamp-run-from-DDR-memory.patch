@@ -1,0 +1,36 @@
+From 144448403e0356d430845d0ebc514ddd48b4e054 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Fri, 21 May 2021 14:15:18 +0200
+Subject: [PATCH 16/16] samples: openamp: run from DDR memory
+
+---
+ samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt | 2 ++
+ samples/subsys/ipc/openamp_zynqmp/nvme.overlay   | 3 +++
+ 2 files changed, 5 insertions(+)
+ create mode 100644 samples/subsys/ipc/openamp_zynqmp/nvme.overlay
+
+diff --git a/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt b/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
+index f408a92f80..c976a88595 100644
+--- a/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
++++ b/samples/subsys/ipc/openamp_zynqmp/CMakeLists.txt
+@@ -2,6 +2,8 @@
+ 
+ cmake_minimum_required(VERSION 3.13.1)
+ 
++set(DTC_OVERLAY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/nvme.overlay")
++
+ include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
+ project(openamp_zynqmp)
+ 
+diff --git a/samples/subsys/ipc/openamp_zynqmp/nvme.overlay b/samples/subsys/ipc/openamp_zynqmp/nvme.overlay
+new file mode 100644
+index 0000000000..fa75ae9e3a
+--- /dev/null
++++ b/samples/subsys/ipc/openamp_zynqmp/nvme.overlay
+@@ -0,0 +1,3 @@
++&sram0 {
++	reg = <0x3ed00000 DT_SIZE_K(128)>;
++};
+-- 
+2.25.1
+

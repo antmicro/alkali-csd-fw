@@ -1,0 +1,31 @@
+From a601cfda29c663d7a83d1951c6875649137f8eb4 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Thu, 22 Apr 2021 13:19:58 +0200
+Subject: [PATCH 13/16] dts: add interrupt fixup for NVMe cores
+
+This is required because arch_irq_enable for Cortex-Rs shifts IRQ numbers by 8 and subtracts 1.
+To get a correct IRQ number in GIC we need to do the opposite and modify IRQ number we get from
+devicetree.
+---
+ soc/arm/xilinx_zynqmp/dts_fixup.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/soc/arm/xilinx_zynqmp/dts_fixup.h b/soc/arm/xilinx_zynqmp/dts_fixup.h
+index 4a60342271..4e3f5e67e8 100644
+--- a/soc/arm/xilinx_zynqmp/dts_fixup.h
++++ b/soc/arm/xilinx_zynqmp/dts_fixup.h
+@@ -18,3 +18,11 @@
+ #undef DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0
+ #define DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_0 \
+ 	((DT_INST_0_XLNX_ZYNQMP_MAILBOX_IRQ_IPI + 1) << 8)
++
++#undef DT_INST_0_NVME_TC_IRQ_0
++#define DT_INST_0_NVME_TC_IRQ_0 \
++	((DT_INST_0_NVME_TC_IRQ_HOST_WRITE + 1) << 8)
++
++#undef DT_INST_0_NVME_DMA_IRQ_0
++#define DT_INST_0_NVME_DMA_IRQ_0 \
++	((DT_INST_0_NVME_DMA_IRQ_DMA_DONE + 1) << 8)
+-- 
+2.25.1
+

@@ -1,0 +1,55 @@
+From 51c665bf69654a1340bc26c42a5bd7a30d334dd0 Mon Sep 17 00:00:00 2001
+From: Piotr Binkowski <pbinkowski@antmicro.com>
+Date: Wed, 21 Apr 2021 16:23:31 +0200
+Subject: [PATCH 11/16] dts: add minimal bindings for NVMe cores
+
+---
+ dts/bindings/misc/nvme-dma.yaml | 14 ++++++++++++++
+ dts/bindings/misc/nvme-tc.yaml  | 14 ++++++++++++++
+ 2 files changed, 28 insertions(+)
+ create mode 100644 dts/bindings/misc/nvme-dma.yaml
+ create mode 100644 dts/bindings/misc/nvme-tc.yaml
+
+diff --git a/dts/bindings/misc/nvme-dma.yaml b/dts/bindings/misc/nvme-dma.yaml
+new file mode 100644
+index 0000000000..e9578a4bf6
+--- /dev/null
++++ b/dts/bindings/misc/nvme-dma.yaml
+@@ -0,0 +1,14 @@
++#
++# Copyright (c) 2021 Antmicro <www.antmicro.com>
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++title: NVMe DMA
++
++description: |
++    This binding allows control of the NVMe DMA
++
++compatible: "nvme-dma"
++
++include: base.yaml
+diff --git a/dts/bindings/misc/nvme-tc.yaml b/dts/bindings/misc/nvme-tc.yaml
+new file mode 100644
+index 0000000000..06f36c4da9
+--- /dev/null
++++ b/dts/bindings/misc/nvme-tc.yaml
+@@ -0,0 +1,14 @@
++#
++# Copyright (c) 2021 Antmicro <www.antmicro.com>
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++title: NVMe Core
++
++description: |
++    This binding allows control of the NVMe core
++
++compatible: "nvme-tc"
++
++include: base.yaml
+-- 
+2.25.1
+

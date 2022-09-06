@@ -1,0 +1,48 @@
+From 63f8b1429d41a8a78079b3920c42f424ba4ef2a6 Mon Sep 17 00:00:00 2001
+From: Wojciech Sipak <wsipak@internships.antmicro.com>
+Date: Wed, 4 Sep 2019 09:33:33 +0200
+Subject: [PATCH 03/16] drivers: timer: add dummy functions to xlnx timer
+
+This commit adds dummy functions for tickless kernel api
+in xlnx_psttc_timer driver.
+
+Signed-off-by: Wojciech Sipak <wsipak@internships.antmicro.com>
+---
+ drivers/timer/xlnx_psttc_timer.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/drivers/timer/xlnx_psttc_timer.c b/drivers/timer/xlnx_psttc_timer.c
+index d1abeb45e9..11228f671d 100644
+--- a/drivers/timer/xlnx_psttc_timer.c
++++ b/drivers/timer/xlnx_psttc_timer.c
+@@ -194,3 +194,27 @@ u32_t z_timer_cycle_get_32(void)
+ {
+ 	return accumulated_cycles;
+ }
++
++
++/**
++ *
++ * @brief Place system timer into idle state
++ *
++ * This is a dummy for tickless kerner driver api
++ *
++ * @return N/A
++ */
++void z_timer_idle_enter(s32_t ticks)
++{
++
++}
++
++/**
++ * This is a dummy for tickless kernel driver api
++ *
++ * @return N/A
++ */
++void z_set_time(u32_t time)
++{
++
++}
+-- 
+2.25.1
+
