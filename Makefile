@@ -17,8 +17,10 @@ WEST_INIT_DIR ?= $(RPUAPP_DIR)
 
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
 REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
-RPUAPP_DIR = $(ROOT_DIR)/rpu-app
 BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
+SCRIPTS_DIR = $(ROOT_DIR)/scripts
+RPUAPP_DIR = $(ROOT_DIR)/rpu-app
+ZEPHYR_PATCHES_DIR=$(RPUAPP_DIR)/patches
 
 # Output paths ----------------------------------------------------------------
 
@@ -204,8 +206,11 @@ $(ZEPHYR_SDK_LOCAL_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	chmod u+rwx $(ZEPHYR_SDK_DOWNLOAD_PATH)
 	bash $(ZEPHYR_SDK_DOWNLOAD_PATH) --quiet -- -d $(ZEPHYR_SDK_LOCAL_INSTALL_DIR)
 
-$(ZEPHYR_SOURCES) &: | $(WEST_CONFIG)
+$(ZEPHYR_SOURCES) &: $(SCRIPTS_DIR)/copy_and_patch.py $(ZEPHYR_PATCHES_DIR)/zephyr $(ZEPHYR_PATCHES_DIR)/libmetal | $(WEST_CONFIG)
+	$(RM) -r $(BUILD_DIR)/zephyr $(BUILD_DIR)/libmetal
 	west update
+	$(SCRIPTS_DIR)/copy_and_patch.py -f $(BUILD_DIR)/zephyr $(BUILD_DIR)/zephyr -p $(ZEPHYR_PATCHES_DIR)/zephyr
+	$(SCRIPTS_DIR)/copy_and_patch.py -f $(BUILD_DIR)/modules/hal/libmetal $(BUILD_DIR)/modules/hal/libmetal -p $(ZEPHYR_PATCHES_DIR)/libmetal
 
 $(WEST_CONFIG): SHELL := /bin/bash
 $(WEST_CONFIG):

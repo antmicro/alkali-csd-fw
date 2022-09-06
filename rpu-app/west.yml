@@ -11,34 +11,24 @@ manifest:
     path: rpu-app
 
   remotes:
-    - name: antmicro-wd
-      url-base: git@github.com:antmicro
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
 
   projects:
     - name: zephyr
       path: build/zephyr
-      repo-path: wd-nvme-zephyr
-      remote: antmicro-wd
-      revision: 144448403e0356d430845d0ebc514ddd48b4e054
+      revision: 64dbc3e610d79db74f3ff1395fc9b1bf891f73c2
       import: true
 
     - name: libmetal
-      repo-path: wd-nvme-libmetal
-      remote: antmicro-wd
-      revision: c8944fe5af45f1a20e657f14806b78535f8c6b02
+      revision: 6f2798ba1f6a63747baeb366ea50ccdc0cac2797
       path: build/modules/hal/libmetal
-      groups:
-        - hal
-
     - name: ci-tools
       revision: c083680dd5e281218ddb47d0ceac5c5fd5619749
       path: build/tools/ci-tools
     - name: net-tools
       revision: 30b7efa827b04d2e47840716b0372737fe7d6c92
       path: build/tools/net-tools
-
     - name: hal_atmel
       revision: 5690f5b84495c8b657ff204c5c827df1ab9e12e3
       path: build/modules/hal/atmel
