@@ -28,6 +28,7 @@ APUAPP_BUILD_DIR = $(BUILD_DIR)/apu-app
 RPUAPP_BUILD_DIR = $(BUILD_DIR)/rpu-app
 BUILDROOT_BUILD_DIR = $(BUILD_DIR)/buildroot
 DOCKER_BUILD_DIR = $(BUILD_DIR)/docker
+ZEPHYR_DOWNLOAD_DIR = $(BUILD_DIR)/zephyr-sources
 
 # Helpers  --------------------------------------------------------------------
 
@@ -155,33 +156,33 @@ ZEPHYR_SDK_DOWNLOAD_PATH = $(BUILD_DIR)/zephyr-sdk.run
 ZEPHYR_SDK_LOCAL_INSTALL_DIR = $(BUILD_DIR)/$(ZEPHYR_SDK_NAME)
 
 ZEPHYR_SOURCES= \
-	$(BUILD_DIR)/zephyr \
-	$(BUILD_DIR)/tools \
-	$(BUILD_DIR)/modules/hal/libmetal \
-	$(BUILD_DIR)/modules \
-	$(BUILD_DIR)/modules/hal/atmel \
-	$(BUILD_DIR)/modules/lib/civetweb \
-	$(BUILD_DIR)/modules/hal/esp-idf \
-	$(BUILD_DIR)/modules/fs/fatfs \
-	$(BUILD_DIR)/modules/hal/cypress \
-	$(BUILD_DIR)/modules/hal/nordic \
-	$(BUILD_DIR)/modules/hal/openisa \
-	$(BUILD_DIR)/modules/hal/microchip \
-	$(BUILD_DIR)/modules/hal/silabs \
-	$(BUILD_DIR)/modules/hal/st \
-	$(BUILD_DIR)/modules/hal/stm32 \
-	$(BUILD_DIR)/modules/hal/ti \
-	$(BUILD_DIR)/modules/lib/gui/lvgl \
-	$(BUILD_DIR)/modules/crypto/mbedtls \
-	$(BUILD_DIR)/modules/lib/mcumgr \
-	$(BUILD_DIR)/modules/fs/nffs \
-	$(BUILD_DIR)/modules/hal/nxp \
-	$(BUILD_DIR)/modules/lib/open-amp \
-	$(BUILD_DIR)/modules/lib/openthread \
-	$(BUILD_DIR)/modules/debug/segger \
-	$(BUILD_DIR)/modules/lib/tinycbor \
-	$(BUILD_DIR)/modules/fs/littlefs \
-	$(BUILD_DIR)/modules/debug/mipi-sys-t
+	$(ZEPHYR_DOWNLOAD_DIR)/zephyr \
+	$(ZEPHYR_DOWNLOAD_DIR)/tools \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/libmetal \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/atmel \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/civetweb \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/esp-idf \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/fs/fatfs \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/cypress \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/nordic \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/openisa \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/microchip \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/silabs \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/st \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/stm32 \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/ti \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/gui/lvgl \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/crypto/mbedtls \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/mcumgr \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/fs/nffs \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/hal/nxp \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/open-amp \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/openthread \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/debug/segger \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/lib/tinycbor \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/fs/littlefs \
+	$(ZEPHYR_DOWNLOAD_DIR)/modules/debug/mipi-sys-t
 
 .PHONY: zephyr/sdk
 zephyr/sdk: $(ZEPHYR_SDK_LOCAL_INSTALL_DIR) ## Install Zephyr SDK locally (helper)
@@ -209,8 +210,8 @@ $(ZEPHYR_SDK_LOCAL_INSTALL_DIR): $(ZEPHYR_SDK_DOWNLOAD_PATH)
 $(ZEPHYR_SOURCES) &: $(SCRIPTS_DIR)/copy_and_patch.py $(ZEPHYR_PATCHES_DIR)/zephyr $(ZEPHYR_PATCHES_DIR)/libmetal | $(WEST_CONFIG)
 	$(RM) -r $(BUILD_DIR)/zephyr $(BUILD_DIR)/libmetal
 	west update
-	$(SCRIPTS_DIR)/copy_and_patch.py -f $(BUILD_DIR)/zephyr $(BUILD_DIR)/zephyr -p $(ZEPHYR_PATCHES_DIR)/zephyr
-	$(SCRIPTS_DIR)/copy_and_patch.py -f $(BUILD_DIR)/modules/hal/libmetal $(BUILD_DIR)/modules/hal/libmetal -p $(ZEPHYR_PATCHES_DIR)/libmetal
+	$(SCRIPTS_DIR)/copy_and_patch.py -f $(ZEPHYR_DOWNLOAD_DIR)/zephyr $(ZEPHYR_DOWNLOAD_DIR)/zephyr -p $(ZEPHYR_PATCHES_DIR)/zephyr
+	$(SCRIPTS_DIR)/copy_and_patch.py -f $(ZEPHYR_DOWNLOAD_DIR)/modules/hal/libmetal $(ZEPHYR_DOWNLOAD_DIR)/modules/hal/libmetal -p $(ZEPHYR_PATCHES_DIR)/libmetal
 
 $(WEST_CONFIG): SHELL := /bin/bash
 $(WEST_CONFIG):
@@ -236,7 +237,7 @@ RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
 
-IN_ZEPHYR_ENV = source $(BUILD_DIR)/zephyr/zephyr-env.sh
+IN_ZEPHYR_ENV = source $(ZEPHYR_DOWNLOAD_DIR)/zephyr/zephyr-env.sh
 IN_SDK_ENV = \
 	source $(BUILD_DIR)/zephyr/zephyr-env.sh && \
 	export ZEPHYR_TOOLCHAIN_VARIANT=zephyr && \
