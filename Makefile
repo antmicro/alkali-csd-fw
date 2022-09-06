@@ -65,35 +65,23 @@ BUILDROOT_OPTS = O=$(BUILDROOT_BUILD_DIR) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2
 BUILDROOT_TOOLCHAIN_TAR_FILE = $(BUILDROOT_BUILD_DIR)/images/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
 BUILDROOT_TOOLCHAIN_OUTPUT_DIR = $(BUILD_DIR)/aarch64-buildroot-linux-gnu_sdk-buildroot
 BUILDROOT_TOOLCHAIN_CMAKE_FILE = $(BUILDROOT_TOOLCHAIN_OUTPUT_DIR)/share/buildroot/toolchainfile.cmake
+BUILDROOT_IMAGES_DIR = $(BUILDROOT_BUILD_DIR)/images
+BUILDROOT_OUTPUTS := \
+	$(BUILDROOT_IMAGES_DIR)/bl31.elf \
+	$(BUILDROOT_IMAGES_DIR)/Image \
+	$(BUILDROOT_IMAGES_DIR)/rootfs.cpio.uboot \
+	$(BUILDROOT_IMAGES_DIR)/u-boot.elf \
+	$(BUILDROOT_IMAGES_DIR)/zynqmp-an300-nvme.dtb \
+	$(BUILDROOT_IMAGES_DIR)/zynqmp-zcu106-nvme.dtb
 
 $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 	mkdir -p $@
-
-.PHONY: buildroot
-buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
-	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
-	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware
-	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
-	cp $(RPUAPP_ZEPHYR_ELF) $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware/zephyr.elf
-	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin
-	cp $(APUAPP_BUILD_DIR)/apu-app $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
-	cp $(APUAPP_BUILD_DIR)/tflite-delegate-test $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
-	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
-	$(MAKE) $(BUILDROOT_OPTS) -j`nproc`
-
-.PHONY: buildroot/distclean
-buildroot/distclean: ## Remove Buildroot build
-	$(MAKE) $(BUILDROOT_OPTS) distclean
 
 .PHONY: buildroot/sdk
 buildroot/sdk: $(BUILDROOT_TOOLCHAIN_TAR_FILE) ## Generate Buildroot toolchain
 
 .PHONY: buildroot/sdk-untar
 buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_DIR) ## Untar Buildroot toolchain (helper)
-
-.PHONY: buildroot//%
-buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buildroot//menuconfig`
-	$(MAKE) $(BUILDROOT_OPTS) $*
 
 $(BUILDROOT_TOOLCHAIN_CMAKE_FILE): $(BUILDROOT_TOOLCHAIN_TAR_FILE)
 	tar mxf $(BUILDROOT_TOOLCHAIN_TAR_FILE) -C $(BUILD_DIR)
@@ -271,7 +259,9 @@ $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 #       configuration variables are located above, after all and clean targets.
 
 .PHONY: buildroot
-buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
+buildroot: $(BUILDROOT_OUTPUTS) ## Build Buildroot
+
+$(BUILDROOT_OUTPUTS) &: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
 	cp -r $(BR2_EXTERNAL_OVERLAY_DIR) $(BUILDROOT_BOARD_BUILD_DIR)
 	mkdir -p $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/firmware
 	cp $(APUAPP_BUILD_DIR)/*.so $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/lib/.
@@ -281,6 +271,7 @@ buildroot: $(APUAPP_OUTPUTS) $(RPUAPP_ZEPHYR_ELF) ## Build Buildroot
 	cp $(APUAPP_BUILD_DIR)/tflite-delegate-test $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR)/bin/.
 	$(MAKE) $(BUILDROOT_OPTS) zynqmp_nvme_defconfig
 	$(MAKE) $(BUILDROOT_OPTS) -j`nproc`
+	touch -c $(BUILDROOT_OUTPUTS)
 
 .PHONY: buildroot/distclean
 buildroot/distclean: ## Remove Buildroot build
