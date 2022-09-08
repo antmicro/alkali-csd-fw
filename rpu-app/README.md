@@ -1,7 +1,8 @@
 NVMe RPU firmware
 =================
 
-Copyright (c) 2021 [Antmicro](https://www.antmicro.com)
+Copyright 2021-2022 Western Digital Corporation or its affiliates
+Copyright 2021-2022 Antmicro
 
 This repository contains RPU firmware that is responsible for handling the NVMe communitation with host.
 
