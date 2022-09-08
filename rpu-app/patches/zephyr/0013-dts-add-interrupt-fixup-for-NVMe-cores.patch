@@ -1,4 +1,4 @@
-From a601cfda29c663d7a83d1951c6875649137f8eb4 Mon Sep 17 00:00:00 2001
+From 7d52adec82510fddfe928c74913e6464884f6af6 Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Thu, 22 Apr 2021 13:19:58 +0200
 Subject: [PATCH 13/16] dts: add interrupt fixup for NVMe cores

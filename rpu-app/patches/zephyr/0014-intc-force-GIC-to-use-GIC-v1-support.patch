@@ -1,4 +1,4 @@
-From f1390ea13bacf8f16dc11c799eb3b8efdb0b2a8f Mon Sep 17 00:00:00 2001
+From a898de9e6b40c1b186c1f843e8006626b2975b6e Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Thu, 22 Apr 2021 13:54:13 +0200
 Subject: [PATCH 14/16] intc: force GIC to use GIC v1 support

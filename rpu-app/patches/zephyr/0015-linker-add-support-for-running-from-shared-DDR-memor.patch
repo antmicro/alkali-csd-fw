@@ -1,4 +1,4 @@
-From 962e6e6925decb54c6f1c3b59bc0cfe8d4ffd8de Mon Sep 17 00:00:00 2001
+From 9293cb1e8ec032c30c0ce56bf633733e743a6137 Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Tue, 27 Apr 2021 13:03:20 +0200
 Subject: [PATCH 15/16] linker: add support for running from shared DDR memory

@@ -1,15 +1,15 @@
-From 65866aa0b0f96eb814025810855982ad6a38def6 Mon Sep 17 00:00:00 2001
+From 6adf4b787b61144eecfddef035526a4dd6aa11dd Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Thu, 25 Mar 2021 15:03:12 +0100
 Subject: [PATCH 09/16] boards: arm: add ZCU106 board
 
 ---
- boards/arm/zcu106/Kconfig.board     |  5 +++++
- boards/arm/zcu106/Kconfig.defconfig | 16 +++++++++++++++
- boards/arm/zcu106/zcu106.dts        | 30 +++++++++++++++++++++++++++++
- boards/arm/zcu106/zcu106.yaml       |  8 ++++++++
- boards/arm/zcu106/zcu106_defconfig  | 15 +++++++++++++++
- 5 files changed, 74 insertions(+)
+ boards/arm/zcu106/Kconfig.board     |  8 ++++++++
+ boards/arm/zcu106/Kconfig.defconfig | 18 +++++++++++++++++
+ boards/arm/zcu106/zcu106.dts        | 31 +++++++++++++++++++++++++++++
+ boards/arm/zcu106/zcu106.yaml       | 10 ++++++++++
+ boards/arm/zcu106/zcu106_defconfig  | 15 ++++++++++++++
+ 5 files changed, 82 insertions(+)
  create mode 100644 boards/arm/zcu106/Kconfig.board
  create mode 100644 boards/arm/zcu106/Kconfig.defconfig
  create mode 100644 boards/arm/zcu106/zcu106.dts
@@ -18,22 +18,27 @@ Subject: [PATCH 09/16] boards: arm: add ZCU106 board
 
 diff --git a/boards/arm/zcu106/Kconfig.board b/boards/arm/zcu106/Kconfig.board
 new file mode 100644
-index 0000000000..6d19744d37
+index 0000000000..d3bd790d74
 --- /dev/null
 +++ b/boards/arm/zcu106/Kconfig.board
-@@ -0,0 +1,5 @@
-+# Copyright (c) 2021, Antmicro
+@@ -0,0 +1,8 @@
++# Copyright 2021-2022 Western Digital Corporation or its affiliates
++# Copyright 2021-2022 Antmicro
++#
 +# SPDX-License-Identifier: Apache-2.0
++
 +config BOARD_ZCU106
 +	bool "ZCU106 Board"
 +	depends on SOC_XILINX_ZYNQMP_RPU
 diff --git a/boards/arm/zcu106/Kconfig.defconfig b/boards/arm/zcu106/Kconfig.defconfig
 new file mode 100644
-index 0000000000..81c4dea17a
+index 0000000000..1fbee6e6ac
 --- /dev/null
 +++ b/boards/arm/zcu106/Kconfig.defconfig
-@@ -0,0 +1,16 @@
-+# Copyright (c) 2021, Antmicro
+@@ -0,0 +1,18 @@
++# Copyright 2021-2022 Western Digital Corporation or its affiliate
++# Copyright 2021-2022 Antmicro
++#
 +# SPDX-License-Identifier: Apache-2.0
 +
 +if BOARD_ZCU106
@@ -51,12 +56,13 @@ index 0000000000..81c4dea17a
 +endif
 diff --git a/boards/arm/zcu106/zcu106.dts b/boards/arm/zcu106/zcu106.dts
 new file mode 100644
-index 0000000000..be8267e174
+index 0000000000..ee95ebded1
 --- /dev/null
 +++ b/boards/arm/zcu106/zcu106.dts
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,31 @@
 +/*
-+ * Copyright (c) 2021, Antmicro
++ * Copyright 2021-2022 Western Digital Corporation or its affiliates
++ * Copyright 2021-2022 Antmicro
 + *
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -87,11 +93,13 @@ index 0000000000..be8267e174
 +};
 diff --git a/boards/arm/zcu106/zcu106.yaml b/boards/arm/zcu106/zcu106.yaml
 new file mode 100644
-index 0000000000..135f8c74cf
+index 0000000000..00764fe74e
 --- /dev/null
 +++ b/boards/arm/zcu106/zcu106.yaml
-@@ -0,0 +1,8 @@
-+# Copyright (c) 2021, Antmicro
+@@ -0,0 +1,10 @@
++# Copyright 2021-2022 Western Digital Corporation or its affiliates
++# Copyright 2021-2022 Antmicro
++
 +identifier: zcu106
 +name: ZCU106
 +type: mcu

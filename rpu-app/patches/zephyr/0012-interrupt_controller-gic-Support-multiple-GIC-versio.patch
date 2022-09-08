@@ -1,4 +1,4 @@
-From 4c394c4638cee46a6e4b880dc43e56dcc1fdb4cf Mon Sep 17 00:00:00 2001
+From c969b8696a9e56c5d55afbae5301b1a84a50f930 Mon Sep 17 00:00:00 2001
 From: Stephanos Ioannidis <root@stephanos.io>
 Date: Thu, 19 Dec 2019 14:54:46 +0900
 Subject: [PATCH 12/16] interrupt_controller: gic: Support multiple GIC

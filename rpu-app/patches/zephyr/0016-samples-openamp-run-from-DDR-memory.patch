@@ -1,4 +1,4 @@
-From 144448403e0356d430845d0ebc514ddd48b4e054 Mon Sep 17 00:00:00 2001
+From ec694c88952b86df2140616e8348a13104d7d2d1 Mon Sep 17 00:00:00 2001
 From: Piotr Binkowski <pbinkowski@antmicro.com>
 Date: Fri, 21 May 2021 14:15:18 +0200
 Subject: [PATCH 16/16] samples: openamp: run from DDR memory
