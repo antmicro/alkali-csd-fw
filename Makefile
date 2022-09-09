@@ -224,6 +224,11 @@ $(WEST_CONFIG):
 RPUAPP_SRC_DIR = $(RPUAPP_DIR)/src
 RPUAPP_GENERATED_DIR = $(RPUAPP_BUILD_DIR)/generated
 RPUAPP_ZEPHYR_ELF = $(RPUAPP_BUILD_DIR)/zephyr/zephyr.elf
+RPUAPP_SOURCES = \
+	$(wildcard $(RPUAPP_SRC_DIR)/*.c) \
+	$(wildcard $(RPUAPP_SRC_DIR)/*.h) \
+	$(wildcard $(RPUAPP_SRC_DIR)/cmds/*.h) \
+	$(wildcard $(RPUAPP_SRC_DIR)/cmds/*.c)
 
 IN_ZEPHYR_ENV = source $(ZEPHYR_DOWNLOAD_DIR)/zephyr/zephyr-env.sh
 IN_SDK_ENV = \
@@ -249,6 +254,7 @@ rpu-app/clean: ## Remove RPU App build files
 
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
+$(RPUAPP_ZEPHYR_ELF): $(RPUAPP_SOURCES)
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
 
 # -----------------------------------------------------------------------------
