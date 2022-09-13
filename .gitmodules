@@ -6,7 +6,7 @@
 	url = https://github.com/google/googletest.git
 [submodule "third-party/ubpf"]
 	path = third-party/ubpf
-	url = ../wd-nvme-ubpf.git
+	url = https://github.com/antmicro/ubpf.git
 [submodule "third-party/buildroot"]
 	path = third-party/buildroot
 	url = ../wd-nvme-buildroot.git
