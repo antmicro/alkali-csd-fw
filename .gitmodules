@@ -9,7 +9,7 @@
 	url = https://github.com/antmicro/ubpf.git
 [submodule "third-party/buildroot"]
 	path = third-party/buildroot
-	url = ../wd-nvme-buildroot.git
+	url = https://github.com/buildroot/buildroot.git
 [submodule "third-party/registers-generator"]
 	path = third-party/registers-generator
 	url = ../wd-nvme-registers-generator.git
