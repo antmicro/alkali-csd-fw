@@ -20,9 +20,17 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - name: Build firmware
-        run: |
-          make all
+      - name: Build Buildroot SDK
+        run: make buildroot/sdk-untar
+
+      - name: Build APU application
+        run: make apu-app
+
+      - name: Build RPU application
+        run: make rpu-app
+
+      - name: Build Buildroot rootfs
+        run: make buildroot
 
       - uses: actions/upload-artifact@v3
         with:
