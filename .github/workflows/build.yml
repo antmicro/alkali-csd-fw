@@ -20,6 +20,9 @@ jobs:
         with:
           submodules: 'recursive'
 
+      - name: Apply workaround for broken Buildroot mirror
+        run: echo "1.1.1.1 invisible-mirror.net" | tee -a /etc/hosts
+
       - name: Build Buildroot SDK
         run: make buildroot/sdk-untar
 
