@@ -81,7 +81,7 @@ $(BUILDROOT_BOARD_OVERLAY_BUILD_DIR):
 buildroot/sdk: $(BUILDROOT_TOOLCHAIN_TAR_FILE) ## Generate Buildroot toolchain
 
 .PHONY: buildroot/sdk-untar
-buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_DIR) ## Untar Buildroot toolchain (helper)
+buildroot/sdk-untar: $(BUILDROOT_TOOLCHAIN_CMAKE_FILE) ## Untar Buildroot toolchain (helper)
 
 $(BUILDROOT_TOOLCHAIN_CMAKE_FILE): $(BUILDROOT_TOOLCHAIN_TAR_FILE)
 	tar mxf $(BUILDROOT_TOOLCHAIN_TAR_FILE) -C $(BUILD_DIR)

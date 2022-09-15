@@ -1,0 +1,49 @@
+name: Build Alkali Firmware
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build Alkali Firmware
+    runs-on: ubuntu-latest
+    container:
+      image: antmicro/alkali:latest
+    strategy:
+      matrix:
+        board: [an300, zcu106]
+    env:
+      BOARD: ${{ matrix.board }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: Apply workaround for broken Buildroot mirror
+        run: echo "1.1.1.1 invisible-mirror.net" | tee -a /etc/hosts
+
+      - name: Build Buildroot SDK
+        run: make buildroot/sdk-untar
+
+      - name: Build APU application
+        run: make apu-app
+
+      - name: Build RPU application
+        run: make rpu-app
+
+      - name: Build Buildroot rootfs
+        run: make buildroot
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: alkali-firmware-${{ matrix.board }}
+          path: |
+            build/buildroot/images/*.elf
+            build/buildroot/images/*.dtb
+            build/buildroot/images/rootfs.tar
+            build/buildroot/images/rootfs.cpio.uboot
+            build/buildroot/images/Image
+            build/apu-app/apu-app
+            build/apu-app/*.so
+            build/rpu-app/zephyr/zephyr.elf
