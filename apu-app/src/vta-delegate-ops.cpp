@@ -522,18 +522,21 @@ void VTAGEMMOp::permuteDims(
     uint8_t *outarray,
     size_t elemsize)
 {
-    for (int i = 0; i < outlayout.size() / elemsize; i++)
+    TFLITE_CHECK_EQ(tensorElements(inplayout), tensorElements(outlayout));
+    for (int i = 0; i < tensorElements(inplayout); i++)
     {
-        int newindex = 0;
-        int remaining = i;
-        for (auto &inpdim : inplayout)
+        int inpremaining = i;
+        int outindex = 0;
+        for (auto &axis : inplayout)
         {
-            int step = getDimStep(inplayout, inpdim);
-            int dimid = remaining / step;
-            newindex += dimid * getDimStep(outlayout, inpdim);
-            remaining %= step;
+            int step = getDimStep(inplayout, axis);
+            int axisindex = inpremaining / step;
+            outindex += axisindex * getDimStep(outlayout, axis);
+            inpremaining %= step;
+            printf("step [%d] axisindex [%d] outindex [%d]", step, axisindex, outindex);
         }
-        std::copy(&inparray[i * elemsize], &inparray[(i + 1) * elemsize], &outarray[newindex]);
+        printf("%d -> %d\n", i, outindex);
+        std::copy(&inparray[i * elemsize], &inparray[(i + 1) * elemsize], &outarray[outindex * elemsize]);
     }
 }
 
