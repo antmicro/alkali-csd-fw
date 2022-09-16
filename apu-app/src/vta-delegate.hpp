@@ -220,39 +220,6 @@ class VTAGEMMOp : public VTAOp
         TfLiteStatus compute() override;
         ~VTAGEMMOp();
 
-    private:
-        /**
-         * Performs 2D convolution.
-         */
-        TfLiteStatus gemmConv2D();
-
-        /**
-         * Map holding dimensions for GEMM data
-         * CONV2D:
-         *     Input, weights and bias dimensions
-         *         N - batch size
-         *         H - input height
-         *         W - input width
-         *         I - input channels
-         *
-         *         Ho - output height
-         *         Wo - output width
-         *         O - output channels
-         *
-         *         Hk - kernel height
-         *         Wk - kernel width
-         *     Computed dimensions
-         *         No - outer batch size (N / VTA_BATCH)
-         *         Io - outer input channels (I / VTA_BLOCK_IN)
-         *         Oo - outer output channels (O / VTA_BLOCK_OUT)
-         *     Walking dimensions
-         *         paddingH - height padding
-         *         paddingW - width padding
-         *         strideH - stride along height axis
-         *         strideW - stride along width axis
-         */
-        std::unordered_map<std::string, int> dims;
-
         /**
          * Resets the dim map.
          */
@@ -304,6 +271,38 @@ class VTAGEMMOp : public VTAOp
          * @return size of the tensor in elements
          */
         int tensorElements(const std::vector<std::string> &layout);
+    private:
+        /**
+         * Performs 2D convolution.
+         */
+        TfLiteStatus gemmConv2D();
+
+        /**
+         * Map holding dimensions for GEMM data
+         * CONV2D:
+         *     Input, weights and bias dimensions
+         *         N - batch size
+         *         H - input height
+         *         W - input width
+         *         I - input channels
+         *
+         *         Ho - output height
+         *         Wo - output width
+         *         O - output channels
+         *
+         *         Hk - kernel height
+         *         Wk - kernel width
+         *     Computed dimensions
+         *         No - outer batch size (N / VTA_BATCH)
+         *         Io - outer input channels (I / VTA_BLOCK_IN)
+         *         Oo - outer output channels (O / VTA_BLOCK_OUT)
+         *     Walking dimensions
+         *         paddingH - height padding
+         *         paddingW - width padding
+         *         strideH - stride along height axis
+         *         strideW - stride along width axis
+         */
+        std::unordered_map<std::string, int> dims;
 };
 
 /**

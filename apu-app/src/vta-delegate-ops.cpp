@@ -308,8 +308,9 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
                 // create micro-op kernel for vector addition
                 // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
+                void *map = nullptr;
                 VTAPushALUOp(
-                    &cmd,
+                    &map,
                     lambda,
                     nullptr,
                     0
