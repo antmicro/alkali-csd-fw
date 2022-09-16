@@ -117,6 +117,7 @@ if (BUILD_TESTS)
         tests/add-tests.cpp
         tests/conv2d-tests.cpp
         tests/tests-main.cpp
+        tests/vta-gemm-test.cpp
     )
     target_link_libraries(vta-delegate-test-runner
         gmock
