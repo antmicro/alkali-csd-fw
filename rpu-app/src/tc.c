@@ -8,17 +8,18 @@
 #include "tc.h"
 #include "dma.h"
 #include "cmd.h"
+#include "main.h"
 
 #include <sys/printk.h>
 
 #include <string.h>
 #include <math.h>
-#define DEBUG
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 static nvme_tc_priv_t p_tc = {0};
-
 static char __aligned(16) cmd_slab_buffer[sizeof(nvme_cmd_priv_t)*NVME_CMD_SLAB_SIZE];
-
 static char __aligned(16) prp_slab_buffer[NVME_PRP_LIST_SIZE*NVME_PRP_SLAB_SIZE];
 
 static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
@@ -27,41 +28,37 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 	uint32_t csts = sys_read32(priv->base + NVME_TC_REG_CSTS);
 
 	if(pow(2, NVME_TC_GET_FIELD(cc, CC_IOCQES)) != NVME_TC_CQ_ENTRY_SIZE) {
-		printk("Invalid IO CQ entry size! (%d)\n", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOCQES)));
+		LOG_ERR("Invalid IO CQ entry size! (%d)", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOCQES)));
 	}
 	if(pow(2, NVME_TC_GET_FIELD(cc, CC_IOSQES)) != NVME_TC_SQ_ENTRY_SIZE) {
-		printk("Invalid IO SQ entry size! (%d)\n", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOSQES)));
+		LOG_ERR("Invalid IO SQ entry size! (%d)", (int)pow(2, NVME_TC_GET_FIELD(cc, CC_IOSQES)));
 	}
 
 	if(NVME_TC_GET_FIELD(cc, CC_SHN)) {
-#ifdef DEBUG
-		printk("Shutdown notification detected\n");
-#endif
+		LOG_INF("Shutdown notification detected");
 		NVME_TC_SET_FIELD(csts, NVME_TC_SHUTDOWN_COMPLETE, CSTS_SHST);
 	}
 
 	if(NVME_TC_GET_FIELD(cc, CC_AMS))
-		printk("Unsupported arbitration method selected!\nWe only support Round Robin (000b)\n");
+		LOG_WRN("Unsupported arbitration method selected!");
+		LOG_WRN("We only support Round Robin (000b)");
 
 	priv->memory_page_size = pow(2, NVME_TC_GET_FIELD(cc, CC_MPS) + 12);
 
 	if(priv->memory_page_size != NVME_PRP_LIST_SIZE)
-		printk("Unsupported page size selected!\n");
+		LOG_WRN("Unsupported page size selected!");
 
 	if(NVME_TC_GET_FIELD(cc, CC_CSS))
-		printk("Unsupported command set selected!\nWe only support NVM command set (000b)\n");
+		LOG_WRN("Unsupported command set selected!");
+		LOG_WRN("We only support NVM command set (000b)");
 
 	if(cc && NVME_TC_REG_CC_EN) {
 		priv->enabled = true;
-#ifdef DEBUG
-		printk("Controller enabled\n");
-#endif
+		LOG_INF("Controller enabled");
 		csts |= NVME_TC_REG_CSTS_RDY;
 	} else if (priv->enabled) {
 		priv->enabled = false;
-#ifdef DEBUG
-		printk("Controller reset requested\n");
-#endif
+		LOG_DBG("Controller reset requested");
 		csts &= ~NVME_TC_REG_CSTS_RDY;
 	}
 
@@ -136,7 +133,6 @@ static void nvme_tc_tail_handler(nvme_tc_priv_t *priv, const int qid)
 	uint32_t tail = sys_read32(priv->base + DOORBELL_TAIL(qid));
 
 	priv->sq_tail[qid] = tail;
-	printk("%s\n", __FUNCTION__);
 
 	while(priv->sq_tail[qid] != priv->sq_head[qid]) {
 		uint64_t host_addr = nvme_tc_get_sq_addr(priv, qid);
@@ -147,7 +143,7 @@ static void nvme_tc_tail_handler(nvme_tc_priv_t *priv, const int qid)
 			arg->tc = priv;
 			nvme_dma_xfer_host_to_mem(priv->dma_priv, host_addr, (uint32_t)arg->sq_buf, NVME_TC_SQ_ENTRY_SIZE, nvme_cmd_handler, arg);
 		} else {
-			printk("Failed to allocate memory for command!(tail: %d, head: %d)\n", priv->sq_tail[qid], priv->sq_head[qid]);
+			LOG_ERR("Failed to allocate memory for command!(tail: %d, head: %d)", priv->sq_tail[qid], priv->sq_head[qid]);
 		}
 	}
 }
@@ -164,70 +160,66 @@ static void nvme_tc_irq_handler(void *arg)
 	nvme_tc_priv_t *priv = (nvme_tc_priv_t*)arg;
 	bool io_queue_handled = false;
 
-	printk("%s\n", __FUNCTION__);
 	while(sys_read32(priv->base + NVME_TC_REG_IRQ_STA)) {
 		uint16_t reg = sys_read32(priv->base + NVME_TC_REG_IRQ_DAT) * 4;
-#ifdef DEBUG
-		printk("Host write to reg 0x%04x: 0x%08x\n", reg, sys_read32(priv->base + reg));
-#endif
+
 		switch(reg) {
 			case NVME_TC_REG_CC:
-				printk("NVME_TC_REG_CC\n");
+				LOG_DBG("Handling NVME_TC_REG_CC");
 				nvme_tc_cc_handler(priv);
 				break;
 			case NVME_TC_REG_AQA:
-				printk("NVME_TC_REG_AQA\n");
+				LOG_DBG("Handling NVME_TC_REG_AQA");
 				nvme_tc_aqa_handler(priv);
 				break;
 			case NVME_TC_REG_ASQ_0:
-				printk("NVME_TC_REG_ASQ_0\n");
+				LOG_DBG("Handling NVME_TC_REG_ASQ_0");
 				/* This will be handled in ASQ_1 handler */
 				break;
 			case NVME_TC_REG_ASQ_1:
-				printk("NVME_TC_REG_ASQ_1\n");
+				LOG_DBG("Handling NVME_TC_REG_ASQ_1");
 				nvme_tc_asq_handler(priv);
 				break;
 			case NVME_TC_REG_ACQ_0:
-				printk("NVME_TC_REG_ACQ_0\n");
+				LOG_DBG("Handling NVME_TC_REG_ACQ_0");
 				/* This will be handled in ACQ_1 handler */
 				break;
 			case NVME_TC_REG_ACQ_1:
-				printk("NVME_TC_REG_ACQ_1\n");
+				LOG_DBG("Handling NVME_TC_REG_ACQ_1");
 				nvme_tc_acq_handler(priv);
 				break;
 			case NVME_TC_REG_ADM_TAIL:
-				printk("NVME_TC_REG_ADM_TAIL\n");
+				LOG_DBG("Handling NVME_TC_REG_ADM_TAIL");
 				nvme_tc_tail_handler(priv, ADM_QUEUE_ID);
 				break;
 			case NVME_TC_REG_ADM_HEAD:
-				printk("NVME_TC_REG_ADM_HEAD\n");
+				LOG_DBG("Handling NVME_TC_REG_ADM_HEAD");
 				nvme_tc_head_handler(priv, ADM_QUEUE_ID);
 				break;
 			default:
-				printk("DEFAULT\n");
 				for(int i = 0; i < QUEUES; i++) {
 					if(reg == NVME_TC_REG_IO_TAIL(i)) {
+						LOG_DBG("Handling NVME_TC_REG_IO_TAIL");
 						nvme_tc_tail_handler(priv, i + 1);
 						io_queue_handled = true;
 						break;
 					} else if(reg == NVME_TC_REG_IO_HEAD(i)) {
+						LOG_DBG("Handling NVME_TC_REG_IO_HEAD");
 						nvme_tc_head_handler(priv, i + 1);
 						io_queue_handled = true;
 						break;
 					}
 				}
 				if(!io_queue_handled)
-					printk("Register 0x%04x write not handled!\n", reg);
+					LOG_ERR("Register 0x%04x write not handled!", reg);
 		}
 	}
 }
 
 void nvme_tc_irq_init(void)
 {
-	printk("Enabling TC interrupts\n");
 	IRQ_CONNECT(DT_INST_0_NVME_TC_IRQ_0, DT_INST_0_NVME_TC_IRQ_0_PRIORITY, nvme_tc_irq_handler, &p_tc, DT_INST_0_NVME_TC_IRQ_0_FLAGS);
 	irq_enable(DT_INST_0_NVME_TC_IRQ_0);
-	printk("TC interrupts enabled\n");
 }
 
 nvme_tc_priv_t *nvme_tc_init(void *dma_priv)
@@ -242,7 +234,7 @@ nvme_tc_priv_t *nvme_tc_init(void *dma_priv)
 
 	k_mem_slab_init(&priv->prp_slab, prp_slab_buffer, NVME_PRP_LIST_SIZE, NVME_PRP_SLAB_SIZE);
 
-	printk("Clearing registers\n");
+	LOG_INF("Clearing registers");
 	for(int i = 0; i < NVME_TC_REG_IRQ_STA; i+=4)
 		sys_write32(0, priv->base + i);
 

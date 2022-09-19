@@ -6,9 +6,13 @@
  */
 
 #include "cmd.h"
+#include "main.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct cmd_cdw10 {
 	uint32_t lid : 8;
@@ -64,8 +68,8 @@ static void get_smart_log(nvme_cmd_priv_t *priv, uint32_t len, uint64_t off)
 
 	len = (len > SMART_RESP_SIZE) ? SMART_RESP_SIZE : len;
 
-	if(off != 0)
-		printk("Incorrect Get Log offset! (%llu)\n", off);
+	if (off != 0)
+		LOG_ERR("Incorrect Get Log offset! (%llu)", off);
 
 	fill_smart_struct(resp_buf);
 
@@ -86,7 +90,7 @@ void nvme_cmd_adm_get_log(nvme_cmd_priv_t *priv)
 			get_smart_log(priv, len, off);
 			break;
 		default:
-			printk("Invalid Get Log LID value! (%d)\n", cmd->cdw10.lid);
+			LOG_ERR("Invalid Get Log LID value! (%d)", cmd->cdw10.lid);
 			nvme_cmd_return(priv);
 	}
 }

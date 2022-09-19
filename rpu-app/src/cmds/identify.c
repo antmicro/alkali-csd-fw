@@ -8,9 +8,13 @@
 #include "cmd.h"
 #include "nvme_ident_fields.h"
 #include "ramdisk.h"
+#include "main.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct cmd_cdw10 {
 	uint32_t cns : 8;
@@ -76,7 +80,7 @@ static void fill_identify_struct(uint8_t *ptr)
 	sys_write16(OUI2, buf + NVME_ID_FIELD_IEEE + 4);
 
 	sys_write32(VER, buf + NVME_ID_FIELD_VER);
-	
+
 	sys_write8(IO_CNTRL, buf + NVME_ID_FIELD_CNTRLTYPE);
 
 	sys_write8(3, buf + NVME_ID_FIELD_ACL);
@@ -177,25 +181,25 @@ void nvme_cmd_adm_identify(nvme_cmd_priv_t *priv)
 {
 	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
 
-#ifdef DEBUG
-	printk("Identify CNS value (%d)\n", cmd->cdw10.cns);
-#endif
-
 	switch(cmd->cdw10.cns) {
 		case CNS_IDENTIFY_NAMESPACE:
+			LOG_DBG("Handling CNS_IDENTIFY_NAMESPACE");
 			identify_namespace(priv);
 			break;
 		case CNS_IDENTIFY_CONTROLLER:
+			LOG_DBG("Handling CNS_IDENTIFY_CONTROLLER");
 			identify_controller(priv);
 			break;
 		case CNS_IDENTIFY_NAMESPACE_LIST:
+			LOG_DBG("Handling CNS_IDENTIFY_NAMESPACE_LIST");
 			identify_namespace_list(priv);
 			break;
 		case CNS_IDENTIFY_NAMESPACE_IDENT_LIST:
+			LOG_DBG("Handling CNS_IDENTIFY_NAMESPACE_IDENT_LIST");
 			identify_namespace_ident_list(priv);
 			break;
 		default:
-			printk("Invalid Identify CNS value! (%d)\n", cmd->cdw10.cns);
+			LOG_WRN("Invalid Identify CNS value! (%d)", cmd->cdw10.cns);
 			nvme_cmd_return(priv);
 	}
 }

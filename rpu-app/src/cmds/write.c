@@ -6,7 +6,11 @@
  */
 
 #include "cmd.h"
+#include "main.h"
 #include "ramdisk.h"
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct cmd_cdw12 {
 	uint32_t nlb : 16;
@@ -50,16 +54,14 @@ void nvme_cmd_io_write(nvme_cmd_priv_t *priv)
 	uint32_t lba = cmd->cdw10;
 	uint32_t nlb = cmd->cdw12.nlb + 1; // 0's based
 
-#ifdef DEBUG
-	printk("Ramdisk write: %d blocks from %d\n", nlb, lba);
-#endif
+	LOG_DBG("Ramdisk write: %d blocks from %d", nlb, lba);
 
 	buf = ramdisk_write(lba, nlb);
 
 	if(buf) {
 		nvme_cmd_get_data(priv, (void*)buf, nlb*BLK_SIZE);
 	} else {
-		printk("Failed to get ramdisk address!\n");
+		LOG_ERR("Failed to get ramdisk address!");
 		nvme_cmd_return(priv);
 	}
 }

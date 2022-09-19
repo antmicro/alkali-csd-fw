@@ -6,11 +6,14 @@
  */
 
 #include "dma.h"
+#include "main.h"
+
 #include <zephyr.h>
 #include <sys/printk.h>
 #include <string.h>
 
-#define DEBUG
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct nvme_dma_priv {
 	mem_addr_t base;
@@ -43,10 +46,6 @@ char __aligned(16) desc_slab_buffer[sizeof(nvme_dma_xfer_def_t)*NVME_DMA_SLAB_EN
 
 static void nvme_dma_setup_xfer(nvme_dma_priv_t *priv, nvme_dma_xfer_def_t *desc, uint32_t off)
 {
-#ifdef DEBUG
-	printk("Configuring DMA transfer\n");
-#endif
-
 	__DMB();
 
 	sys_write32(desc->host_addr & 0xffffffff, priv->base + off + NVME_DMA_REG_PCIE_ADDRL);
@@ -77,7 +76,7 @@ void nvme_dma_irq_handler(void *arg)
 				desc->cb(desc->cb_arg, (void*)desc->local_addr);
 			k_mem_slab_free(&priv->desc_slab, (void**)&desc);
 		} else {
-			printk("Spurious DMA RX interrupt!\n");
+			LOG_WRN("Spurious DMA RX interrupt!");
 		}
 
 		lock = irq_lock();
@@ -99,7 +98,7 @@ void nvme_dma_irq_handler(void *arg)
 				desc->cb(desc->cb_arg, (void*)desc->local_addr);
 			k_mem_slab_free(&priv->desc_slab, (void**)&desc);
 		} else {
-			printk("Spurious DMA TX interrupt!\n");
+			LOG_WRN("Spurious DMA TX interrupt!");
 		}
 
 		lock = irq_lock();
@@ -117,10 +116,8 @@ void nvme_dma_irq_handler(void *arg)
 
 void nvme_dma_irq_init(void)
 {
-	printk("Enabling DMA interrupts\n");
 	IRQ_CONNECT(DT_INST_0_NVME_DMA_IRQ_0, DT_INST_0_NVME_DMA_IRQ_0_PRIORITY, nvme_dma_irq_handler, &p_dma, DT_INST_0_NVME_DMA_IRQ_0_FLAGS);
 	irq_enable(DT_INST_0_NVME_DMA_IRQ_0);
-	printk("DMA interrupts enabled\n");
 }
 
 void *nvme_dma_init(void)
@@ -129,19 +126,17 @@ void *nvme_dma_init(void)
 
 	priv->base = (mem_addr_t)DT_INST_0_NVME_DMA_BASE_ADDRESS;
 
-	printk("Initializing private data\n");
-
 	k_fifo_init(&priv->tx_fifo);
 	k_fifo_init(&priv->rx_fifo);
 	k_mem_slab_init(&priv->desc_slab, desc_slab_buffer, sizeof(nvme_dma_xfer_def_t), NVME_DMA_SLAB_ENTRIES);
 
-	printk("Enabling DMA\n");
+	LOG_INF("Enabling DMA");
 	sys_write32(1, priv->base + NVME_DMA_REG_EN);
 
 	if(sys_read32(priv->base + NVME_DMA_REG_EN) == 1)
-		printk("DMA enabled\n");
+		LOG_INF("DMA enabled");
 	else
-		printk("Failed to enable DMA!\n");
+		LOG_ERR("Failed to enable DMA!");
 
 	return (void*)priv;
 }
@@ -160,7 +155,7 @@ static nvme_dma_xfer_def_t *nvme_dma_xfer_fill_desc(nvme_dma_priv_t *priv, uint6
 		desc->cb_arg = cb_arg;
 		desc->tag = tag;
 	} else {
-		printk("Failed to allocate DMA descriptor!\n");
+		LOG_ERR("Failed to allocate DMA descriptor!");
 		return NULL;
 	}
 
@@ -173,7 +168,6 @@ int nvme_dma_xfer_host_to_mem(void* arg, uint64_t src, uint32_t dst, uint32_t le
 	nvme_dma_xfer_def_t *desc = nvme_dma_xfer_fill_desc(priv, src, dst, len, 0xAA, cb, cb_arg);
 	unsigned long long lock;
 
-	printk("%s\n", __FUNCTION__);
 	if(desc) {
 		lock = irq_lock();
 		k_fifo_put(&priv->rx_fifo, desc);
