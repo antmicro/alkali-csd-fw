@@ -15,6 +15,7 @@
 #include <openamp/rpmsg_virtio.h>
 #include "platform_info.h"
 #include "rsc_table.h"
+#include "main.h"
 
 /* Cortex R5 memory attributes */
 #define DEVICE_SHARED		0x00000001U /* device, shareable */
@@ -26,6 +27,9 @@
 #define SHARED_MEM_PA  0x7ff00000UL
 #define SHARED_MEM_SIZE  0x100000UL
 #define SHARED_BUF_OFFSET 0x8000UL
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 #define _rproc_wait() ({ \
 		__asm volatile("wfi"); \
@@ -57,7 +61,7 @@ platform_create_proc(int proc_index, int rsc_index)
 	/* Initialize remoteproc instance */
 	if (!remoteproc_init(&rproc_inst, &zynqmp_r5_a53_proc_ops,
 				&rproc_priv)) {
-		printk("returned null\n");
+		LOG_ERR("returned null");
 		return NULL;
 	}
 
@@ -82,11 +86,12 @@ platform_create_proc(int proc_index, int rsc_index)
 	/* parse resource table to remoteproc */
 	ret = remoteproc_set_rsc_table(&rproc_inst, rsc_table, rsc_size);
 	if (ret) {
-		printk("Failed to initialize remoteproc\n");
+		LOG_ERR("Failed to initialize remoteproc");
 		remoteproc_remove(&rproc_inst);
 		return NULL;
 	}
-	printk("Initialize remoteproc successfully.\n");
+
+	LOG_INF("Initialize remoteproc successfully");
 
 	return &rproc_inst;
 }
@@ -98,12 +103,12 @@ int platform_init(void **platform)
 	struct remoteproc *rproc;
 
 	if (!platform) {
-		printk("Failed to initialize platform: NULL pointer to store platform data.\n");
+		LOG_ERR("Failed to initialize platform: NULL pointer to store platform data");
 		return -1;
 	}
 	rproc = platform_create_proc(proc_id, rsc_id);
 	if (!rproc) {
-		printk("Failed to create remoteproc device.\n");
+		LOG_ERR("Failed to create remoteproc device");
 		return -EINVAL;
 	}
 	*platform = rproc;
@@ -124,7 +129,7 @@ platform_create_rpmsg_vdev(void *platform, unsigned int vdev_index,
 	int ret;
 
 	rpmsg_vdev = metal_allocate_memory(sizeof(*rpmsg_vdev));
-	printk("allocated memory for rpmsg_vdev\n");
+	LOG_INF("allocated memory for rpmsg_vdev");
 	if (!rpmsg_vdev)
 		return NULL;
 	shbuf_io = remoteproc_get_io_with_pa(rproc, SHARED_MEM_PA);
@@ -133,30 +138,30 @@ platform_create_rpmsg_vdev(void *platform, unsigned int vdev_index,
 	shbuf = metal_io_phys_to_virt(shbuf_io,
 				      SHARED_MEM_PA + SHARED_BUF_OFFSET);
 
-	printk("creating remoteproc virtio\n");
+	LOG_INF("creating remoteproc virtio");
 	vdev = remoteproc_create_virtio(rproc, vdev_index, role, rst_cb);
 	if (!vdev) {
-		printk("failed remoteproc_create_virtio\n");
+		LOG_ERR("failed remoteproc_create_virtio");
 		goto err1;
 	}
 
-	printk("initializing rpmsg shared buffer pool\n");
+	LOG_INF("initializing rpmsg shared buffer pool");
 	/* Only RPMsg virtio master needs to initialize
 	 * the shared buffers pool
 	 */
 	rpmsg_virtio_init_shm_pool(&shpool, shbuf,
 				   (SHARED_MEM_SIZE - SHARED_BUF_OFFSET));
 
-	printk("initializing rpmsg vdev\n");
+	LOG_INF("initializing rpmsg vdev");
 	/* RPMsg virtio slave can set shared buffers pool argument to NULL */
 	ret =  rpmsg_init_vdev(rpmsg_vdev, vdev, ns_bind_cb,
 			       shbuf_io,
 			       &shpool);
 	if (ret) {
-		printk("failed rpmsg_init_vdev\n");
+		LOG_ERR("failed rpmsg_init_vdev");
 		goto err2;
 	}
-	printk("initializing rpmsg vdev\n");
+	LOG_INF("initializing rpmsg vdev");
 	return rpmsg_virtio_get_rpmsg_device(rpmsg_vdev);
 err2:
 	remoteproc_remove_virtio(rproc, vdev);

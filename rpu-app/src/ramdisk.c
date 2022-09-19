@@ -6,9 +6,13 @@
  */
 
 #include "ramdisk.h"
+#include "main.h"
 
 #include <string.h>
 #include <sys/printk.h>
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 #define RAMDISK_SIZE (BLK_SIZE*BLK_CNT)
 
@@ -18,14 +22,11 @@ void ramdisk_init()
 {
 	ramdisk_buffer = (uint8_t*)DT_INST_1_MMIO_SRAM_BASE_ADDRESS;
 
-	printk("Creating ramdisk:\nstart: %08x\nblocks: %d\nblock size: %d\n", (uint32_t)ramdisk_buffer, BLK_CNT, BLK_SIZE);
-
-	printk("Clearing first block: ");
+	LOG_INF("Creating ramdisk, nstart: %08x, blocks: %d, block size: %d", (uint32_t)ramdisk_buffer, BLK_CNT, BLK_SIZE);
+	LOG_INF("Clearing first block");
 
 	for(int i = 0; i < BLK_SIZE; i++)
 		ramdisk_buffer[i] = i;
-
-	printk("done\n");
 }
 
 uint8_t *ramdisk_read(uint32_t lba, uint32_t nlb)

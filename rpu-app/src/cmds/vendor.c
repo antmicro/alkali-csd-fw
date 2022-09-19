@@ -6,7 +6,11 @@
  */
 
 #include "cmd.h"
+#include "main.h"
 #include "rpmsg.h"
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 static int send_cmd(nvme_cmd_priv_t *priv)
 {
@@ -16,7 +20,7 @@ static int send_cmd(nvme_cmd_priv_t *priv)
 	const int buffer_size = cmd->ndt * 4;
 
 	if(msg == NULL) {
-		printk("Failed to allocate rpmsg buffer!\n");
+		LOG_ERR("Failed to allocate rpmsg buffer!");
 		// TODO: send response stating that comand failed
 		return -1;
 	}
@@ -29,11 +33,11 @@ static int send_cmd(nvme_cmd_priv_t *priv)
 
 	memcpy(msg->data, priv->sq_buf, msg->len);
 
-	printk("vendor buffer %x, %d\n", msg->buf, msg->buf_len);
+	LOG_DBG("vendor buffer %x, %d", msg->buf, msg->buf_len);
 
 	int ret = rpmsg_send(&priv->tc->lept, msg, msg_size);
 	if(ret != msg_size) {
-		printk("Failed to send rpmsg message: %d\n", ret);
+		LOG_ERR("Failed to send rpmsg message: %d", ret);
 		return -1;
 	}
 
@@ -60,12 +64,12 @@ void nvme_cmd_vendor(nvme_cmd_priv_t *priv, int zero_based)
 
 	const int buffer_size = cmd->ndt * 4;
 
-	printk("Vendor %s command (Opcode: %d, priv: %08x)\n", (priv->qid > 0) ? "IO" : "Admin", opc, (uint32_t)priv);
-	
+	LOG_INF("Vendor %s command (Opcode: %d, priv: %08x)", (priv->qid > 0) ? "IO" : "Admin", opc, (uint32_t)priv);
+
 	if((dir != NVME_CMD_XFER_NONE) && (buffer_size > 0)) {
 		int ret = k_mem_pool_alloc(priv->tc->buffer_pool, &priv->block, buffer_size, 0);
 		if(ret) {
-			printk("Failed to allocate vendor command data buffer! (size: %d, ret: %d)\n", buffer_size, ret);
+			LOG_ERR("Failed to allocate vendor command data buffer! (size: %d, ret: %d)", buffer_size, ret);
 			// TODO: send response stating that comand failed
 			return;
 		}

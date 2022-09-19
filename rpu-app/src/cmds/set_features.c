@@ -6,9 +6,13 @@
  */
 
 #include "cmd.h"
+#include "main.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct cmd_cdw10 {
 	uint32_t fid : 8;
@@ -33,12 +37,11 @@ typedef struct cmd_sq {
 static void number_of_queues(nvme_cmd_priv_t *priv)
 {
 	nvme_cq_entry_t *cq = (nvme_cq_entry_t*)priv->cq_buf;
-#ifdef DEBUG
-	cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
-	uint16_t ncqr = (cmd->cdw[0] >> 16) & 0xFFFF;
-	uint16_t nsqr = cmd->cdw[0] & 0xFFFF;
-	printk("NCQR: %d\nNSQR: %d\n", ncqr, nsqr);
-#endif
+
+	// cmd_sq_t *cmd = (cmd_sq_t*)priv->sq_buf;
+	// uint16_t ncqr = (cmd->cdw[0] >> 16) & 0xFFFF;
+	// uint16_t nsqr = cmd->cdw[0] & 0xFFFF;
+	// LOG_DBG("NCQR: %d, NSQR: %d", ncqr, nsqr);
 
 	// For now create only one IO queue
 
@@ -53,10 +56,11 @@ void nvme_cmd_adm_set_features(nvme_cmd_priv_t *priv)
 
 	switch(cmd->cdw10.fid) {
 		case FID_NUMBER_OF_QUEUES:
+			LOG_DBG("Handling FID_NUMBER_OF_QUEUES");
 			number_of_queues(priv);
 			break;
 		default:
-			printk("Invalid Set Features FID value! (%d)\n", cmd->cdw10.fid);
+			LOG_WRN("Invalid Set Features FID value! (%d)", cmd->cdw10.fid);
 	}
 
 	nvme_cmd_return(priv);

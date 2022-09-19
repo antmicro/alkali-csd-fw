@@ -26,7 +26,10 @@
 #include <openamp/rpmsg_virtio.h>
 #include <drivers/ipm.h>
 #include "platform_info.h"
+#include "main.h"
 
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 static struct device *ipm_dev_tx;
 static struct device *ipm_dev_rx;
@@ -52,7 +55,7 @@ zynqmp_r5_a53_proc_init(struct remoteproc *rproc,
 {
 	struct remoteproc_priv *prproc = arg;
 
-	printk("remoteproc init\n");
+	LOG_INF("remoteproc init");
 
 	ipm_dev_tx = device_get_binding("MAILBOX_0");
 	ipm_dev_rx = device_get_binding("MAILBOX_1");
