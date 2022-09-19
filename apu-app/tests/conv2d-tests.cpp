@@ -33,6 +33,12 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
                     modelfiles.push_back(file.path().string());
                 }
             }
+            std::sort(modelfiles.begin(), modelfiles.end());
+            std::cout << "VTAConv2DTest suite ids:" << std::endl;
+            for (unsigned int i = 0; i < modelfiles.size(); i++)
+            {
+                std::cout << i << ":  " << modelfiles[i] << std::endl;
+            }
             ASSERT_EQ(NUM_MODELS, modelfiles.size()) << "Invalid number of declared models and present models in the " << modelspath << " directory" << std::endl;
         }
         void SetUp()
@@ -46,6 +52,7 @@ std::vector<std::string> VTAConv2DTest::modelfiles;
 
 TEST_P(VTAConv2DTest, CPUInvoking)
 {
+    std::cout << "Testing  " << modelfiles[GetParam()] << std::endl;
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAConv2DTest::modelfiles[GetParam()].c_str());
 
     tflite::ops::builtin::BuiltinOpResolver resolver;
