@@ -361,6 +361,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     VTA_MEM_ID_WGT // dst_memory_type
                 );
                 VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
+                VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
                 // Data loading thread 2
                 VTALoadBuffer2D(
                     cmd, // cmd
@@ -405,7 +406,6 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     tensorElements({"Hk", "Wk"}) * (dim("Ii") / 2), //dst_sram_index
                     VTA_MEM_ID_WGT // dst_memory_type
                 );
-                VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
                 VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
                 for (int threadid = 0; threadid < vthreads; threadid++)
                 {
@@ -452,8 +452,9 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
                     // create micro-op kernel for vector addition
                     // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
+                    void *map = nullptr;
                     VTAPushALUOp(
-                        &cmd,
+                        &map,
                         lambda,
                         nullptr,
                         0
@@ -469,6 +470,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
             const int outchanstep = dim("Oo") / vthreads;
             for (int threadid = 0; threadid < vthreads; threadid++)
             {
+                VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
                 for (int o = 0; o < outchanstep; o++)
                 {
                     for (int y = 0; y < heightstep; y++)
@@ -489,7 +491,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                         }
                     }
                 }
-                VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
+                VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
             }
         }
     }
@@ -501,7 +503,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
 
     // synchronize with VTA
-    VTASynchronize(cmd, 10000000);
+    VTASynchronize(cmd, 1000);
 
     VTABufferCopy(outbuf, 0, outarray.data(), 0, sizeof(int32_t) * outelemsfull, VTA_MEMCPY_D2H);
 
