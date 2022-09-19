@@ -243,10 +243,18 @@ IN_SDK_ENV = \
 
 CMAKE_OPTS = -DGENERATED_DIR=$(RPUAPP_GENERATED_DIR) -DREGGEN_DIR=$(REGGEN_DIR) \
 	-DNVME_SPEC_FILE=$(NVME_SPEC_FILE) -DRPUAPP_GENERATED_DIR=$(RPUAPP_GENERATED_DIR)
-WEST_BUILD = west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
+
+WEST_BUILD := west build -b zcu106 -d $(RPUAPP_BUILD_DIR) rpu-app $(CMAKE_OPTS)
+WEST_MENUCONFIG := west build -b zcu106 -d $(RPUAPP_BUILD_DIR) -t menuconfig
 
 .PHONY: rpu-app
 rpu-app: $(RPUAPP_ZEPHYR_ELF) ## Build RPU App
+
+.PHONY: rpu-app/menuconfig
+rpu-app/menuconfig: SHELL:=/bin/bash
+rpu-app/menuconfig: $(ZEPHYR_SOURCES)
+rpu-app/menuconfig: $(RPUAPP_SOURCES)
+	$(IN_ZEPHYR_ENV) && $(WEST_MENUCONFIG)
 
 .PHONY: rpu-app/with-sdk
 rpu-app/with-sdk: SHELL:=/bin/bash ## Build RPU App with local Zephyr SDK (helper)
