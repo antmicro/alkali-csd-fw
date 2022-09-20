@@ -7,6 +7,7 @@
 
 #include <vta-delegate.hpp>
 
+#include <tensorflow/lite/c/c_api.h>
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"
 #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
@@ -505,7 +506,18 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     // synchronize with VTA
     VTASynchronize(cmd, 1000);
 
-    VTABufferCopy(outbuf, 0, outarray.data(), 0, sizeof(int32_t) * outelemsfull, VTA_MEMCPY_D2H);
+    // TODO Handle this better
+    std::vector<int32_t> outarraypreq(outelemsfull);
+    VTABufferCopy(outbuf, 0, outarraypreq.data(), 0, sizeof(int32_t) * outelemsfull, VTA_MEMCPY_D2H);
+
+    // requantize the outputs
+    auto params = TfLiteTensorQuantizationParams(&outptr);
+    // TODO handle this in VTA?
+    for (int i = 0; i < outelemsfull; i++)
+    {
+        // TODO make type configurable
+        outarray[outelemsfull] = static_cast<int8_t>((static_cast<float>(outarraypreq[i]) - params.zero_point) * params.scale);
+    }
 
     permuteDims(
         {"No", "Oo", "Ho", "Wo", "Ni", "Oi"},
@@ -536,9 +548,7 @@ void VTAGEMMOp::permuteDims(
             int axisindex = inpremaining / step;
             outindex += axisindex * getDimStep(outlayout, axis);
             inpremaining %= step;
-            printf("step [%d] axisindex [%d] outindex [%d]", step, axisindex, outindex);
         }
-        printf("%d -> %d\n", i, outindex);
         std::copy(&inparray[i * elemsize], &inparray[(i + 1) * elemsize], &outarray[outindex * elemsize]);
     }
 }
