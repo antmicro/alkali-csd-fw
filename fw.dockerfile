@@ -45,9 +45,9 @@ RUN git clone -b v3.16.7 https://gitlab.kitware.com/cmake/cmake.git cmake && \
 
 # Install Python dependencies
 COPY requirements.txt requirements.txt
-COPY third-party/registers-generator/requirements.txt third-party/registers-generator/requirements.txt
+COPY registers-generator/requirements.txt registers-generator/requirements.txt
 RUN pip3 install -r requirements.txt
-RUN rm requirements.txt third-party/registers-generator/requirements.txt
+RUN rm requirements.txt registers-generator/requirements.txt
 
 # Install Zephyr
 RUN wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/zephyr-sdk-0.10.3-setup.run && \
