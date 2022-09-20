@@ -17,7 +17,7 @@ WEST_INIT_DIR ?= $(RPUAPP_DIR)
 # Input paths ----------------------------------------------------------------
 
 THIRD_PARTY_DIR = $(ROOT_DIR)/third-party
-REGGEN_DIR = $(ROOT_DIR)/third-party/registers-generator
+REGGEN_DIR = $(ROOT_DIR)/registers-generator
 BUILDROOT_DIR = $(ROOT_DIR)/third-party/buildroot
 SCRIPTS_DIR = $(ROOT_DIR)/scripts
 RPUAPP_DIR = $(ROOT_DIR)/rpu-app
