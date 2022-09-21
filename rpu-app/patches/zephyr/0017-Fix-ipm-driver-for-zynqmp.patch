@@ -1,0 +1,26 @@
+From 32ec536bef32a3bb0c3f04c193bbef2d0cb4c9fd Mon Sep 17 00:00:00 2001
+From: Robert Winkler <rwinkler@antmicro.com>
+Date: Wed, 21 Sep 2022 12:51:37 +0200
+Subject: [PATCH] Fix ipm driver for zynqmp
+
+Signed-off-by: Robert Winkler <rwinkler@antmicro.com>
+---
+ drivers/ipm/ipm_xlnx_zynqmp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/ipm/ipm_xlnx_zynqmp.c b/drivers/ipm/ipm_xlnx_zynqmp.c
+index 504c4d7c0c..5188e6cffb 100644
+--- a/drivers/ipm/ipm_xlnx_zynqmp.c
++++ b/drivers/ipm/ipm_xlnx_zynqmp.c
+@@ -15,7 +15,7 @@
+ #define TIMEOUT	K_MSEC(3000)
+ #define DELAY	K_MSEC(200)
+ 
+-LOG_MODULE_DECLARE(ipm_xlnx, LOG_LEVEL_DBG);
++LOG_MODULE_REGISTER(ipm_xlnx, LOG_LEVEL_DBG);
+ 
+ struct ipm_zynqmp_data {
+ 	ipm_callback_t callback;
+-- 
+2.25.1
+
