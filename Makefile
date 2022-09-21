@@ -268,6 +268,7 @@ rpu-app/clean: ## Remove RPU App build files
 $(RPUAPP_ZEPHYR_ELF): SHELL := /bin/bash
 $(RPUAPP_ZEPHYR_ELF): $(ZEPHYR_SOURCES)
 $(RPUAPP_ZEPHYR_ELF): $(RPUAPP_SOURCES)
+$(RPUAPP_ZEPHYR_ELF): $(RPUAPP_DIR)/prj.conf
 	$(IN_ZEPHYR_ENV) && $(WEST_BUILD)
 
 # -----------------------------------------------------------------------------
