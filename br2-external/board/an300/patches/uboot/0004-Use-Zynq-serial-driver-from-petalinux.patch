@@ -1,0 +1,270 @@
+From cba3cb2c3441cc48c53dd3a3f9171e324bf895ef Mon Sep 17 00:00:00 2001
+From: Robert Winkler <rwinkler@antmicro.com>
+Date: Fri, 16 Sep 2022 11:38:51 +0200
+Subject: [PATCH 4/4] Use Zynq serial driver from petalinux
+
+Signed-off-by: Robert Winkler <rwinkler@antmicro.com>
+---
+ drivers/serial/serial_zynq.c | 140 ++++++++++++++++++++++++++++++++---
+ 1 file changed, 128 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/serial/serial_zynq.c b/drivers/serial/serial_zynq.c
+index 7e486a68ff..bd1d6e94ea 100644
+--- a/drivers/serial/serial_zynq.c
++++ b/drivers/serial/serial_zynq.c
+@@ -17,23 +17,49 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-#define ZYNQ_UART_SR_TXACTIVE	BIT(11) /* TX active */
+ #define ZYNQ_UART_SR_TXFULL	BIT(4) /* TX FIFO full */
+-#define ZYNQ_UART_SR_RXEMPTY	BIT(1) /* RX FIFO empty */
++#define ZYNQ_UART_SR_TXEMPTY	(1 << 3) /* TX FIFO empty */
++#define ZYNQ_UART_SR_TXACTIVE	(1 << 11)  /* TX active */
++#define ZYNQ_UART_SR_RXEMPTY	0x00000002 /* RX FIFO empty */
+ 
+-#define ZYNQ_UART_CR_TX_EN	BIT(4) /* TX enabled */
+-#define ZYNQ_UART_CR_RX_EN	BIT(2) /* RX enabled */
+-#define ZYNQ_UART_CR_TXRST	BIT(1) /* TX logic reset */
+-#define ZYNQ_UART_CR_RXRST	BIT(0) /* RX logic reset */
++#define ZYNQ_UART_CR_TX_EN	0x00000010 /* TX enabled */
++#define ZYNQ_UART_CR_RX_EN	0x00000004 /* RX enabled */
++#define ZYNQ_UART_CR_TXRST	0x00000002 /* TX logic reset */
++#define ZYNQ_UART_CR_RXRST	0x00000001 /* RX logic reset */
+ 
+ #define ZYNQ_UART_MR_PARITY_NONE	0x00000020  /* No parity mode */
+ 
++/*
++ * Modem Control register:
++ * The read/write Modem Control register controls the interface with the modem
++ * or data set, or a peripheral device emulating a modem.
++ */
++#define CDNS_UART_MODEMCR_FCM	0x00000020 /* Automatic flow control mode */
++#define CDNS_UART_MODEMCR_RTS	0x00000002 /* Request to send output control */
++#define CDNS_UART_MODEMCR_DTR	0x00000001 /* Data Terminal Ready */
++
++/*
++ * Modem Status register:
++ * The read/write Modem Status register reports the interface with the modem
++ * or data set, or a peripheral device emulating a modem.
++ */
++#define CDNS_UART_MODEMSR_DCD	BIT(7) /* Data Carrier Detect */
++#define CDNS_UART_MODEMSR_RI	BIT(6) /* Ting Indicator */
++#define CDNS_UART_MODEMSR_DSR	BIT(5) /* Data Set Ready */
++#define CDNS_UART_MODEMSR_CTS	BIT(4) /* Clear To Send */
++
++//Basalt: Enabled below macro to duplicate uart0 output to uart1 as well
++//Assumes Petalinux master config and dts selects uart0 as serial0.
++#define UART1_CLONE_UART0
++
+ struct uart_zynq {
+ 	u32 control; /* 0x0 - Control Register [8:0] */
+ 	u32 mode; /* 0x4 - Mode Register [10:0] */
+ 	u32 reserved1[4];
+ 	u32 baud_rate_gen; /* 0x18 - Baud Rate Generator [15:0] */
+-	u32 reserved2[4];
++	u32 reserved2[2];
++    u32 modem_ctrl;   /* 0x24 - Modem Control */
++    u32 modem_status; /* 0x28 - Modem Status */
+ 	u32 channel_sts; /* 0x2c - Channel Status [11:0] */
+ 	u32 tx_rx_fifo; /* 0x30 - FIFO [15:0] or [7:0] */
+ 	u32 baud_rate_divider; /* 0x34 - Baud Rate Divider [7:0] */
+@@ -43,6 +69,11 @@ struct zynq_uart_platdata {
+ 	struct uart_zynq *regs;
+ };
+ 
++#if defined(UART1_CLONE_UART0)
++int last_read_uart = 0;
++int last_pending_check_uart = 0;
++#endif
++
+ /* Set up the baud rate in gd struct */
+ static void _uart_zynq_serial_setbrg(struct uart_zynq *regs,
+ 				     unsigned long clock, unsigned long baud)
+@@ -87,14 +118,23 @@ static void _uart_zynq_serial_setbrg(struct uart_zynq *regs,
+ /* Initialize the UART, with...some settings. */
+ static void _uart_zynq_serial_init(struct uart_zynq *regs)
+ {
++        u32 cval = 0;
++
+ 	/* RX/TX enabled & reset */
+ 	writel(ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | \
+ 					ZYNQ_UART_CR_RXRST, &regs->control);
+ 	writel(ZYNQ_UART_MR_PARITY_NONE, &regs->mode); /* 8 bit, no parity */
++
++    cval = readl(&regs->modem_ctrl);
++	cval |= CDNS_UART_MODEMCR_FCM;
++    cval |= CDNS_UART_MODEMCR_RTS;
++    writel(cval, &regs->modem_ctrl); /* modem h/w flow control */
++
+ }
+ 
+ static int _uart_zynq_serial_putc(struct uart_zynq *regs, const char c)
+ {
++	//if (!(readl(&regs->channel_sts) & ZYNQ_UART_SR_TXEMPTY))
+ 	if (readl(&regs->channel_sts) & ZYNQ_UART_SR_TXFULL)
+ 		return -EAGAIN;
+ 
+@@ -111,6 +151,9 @@ static int zynq_serial_setbrg(struct udevice *dev, int baudrate)
+ 	int ret;
+ 	struct clk clk;
+ 
++#if defined(UART1_CLONE_UART0)
++       struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++#endif
+ 	ret = clk_get_by_index(dev, 0, &clk);
+ 	if (ret < 0) {
+ 		dev_err(dev, "failed to get clock\n");
+@@ -132,18 +175,27 @@ static int zynq_serial_setbrg(struct udevice *dev, int baudrate)
+ 
+ 	_uart_zynq_serial_setbrg(platdata->regs, clock, baudrate);
+ 
++#if defined(UART1_CLONE_UART0)
++        _uart_zynq_serial_setbrg(regs_uart2, clock, baudrate);
++#endif
+ 	return 0;
+ }
+ 
+ static int zynq_serial_probe(struct udevice *dev)
+ {
+ 	struct zynq_uart_platdata *platdata = dev_get_platdata(dev);
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++#endif
+ 
+ 	/* No need to reinitialize the UART after relocation */
+-	if (gd->flags & GD_FLG_RELOC)
+-		return 0;
++	//if (gd->flags & GD_FLG_RELOC)
++	//	return 0;
+ 
+ 	_uart_zynq_serial_init(platdata->regs);
++#if defined(UART1_CLONE_UART0)
++        _uart_zynq_serial_init(regs_uart2);
++#endif
+ 
+ 	return 0;
+ }
+@@ -152,16 +204,43 @@ static int zynq_serial_getc(struct udevice *dev)
+ {
+ 	struct zynq_uart_platdata *platdata = dev_get_platdata(dev);
+ 	struct uart_zynq *regs = platdata->regs;
+-
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++
++	if(last_read_uart == 0)
++	{
++		last_read_uart = 1;
++		if (readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY)
++			return -EAGAIN;
++
++		return readl(&regs->tx_rx_fifo);
++        } else
++	{
++                last_read_uart = 0;
++                if (readl(&regs_uart2->channel_sts) & ZYNQ_UART_SR_RXEMPTY)
++                        return -EAGAIN;
++
++                return readl(&regs_uart2->tx_rx_fifo);
++	}
++#else
+ 	if (readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY)
+ 		return -EAGAIN;
+ 
+ 	return readl(&regs->tx_rx_fifo);
++#endif
+ }
+ 
+ static int zynq_serial_putc(struct udevice *dev, const char ch)
+ {
+ 	struct zynq_uart_platdata *platdata = dev_get_platdata(dev);
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++       	int retval;
++
++       	retval = _uart_zynq_serial_putc(regs_uart2, ch);
++	if(retval == -EAGAIN) /* sometimes first char miss happens due to uart sped, retry*/
++        _uart_zynq_serial_putc(regs_uart2, ch);
++#endif
+ 
+ 	return _uart_zynq_serial_putc(platdata->regs, ch);
+ }
+@@ -170,11 +249,32 @@ static int zynq_serial_pending(struct udevice *dev, bool input)
+ {
+ 	struct zynq_uart_platdata *platdata = dev_get_platdata(dev);
+ 	struct uart_zynq *regs = platdata->regs;
+-
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++
++        if(last_pending_check_uart == 0)
++        {
++                last_pending_check_uart = 1;
++
++	        if (input)
++		        return !(readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY);
++	        else
++		        return !!(readl(&regs->channel_sts) & ZYNQ_UART_SR_TXACTIVE);
++        } else
++        {
++                last_pending_check_uart = 0;
++
++                if (input)
++                        return !(readl(&regs_uart2->channel_sts) & ZYNQ_UART_SR_RXEMPTY);
++                else
++                        return !!(readl(&regs_uart2->channel_sts) & ZYNQ_UART_SR_TXACTIVE);
++        }
++#else
+ 	if (input)
+ 		return !(readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY);
+ 	else
+ 		return !!(readl(&regs->channel_sts) & ZYNQ_UART_SR_TXACTIVE);
++#endif
+ }
+ 
+ static int zynq_serial_ofdata_to_platdata(struct udevice *dev)
+@@ -210,23 +310,39 @@ U_BOOT_DRIVER(serial_zynq) = {
+ 	.platdata_auto_alloc_size = sizeof(struct zynq_uart_platdata),
+ 	.probe = zynq_serial_probe,
+ 	.ops	= &zynq_serial_ops,
++	.flags = DM_FLAG_PRE_RELOC,
+ };
+ 
+ #ifdef CONFIG_DEBUG_UART_ZYNQ
+ static inline void _debug_uart_init(void)
+ {
+ 	struct uart_zynq *regs = (struct uart_zynq *)CONFIG_DEBUG_UART_BASE;
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++#endif
+ 
+ 	_uart_zynq_serial_init(regs);
+ 	_uart_zynq_serial_setbrg(regs, CONFIG_DEBUG_UART_CLOCK,
+ 				 CONFIG_BAUDRATE);
++
++#if defined(UART1_CLONE_UART0)
++        _uart_zynq_serial_init(regs_uart2);
++        _uart_zynq_serial_setbrg(regs_uart2, CONFIG_DEBUG_UART_CLOCK,
++                                 CONFIG_BAUDRATE);
++#endif
+ }
+ 
+ static inline void _debug_uart_putc(int ch)
+ {
+ 	struct uart_zynq *regs = (struct uart_zynq *)CONFIG_DEBUG_UART_BASE;
++#if defined(UART1_CLONE_UART0)
++        struct uart_zynq *regs_uart2 = (struct uart_zynq *)0xff010000;
++
++        while (_uart_zynq_serial_putc(regs_uart2, ch) == -EAGAIN)
++                WATCHDOG_RESET();
++#endif
+ 
+-	while (_uart_zynq_serial_putc(regs, ch) == -EAGAIN)
++        while (_uart_zynq_serial_putc(regs, ch) == -EAGAIN)
+ 		WATCHDOG_RESET();
+ }
+ 
+-- 
+2.25.1
+
