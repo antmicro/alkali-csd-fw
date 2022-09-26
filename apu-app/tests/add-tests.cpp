@@ -55,6 +55,7 @@ TEST_P(VTAAddTest, AddTestTFLite)
     std::unique_ptr<tflite::Interpreter> interpreter;
 
     tflite::InterpreterBuilder(*model, resolver)(&interpreter);
+
     interpreter->AllocateTensors();
 
     // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
@@ -81,52 +82,44 @@ TEST_P(VTAAddTest, AddTestTFLite)
     interpreter->Invoke();
 }
 
-// TEST_P(VTAAddTest, AddTestDelegate)
-// {
-//     std::unique_ptr<tflite::Interpreter> interpreter = createInterpreter(VTAAddTest::modelfiles[GetParam()]);
+TEST_P(VTAAddTest, AddTestDelegate)
+{
+    std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAAddTest::modelfiles[GetParam()].c_str());
 
-//     interpreter->AllocateTensors();
+    tflite::ops::builtin::BuiltinOpResolver resolver;
+    std::unique_ptr<tflite::Interpreter> interpreter;
 
-//     // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
-//     // int8_t *input2 = interpreter->typed_input_tensor<int8_t>(1);
+    tflite::InterpreterBuilder(*model, resolver)(&interpreter);
 
-//     ASSERT_EQ(interpreter->input_tensor(0)->dims->size, interpreter->input_tensor(1)->dims->size) << "Input tensors differ in dimensionality";
+    std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteVTADelegateDelete)> delegate(tflite::TfLiteVTADelegateCreate(NULL), &tflite::TfLiteVTADelegateDelete);
 
-//     int numdims = interpreter->input_tensor(0)->dims->size;
+    interpreter->ModifyGraphWithDelegate(std::move(delegate));
 
-//     int inputsize = 1;
+    interpreter->AllocateTensors();
 
-//     for (int i = 0; i < numdims; i++)
-//     {
-//         ASSERT_EQ(interpreter->input_tensor(0)->dims->data[i], interpreter->input_tensor(1)->dims->data[i]) << "Input tensors differ in " << i << "th dimension";
-//         inputsize *= interpreter->input_tensor(0)->dims->data[i];
-//     }
+    // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
+    // int8_t *input2 = interpreter->typed_input_tensor<int8_t>(1);
 
-//     std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-//     std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
+    ASSERT_EQ(interpreter->input_tensor(0)->dims->size, interpreter->input_tensor(1)->dims->size) << "Input tensors differ in dimensionality";
 
-//     std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-//     std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    int numdims = interpreter->input_tensor(0)->dims->size;
 
-//     interpreter->Invoke();
+    int inputsize = 1;
 
-//     std::unique_ptr<tflite::Interpreter> vtainterpreter = createInterpreter(VTAAddTest::modelfiles[GetParam()]);
+    for (int i = 0; i < numdims; i++)
+    {
+        ASSERT_EQ(interpreter->input_tensor(0)->dims->data[i], interpreter->input_tensor(1)->dims->data[i]) << "Input tensors differ in " << i << "th dimension";
+        inputsize *= interpreter->input_tensor(0)->dims->data[i];
+    }
 
-//     std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteVTADelegateDelete)> delegate(tflite::TfLiteVTADelegateCreate(NULL), &tflite::TfLiteVTADelegateDelete);
+    std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
+    std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
 
-//     vtainterpreter->ModifyGraphWithDelegate(std::move(delegate));
+    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
 
-//     vtainterpreter->AllocateTensors();
-
-//     int8_t *input1 = vtainterpreter->typed_input_tensor<int8_t>(0);
-//     int8_t *input2 = vtainterpreter->typed_input_tensor<int8_t>(1);
-
-//     vtainterpreter->Invoke();
-
-//     int8_t *out = vtainterpreter->typed_output_tensor<int8_t>(0);
-
-//     printf("output: %d %d\n", out[0], out[1]);
-// }
+    interpreter->Invoke();
+}
 
 INSTANTIATE_TEST_SUITE_P(
     VTAAddTestGroup,
