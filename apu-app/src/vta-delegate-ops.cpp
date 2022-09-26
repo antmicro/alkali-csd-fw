@@ -480,14 +480,15 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
     // Splitting along height
     // TODO improve splitting height dimension
-    const int hthreads = 2;
+    const int hthreads = NUM_THREADS;
     // Virtual threads for latency hiding
-    const int vthreads = 2;
+    const int vthreads = NUM_THREADS;
 
     // output: No HOo COoo WOo COoi HOi WOi Ni COi
     for (int No = 0; No < dim("No"); No++)
     {
         // We split the computations along height
+        // FIXME consider height == 1
         for (int Hoo = 0; Hoo < hthreads; Hoo++)
         {
             int heightstep = dim("Ho") / hthreads;

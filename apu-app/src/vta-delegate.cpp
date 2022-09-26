@@ -26,7 +26,7 @@ bool VTADelegate::IsNodeSupportedByDelegate(
             printf("Skipped builtin code %d\n", registration->builtin_code);
             return false;
     }
-    // Only support int8
+    // We support only INT8-based operations
     for (int i = 0; i < node->inputs->size; ++i)
     {
         auto &tensor = context->tensors[node->inputs->data[i]];
@@ -147,7 +147,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
     }
     for (auto &op: ops)
     {
-        std::cout << "Op:  " << op->name << " number of inputs:  " << op->inputs.size() << " number of outputs: " << op->outputs.size() << std::endl;
+        printf("Op:  %s number of inputs:  %lu number of outputs:  %lu\n", op->name.c_str(), op->inputs.size(), op->outputs.size());
         for (auto &inp: op->inputs)
         {
             printf("%d:(%x)[%d", inp, context->tensors[inp].data, context->tensors[inp].dims->data[0]);
@@ -157,7 +157,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
             }
             printf("]  ");
         }
-        std::cout << std::endl;
+        printf("\n");
         for (auto &out: op->outputs)
         {
             printf("%d:(%x)[%d", out, context->tensors[out].data, context->tensors[out].dims->data[0]);
@@ -167,7 +167,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
             }
             printf("]  ");
         }
-        std::cout << std::endl;
+        printf("\n");
     }
     return kTfLiteOk;
 }
