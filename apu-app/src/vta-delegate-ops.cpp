@@ -13,6 +13,7 @@
 #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
 
 #include <algorithm>
+#include <cmath>
 
 #define NUM_THREADS 2
 #define VTA_UOP_GEMM 0
@@ -133,6 +134,215 @@ TfLiteStatus VTAGEMMOp::compute()
 
 TfLiteStatus VTAALUOp::aluAdd()
 {
+    // create handles for inputs and outputs from TFLite
+    auto &input1 = parent->context->tensors[inputs[0]];
+    auto &input2 = parent->context->tensors[inputs[1]];
+
+    auto &output = parent->context->tensors[outputs[0]];
+
+    // check that sizes of input and output vectors match
+    if (NumElements(&input1) != NumElements(&input2) ||
+        NumElements(&input1) != NumElements(&output) ||
+        input1.type != input2.type)
+    {
+        printf("Number of elements in vectors mismatch:  input1 (%lu) + input2(%lu) = output(%lu)\n",
+            NumElements(&input1),
+            NumElements(&input2),
+            NumElements(&output)
+        );
+        return kTfLiteDelegateError;
+    }
+
+    // determine input element size (to VTA)
+#if VTA_ACC_WIDTH == 32
+    auto ielemsize = sizeof(int32_t);
+#else
+    #error Unsupported ACC_WIDTH value
+#endif
+
+    // determine output element size (from VTA)
+#if VTA_OUT_WIDTH == 32
+    auto oelemsize = sizeof(int32_t);
+#elif VTA_OUT_WIDTH == 8
+    auto oelemsize = sizeof(int8_t);
+#else
+    #error Unsupported OUT_WIDTH value
+#endif
+
+    // get number of elements in vectors
+    auto numelements = NumElements(&input1);
+
+    // allocate shared buffers in DRAM with VTA
+    auto *vtainput1 = VTABufferAlloc(ielemsize * numelements);
+    auto *vtainput2 = VTABufferAlloc(ielemsize * numelements);
+    auto *vtaoutput = VTABufferAlloc(oelemsize * numelements);
+
+    // get maximum number of elements that can be computed at once
+    auto computevectorsize = VTA_BATCH * VTA_BLOCK_OUT;
+
+    // create temporary vectors for storing/converting data for/from VTA
+    std::vector<int32_t> tmpinp1(numelements);
+    std::vector<int32_t> tmpinp2(numelements);
+    std::vector<uint8_t> outdata(oelemsize * numelements);
+
+    // pointers to input data
+    int32_t *inp1 = nullptr;
+    int32_t *inp2 = nullptr;
+#if VTA_ACC_WIDTH == 32
+    if (input1.type == kTfLiteInt32)
+    {
+        // if input vectors are 32-bit integers - passthrough
+        inp1 = GetTensorData<int32_t>(&input1);
+        inp2 = GetTensorData<int32_t>(&input2);
+    }
+    else if (input1.type == kTfLiteInt8)
+    {
+        // if input vectors are 8-bit integers - convert them to 32-bit
+        std::transform(GetTensorData<int8_t>(&input1), GetTensorData<int8_t>(&input1) + numelements, tmpinp1.begin(), [](const int8_t &inp) -> int32_t { return static_cast<int32_t>(inp);});
+        inp1 = tmpinp1.data();
+        std::transform(GetTensorData<int8_t>(&input2), GetTensorData<int8_t>(&input2) + numelements, tmpinp2.begin(), [](const int8_t &inp) -> int32_t { return static_cast<int32_t>(inp);});
+        inp2 = tmpinp2.data();
+    }
+    else {
+        printf("Unsupported tensor type:  %d\n", input1.type);
+        return kTfLiteDelegateError;
+    }
+#else
+    #error Unsupported ACC_WIDTH value
+#endif
+    if (!inp1 || !inp2)
+    {
+        printf("Could not obtain one of input tensors:  %x %x\n", inp1, inp2);
+        return kTfLiteDelegateError;
+    }
+
+    // copy buffers to shared DRAM
+    VTABufferCopy(inp1, 0, vtainput1, 0, ielemsize * numelements, VTA_MEMCPY_H2D);
+    VTABufferCopy(inp2, 0, vtainput2, 0, ielemsize * numelements, VTA_MEMCPY_H2D);
+
+    // prepare command handle for VTA
+    auto cmd = VTATLSCommandHandle();
+
+    // we want to utilize "virtual threads" - to hide latency we want to load data in parallel to processing the previous ones
+    int maxelements = VTA_ACC_BUFF_SIZE / oelemsize / NUM_THREADS;
+
+    for (int threadid = 0; threadid < std::ceil(static_cast<float>(numelements) / maxelements); threadid++)
+    {
+        printf("CHECK\n");
+        VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
+        VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
+    }
+
+    int vectorshift = 0;
+    while (vectorshift < numelements)
+    {
+        for (int threadid = 0; threadid < NUM_THREADS; threadid++)
+        {
+            // no need to schedule another operation
+            if (vectorshift >= numelements)
+            {
+                continue;
+            }
+            // compute remaining vector length
+            int veclength = std::min<int>(maxelements, numelements - vectorshift);
+            // data needs to be aligned - we add padding to satisfy VTA ALU core
+            int padding = std::max<int>(0, computevectorsize - veclength);
+            // Final processing length
+            int processdatalength = veclength + padding;
+            VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
+            VTALoadBuffer2D(
+                cmd,           // cmd
+                vtainput1,     // src_dram_addr
+                vectorshift,   // src_elem_offset
+                veclength,     // x_size
+                1,             // y_size
+                1,             // x_stride
+                0,             // x_pad_before
+                0,             // y_pad_before
+                padding,       // x_pad_after
+                0,             // y_pad_after
+                0,             // dst_sram_index
+                VTA_MEM_ID_ACC // dst_memory_type
+            );
+            VTALoadBuffer2D(
+                cmd,           // cmd
+                vtainput2,     // src_dram_addr
+                vectorshift,   // src_elem_offset
+                veclength,     // x_size
+                1,             // y_size
+                1,             // x_stride
+                0,             // x_pad_before
+                0,             // y_pad_before
+                padding,       // x_pad_after
+                0,             // y_pad_after
+                veclength,     // dst_sram_index
+                VTA_MEM_ID_ACC // dst_memory_type
+            );
+            VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
+            VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
+            VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
+            auto lambda = [veclength, processdatalength, computevectorsize](void *signature) -> int {
+                VTAUopLoopBegin(processdatalength / computevectorsize, 1, 1, 0);
+                VTAUopPush(
+                    VTA_OPCODE_ALU,                        // mode
+                    0,                                     // reset_out
+                    0,                                     // dst_index
+                    processdatalength / computevectorsize, // src_index
+                    0,                                     // wgt_index
+                    VTA_ALU_OPCODE_ADD,                    // opcode
+                    0,                                     // use_imm
+                    0                                      // imm_val
+                );
+                VTAUopLoopEnd();
+                return 0;
+            };
+            void *map = nullptr;
+            VTAPushALUOp(
+                &map,
+                lambda,
+                nullptr,
+                0
+            );
+            VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
+            VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
+            VTAStoreBuffer2D(
+                cmd,            // cmd
+                0,              // src_sram_index
+                VTA_MEM_ID_OUT, // src_memory_type
+                vtaoutput,      // dst_dram_addr
+                vectorshift,    // dst_elem_offset
+                veclength,      // x_size
+                1,              // y_size
+                1               // x_stride
+            );
+            VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
+            VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
+            vectorshift += veclength;
+        }
+    }
+
+    for (int threadid = 0; threadid < std::ceil(static_cast<float>(numelements) / maxelements); threadid++)
+    {
+        VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
+        VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
+    }
+
+    VTASynchronize(cmd, 1000000);
+    VTABufferCopy(vtaoutput, 0, outdata.data(), 0, oelemsize * numelements, VTA_MEMCPY_D2H);
+
+#if VTA_ACC_WIDTH == 32
+    if (output.type == kTfLiteInt32)
+    {
+        std::copy(outdata.begin(), outdata.end(), GetTensorData<int32_t>(&output));
+    }
+    else if (output.type == kTfLiteInt8)
+    {
+        std::transform(outdata.begin(), outdata.end(), GetTensorData<int8_t>(&output), [](const int32_t &inp) -> int8_t { return static_cast<int8_t>(inp);});
+    }
+#else
+    #error Unsupported ACC_WIDTH value
+#endif
+
     return kTfLiteOk;
 }
 
