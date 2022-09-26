@@ -163,14 +163,20 @@ TfLiteStatus VTAALUOp::aluAdd()
     // determine output element size (from VTA)
 #if VTA_OUT_WIDTH == 32
     auto oelemsize = sizeof(int32_t);
+    using oelemtype = int32_t;
 #elif VTA_OUT_WIDTH == 8
     auto oelemsize = sizeof(int8_t);
+    using oelemtype = int8_t;
 #else
     #error Unsupported OUT_WIDTH value
 #endif
 
     // get number of elements in vectors
     auto numelements = NumElements(&input1);
+
+    // prepare command handle for VTA
+    auto cmd = VTATLSCommandHandle();
+    // VTASetDebugMode(cmd, VTA_DEBUG_DUMP_INSN);
 
     // allocate shared buffers in DRAM with VTA
     auto *vtainput1 = VTABufferAlloc(ielemsize * numelements);
@@ -183,7 +189,7 @@ TfLiteStatus VTAALUOp::aluAdd()
     // create temporary vectors for storing/converting data for/from VTA
     std::vector<int32_t> tmpinp1(numelements);
     std::vector<int32_t> tmpinp2(numelements);
-    std::vector<uint8_t> outdata(oelemsize * numelements);
+    std::vector<oelemtype> outdata(numelements, 0);
 
     // pointers to input data
     int32_t *inp1 = nullptr;
@@ -219,23 +225,23 @@ TfLiteStatus VTAALUOp::aluAdd()
     // copy buffers to shared DRAM
     VTABufferCopy(inp1, 0, vtainput1, 0, ielemsize * numelements, VTA_MEMCPY_H2D);
     VTABufferCopy(inp2, 0, vtainput2, 0, ielemsize * numelements, VTA_MEMCPY_H2D);
-
-    // prepare command handle for VTA
-    auto cmd = VTATLSCommandHandle();
+    VTABufferCopy(outdata.data(), 0, vtaoutput, 0, oelemsize * numelements, VTA_MEMCPY_H2D);
 
     // we want to utilize "virtual threads" - to hide latency we want to load data in parallel to processing the previous ones
-    int maxelements = VTA_ACC_BUFF_SIZE / oelemsize / NUM_THREADS;
+    // VTA_ACC_BUFF_DEPTH tells how many tensors of size BATCHxBLOCK_OUT of VTA_ACC_WIDTH-bit lements can fit into the accumulator SRAM aka register file
+    // NUM_THREADS is used for latency hiding
+    // 2 stands for input/result and the second input
+    // maxelements tells how many elements can fit at once in a single pass
+    int maxelements = VTA_ACC_BUFF_DEPTH / NUM_THREADS / 2 * 16;
+    printf("VTA_ACC_BUFF_DEPTH:  %d  MAX ELEMENTS:  %d\n", VTA_ACC_BUFF_DEPTH, maxelements);
 
-    for (int threadid = 0; threadid < std::ceil(static_cast<float>(numelements) / maxelements); threadid++)
-    {
-        printf("CHECK\n");
-        VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
-        VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
-    }
+    VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
+    VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
 
     int vectorshift = 0;
     while (vectorshift < numelements)
     {
+        int sramshift = 0;
         for (int threadid = 0; threadid < NUM_THREADS; threadid++)
         {
             // no need to schedule another operation
@@ -246,52 +252,56 @@ TfLiteStatus VTAALUOp::aluAdd()
             // compute remaining vector length
             int veclength = std::min<int>(maxelements, numelements - vectorshift);
             // data needs to be aligned - we add padding to satisfy VTA ALU core
-            int padding = std::max<int>(0, computevectorsize - veclength);
+            int padding = veclength % computevectorsize == 0 ? 0 : computevectorsize - veclength % computevectorsize;
             // Final processing length
             int processdatalength = veclength + padding;
+            int vectorshiftelem = std::ceil(static_cast<float>(vectorshift) / computevectorsize);
+            int veclengthelem = std::ceil(static_cast<float>(veclength) / computevectorsize);
+            int processdatalengthelem = std::ceil(static_cast<float>(processdatalength) / computevectorsize);
+            printf("Loading data [threadid=%d] [shiftelem=%d] [lengthelem=%d] [padding=%d] [processlengthelem=%d] [sramshift=%d]\n", threadid, vectorshiftelem, veclengthelem, padding, processdatalengthelem, sramshift);
             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
             VTALoadBuffer2D(
-                cmd,           // cmd
-                vtainput1,     // src_dram_addr
-                vectorshift,   // src_elem_offset
-                veclength,     // x_size
-                1,             // y_size
-                1,             // x_stride
-                0,             // x_pad_before
-                0,             // y_pad_before
-                padding,       // x_pad_after
-                0,             // y_pad_after
-                0,             // dst_sram_index
-                VTA_MEM_ID_ACC // dst_memory_type
+                cmd,             // cmd
+                vtainput1,       // src_dram_addr
+                vectorshiftelem, // src_elem_offset (no of unit elements)
+                veclengthelem,   // x_size (no of unit elements)
+                1,               // y_size (no of unit elements)
+                1,               // x_stride
+                0,               // x_pad_before
+                0,               // y_pad_before
+                padding,         // x_pad_after
+                0,               // y_pad_after
+                sramshift,               // dst_sram_index
+                VTA_MEM_ID_ACC   // dst_memory_type
             );
             VTALoadBuffer2D(
-                cmd,           // cmd
-                vtainput2,     // src_dram_addr
-                vectorshift,   // src_elem_offset
-                veclength,     // x_size
-                1,             // y_size
-                1,             // x_stride
-                0,             // x_pad_before
-                0,             // y_pad_before
-                padding,       // x_pad_after
-                0,             // y_pad_after
-                veclength,     // dst_sram_index
-                VTA_MEM_ID_ACC // dst_memory_type
+                cmd,             // cmd
+                vtainput2,       // src_dram_addr
+                vectorshiftelem, // src_elem_offset (no of unit elements)
+                veclengthelem,   // x_size (no of unit elements)
+                1,               // y_size (no of unit elements)
+                1,               // x_stride
+                0,               // x_pad_before
+                0,               // y_pad_before
+                padding,         // x_pad_after
+                0,               // y_pad_after
+                sramshift + processdatalengthelem,   // dst_sram_index
+                VTA_MEM_ID_ACC   // dst_memory_type
             );
             VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
-            auto lambda = [veclength, processdatalength, computevectorsize](void *signature) -> int {
-                VTAUopLoopBegin(processdatalength / computevectorsize, 1, 1, 0);
+            auto lambda = [threadid, processdatalengthelem, sramshift](void *signature) -> int {
+                VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
                 VTAUopPush(
-                    VTA_OPCODE_ALU,                        // mode
-                    0,                                     // reset_out
-                    0,                                     // dst_index
-                    processdatalength / computevectorsize, // src_index
-                    0,                                     // wgt_index
-                    VTA_ALU_OPCODE_ADD,                    // opcode
-                    0,                                     // use_imm
-                    0                                      // imm_val
+                    VTA_UOP_ALU,           // mode
+                    0,                     // reset_out
+                    sramshift,                     // dst_index
+                    sramshift + processdatalengthelem, // src_index
+                    0,                     // wgt_index
+                    VTA_ALU_OPCODE_ADD,    // opcode
+                    0,                     // use_imm
+                    0                      // imm_val
                 );
                 VTAUopLoopEnd();
                 return 0;
@@ -306,31 +316,33 @@ TfLiteStatus VTAALUOp::aluAdd()
             VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
             VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
             VTAStoreBuffer2D(
-                cmd,            // cmd
-                0,              // src_sram_index
-                VTA_MEM_ID_OUT, // src_memory_type
-                vtaoutput,      // dst_dram_addr
-                vectorshift,    // dst_elem_offset
-                veclength,      // x_size
-                1,              // y_size
-                1               // x_stride
+                cmd,             // cmd
+                sramshift,       // src_sram_index
+                VTA_MEM_ID_OUT,  // src_memory_type
+                vtaoutput,       // dst_dram_addr
+                vectorshiftelem, // dst_elem_offset (no of unit elements)
+                veclengthelem,   // x_size (no of unit elements)
+                1,               // y_size
+                1                // x_stride
             );
             VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
             VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
             vectorshift += veclength;
+            sramshift += 2 * processdatalengthelem;
         }
     }
 
-    for (int threadid = 0; threadid < std::ceil(static_cast<float>(numelements) / maxelements); threadid++)
-    {
-        VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
-        VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
-    }
+    VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
+    VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
 
     VTASynchronize(cmd, 1000000);
     VTABufferCopy(vtaoutput, 0, outdata.data(), 0, oelemsize * numelements, VTA_MEMCPY_D2H);
 
-#if VTA_ACC_WIDTH == 32
+    VTABufferFree(vtainput1);
+    VTABufferFree(vtainput2);
+    VTABufferFree(vtaoutput);
+
+#if VTA_OUT_WIDTH == 32
     if (output.type == kTfLiteInt32)
     {
         std::copy(outdata.begin(), outdata.end(), GetTensorData<int32_t>(&output));
@@ -339,9 +351,20 @@ TfLiteStatus VTAALUOp::aluAdd()
     {
         std::transform(outdata.begin(), outdata.end(), GetTensorData<int8_t>(&output), [](const int32_t &inp) -> int8_t { return static_cast<int8_t>(inp);});
     }
+#elif VTA_OUT_WIDTH == 8
+    if (output.type == kTfLiteInt8)
+    {
+        std::copy(outdata.begin(), outdata.end(), GetTensorData<int8_t>(&output));
+    }
+    else if (output.type == kTfLiteInt32)
+    {
+        std::transform(outdata.begin(), outdata.end(), GetTensorData<int32_t>(&output), [](const int8_t &inp) -> int32_t { return static_cast<int32_t>(inp);});
+    }
 #else
     #error Unsupported ACC_WIDTH value
 #endif
+
+    VTARuntimeShutdown();
 
     return kTfLiteOk;
 }
