@@ -36,6 +36,12 @@ class VTAAddTest : public ::testing::TestWithParam<int>
                     modelfiles.push_back(file.path().string());
                 }
             }
+            std::sort(modelfiles.begin(), modelfiles.end());
+            std::cout << "VTAAddTest suite ids:" << std::endl;
+            for (unsigned int i = 0; i < modelfiles.size(); i++)
+            {
+                std::cout << i << ":  " << modelfiles[i] << std::endl;
+            }
             ASSERT_EQ(NUM_MODELS, modelfiles.size()) << "Invalid number of declared models and present models in the " << modelspath << " directory" << std::endl;
         }
         void SetUp()
@@ -97,8 +103,8 @@ TEST_P(VTAAddTest, AddTestDelegate)
 
     interpreter->AllocateTensors();
 
-    // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
-    // int8_t *input2 = interpreter->typed_input_tensor<int8_t>(1);
+    int8_t *tfinput1 = interpreter->typed_input_tensor<int8_t>(0);
+    int8_t *tfinput2 = interpreter->typed_input_tensor<int8_t>(1);
 
     ASSERT_EQ(interpreter->input_tensor(0)->dims->size, interpreter->input_tensor(1)->dims->size) << "Input tensors differ in dimensionality";
 
@@ -118,7 +124,20 @@ TEST_P(VTAAddTest, AddTestDelegate)
     std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
     std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
 
+    std::copy(input1.begin(), input1.end(), tfinput1);
+    std::copy(input2.begin(), input2.end(), tfinput2);
+
     interpreter->Invoke();
+
+    int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
+    for (int i = 0; i < input1.size(); i++)
+    {
+        int8_t val = input1[i] + input2[i];
+        EXPECT_EQ(out[i], val)
+            << "Elem:  " << i << ":  " << static_cast<int>(input1[i]) << " + " << static_cast<int>(input2[i])
+            << " = " << static_cast<int>(val)
+            << " (not " << static_cast<int>(out[i]) << ")";
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
