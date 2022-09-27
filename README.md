@@ -42,11 +42,11 @@ includes the most important files and directories.
 │   ├── src
 │   │   └── ...
 │   └── west.yml
+├── registers-generator
 └── third-party (submodules)
     ├── buildroot
     ├── googletest
     ├── linux
-    ├── registers-generator
     ├── tensorflow
     └── ubpf
 ```
@@ -64,11 +64,12 @@ includes the most important files and directories.
   Zephyr RTOS as an operating system.
 
 * [third-party/](third-party) - the directory used to store all external
-  projects used as a part of the `alkali-csd-hw` project. The
-  `register-generator` directory contains scripts used to parse the NVMe
-  specification and generate the headers with registers descriptions.
+  projects used as a part of the `alkali-csd-hw` project.
   The `buildroot`, `googletest`, `tensorflow` and `ubpf` are used to build APU
   software, including an operating system and applications.
+
+* [registers-generator](registers-generator) - contains scripts used to parse
+  the NVMe specification and generate the headers with registers descriptions.
 
 * [Makefile](Makefile) - file containing all the rules used to manage the
   repository. Type `make help` to display all the documented rules that can be
