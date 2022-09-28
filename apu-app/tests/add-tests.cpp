@@ -17,7 +17,7 @@
 
 #include "vta-delegate.hpp"
 
-#define NUM_MODELS 8
+#define NUM_MODELS 11
 
 class VTAAddTest : public ::testing::TestWithParam<int>
 {

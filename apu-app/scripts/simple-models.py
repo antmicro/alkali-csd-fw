@@ -239,7 +239,9 @@ if __name__ == '__main__':
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    alu_vectors_sizes = [1, 4, 16, 64, 256, 1024, 4096, 8192]
+    alu_vectors_sizes = [
+        1, 4, 16, 25, 64, 256, 1024, 4096, 8192, 10000, 200007
+    ]
     for size in alu_vectors_sizes:
         simple_add(args.output_dir / 'add' / f'add-{size}.onnx', size)
 
