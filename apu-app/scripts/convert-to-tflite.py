@@ -75,6 +75,11 @@ def main():
         type=Path,
         help='TFLite output file or a directory where ONNX files (with same names as converted models) should be saved'  # noqa: E501
     )
+    parser.add_argument(
+        '--skip-existing',
+        action='store_true',
+        help='Skip creating TFLite models that already exist'
+    )
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -82,14 +87,21 @@ def main():
         return -1
 
     if args.input.is_file():
-        save_to_tflite(args.input, args.output)
+        if not (args.skip_existing and args.output.exists()):
+            save_to_tflite(args.input, args.output)
+        else:
+            print(f'Skipping creating {args.output}')
     elif args.input.is_dir():
         for path in args.input.rglob('*.onnx'):
             relpath = path.relative_to(args.input).with_suffix('.tflite')
             outpath = args.output / relpath
+            if args.skip_existing and outpath.exists():
+                print(f'Skipping creating {outpath}')
+                continue
             save_to_tflite(path, outpath)
     else:
         print('Unsupported input')
+
 
 if __name__ == '__main__':
     main()

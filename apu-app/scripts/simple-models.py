@@ -234,6 +234,11 @@ if __name__ == '__main__':
         type=Path,
         help='Output directory with the models'
     )
+    parser.add_argument(
+        '--skip-existing',
+        action='store_true',
+        help='Skip creating ONNX models that already exist'
+    )
 
     args = parser.parse_args()
 
@@ -243,7 +248,11 @@ if __name__ == '__main__':
         1, 4, 16, 25, 64, 256, 1024, 4096, 8192, 10000, 200007
     ]
     for size in alu_vectors_sizes:
-        simple_add(args.output_dir / 'add' / f'add-{size}.onnx', size)
+        modelpath = Path(args.output_dir / 'add' / f'add-{size}.onnx')
+        if args.skip_existing and modelpath.exists():
+            print(f'Skipping creating {modelpath}')
+            continue
+        simple_add(modelpath, size)
 
     # inputsize, inpchannels, outchannels, kernelsize, stride, padding
 
@@ -268,9 +277,12 @@ if __name__ == '__main__':
             continue
         if isize <= ksize:
             continue
-        name = f'conv2d-is{isize}_ic{ichan}_oc{ochan}_ks{ksize}_s{stride}_p{padding}.onnx'  # noqa: E501
+        name = args.output_dir / 'conv2d' / Path(f'conv2d-is{isize}_ic{ichan}_oc{ochan}_ks{ksize}_s{stride}_p{padding}.onnx')  # noqa: E501
+        if args.skip_existing and name.exists():
+            print(f'Skipping creating {modelpath}')
+            continue
         simple_conv2d(
-            args.output_dir / 'conv2d' / name,
+            name,
             isize,
             ichan,
             ochan,
@@ -279,10 +291,18 @@ if __name__ == '__main__':
             padding
         )
 
-    simple_conv2d_add_network(
-        args.output_dir / 'simple-models' / 'simple-conv2d-add.onnx'
-    )
+    path = args.output_dir / 'simple-models' / 'simple-conv2d-add.onnx'
+    if not (args.skip_existing and path.exists()):
+        simple_conv2d_add_network(
+            path
+        )
+    else:
+        print(f'Skipping creating {path}')
 
-    simple_conv2d_add_network_v2(
-        args.output_dir / 'simple-models' / 'simple-conv2d-add-v2.onnx'
-    )
+    path = args.output_dir / 'simple-models' / 'simple-conv2d-add-v2.onnx'
+    if not (args.skip_existing and path.exists()):
+        simple_conv2d_add_network_v2(
+            path
+        )
+    else:
+        print(f'Skipping creating {path}')
