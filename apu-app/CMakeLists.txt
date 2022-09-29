@@ -112,6 +112,30 @@ target_link_libraries(vta-delegate-test
 )
 
 if (BUILD_TESTS)
+    add_custom_target(
+        generate-onnx-models
+        COMMAND
+            ${PROJECT_SOURCE_DIR}/scripts/simple-models.py ${CMAKE_BINARY_DIR}/test-models --skip-existing
+        SOURCES
+            ${PROJECT_SOURCE_DIR}/scripts/simple-models.py
+        COMMENT "Generating ONNX models"
+        BYPRODUCTS
+            "${CMAKE_BINARY_DIR}/test-models"
+            "${CMAKE_BINARY_DIR}/test-models"
+    )
+    add_custom_target(
+        generate-tflite-models
+        COMMAND
+            ${PROJECT_SOURCE_DIR}/scripts/convert-to-tflite.py ${CMAKE_BINARY_DIR}/test-models ${CMAKE_BINARY_DIR}/test-models --skip-existing
+        SOURCES
+            ${PROJECT_SOURCE_DIR}/scripts/convert-to-tflite.py
+        COMMENT "Converting ONNX models to TFLite"
+        BYPRODUCTS
+            "${CMAKE_BINARY_DIR}/test-models"
+            "${CMAKE_BINARY_DIR}/test-models"
+        DEPENDS
+            generate-onnx-models
+    )
     add_executable(vta-delegate-test-runner
         tests/basic-vta-delegate-tests.cpp
         tests/add-tests.cpp
@@ -124,6 +148,10 @@ if (BUILD_TESTS)
         gtest
         stdc++fs
         vta-delegate
+    )
+    add_dependencies(vta-delegate-test-runner
+        generate-onnx-models
+        generate-tflite-models
     )
     add_test(vta-delegate-test vta-delegate-test-runner)
 endif()
