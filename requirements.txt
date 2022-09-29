@@ -1,2 +1,3 @@
 -r registers-generator/requirements.txt
+-r apu-app/requirements.txt
 west==0.13.1
