@@ -7,3 +7,5 @@ build/
 rpu-app/src/nvme_*
 
 tags
+
+**/compile_commands.json
