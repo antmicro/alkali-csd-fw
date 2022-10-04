@@ -58,11 +58,12 @@ typedef struct cma_mem {
 
 unsigned long xlnkGetBufPhyAddr(void*);
 
-static int xlnkfd;
+static int xlnkfd = 0;
 
 std::vector<cma_mem_t*> maps;
 
 void cma_init(void) {
+    printf("Running cma_init\n");
     xlnkfd = open(XLNK_PATH, O_RDWR | O_CLOEXEC);
     if (xlnkfd < 0) {
         printf("Reset failed - could not open device: %s(%d)\n", XLNK_PATH, xlnkfd);
@@ -75,7 +76,9 @@ void cma_init(void) {
 }
 
 void cma_clean(void) {
+    printf("Running cma_clean\n");
     close(xlnkfd);
+    printf("Successfully cleaned CMA\n");
 }
 
 static void *cma_mmap(int32_t id, uint32_t len) {
@@ -89,7 +92,7 @@ void *cma_alloc(uint32_t len, uint32_t cacheable) {
     arg.allocbuf.cacheable = cacheable ? 1 : 0;
 
     if (ioctl(xlnkfd, ALLOC_IOCTL, &arg) < 0) {
-        printf("Alloc failed - IOCTL failed: %d\n", errno);
+        printf("Alloc failed - IOCTL failed: %d (xlnkfd = %d)\n", errno, xlnkfd);
 	return NULL;
     }
 
