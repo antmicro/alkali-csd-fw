@@ -24,6 +24,24 @@ namespace tflite
 {
 
 /**
+ * A class for holding the communication context during VTA usage.
+ * It initializes communication context upon construction,
+ * and cleans communication context upon destruction (i.e. CMA).
+ */
+class CommunicationContext
+{
+    public:
+        /**
+         * Initializes VTA communication context.
+         */
+        CommunicationContext();
+        /**
+         * Cleans VTA communication context.
+         */
+        ~CommunicationContext();
+};
+
+/**
  * A TensorFlow Lite delegate for VTA accelerator.
  *
  * This class is responsible for verifying the compatibility of individual nodes
@@ -133,6 +151,7 @@ public:
     TfLiteContext *context = nullptr;
 private:
     std::vector<std::shared_ptr<VTAOp>> ops;
+    inline static std::shared_ptr<CommunicationContext> commcontext = nullptr;
 };
 
 /**

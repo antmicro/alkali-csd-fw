@@ -12,6 +12,17 @@
 
 namespace tflite
 {
+
+CommunicationContext::CommunicationContext()
+{
+    VTAStartCommunication();
+}
+
+CommunicationContext::~CommunicationContext()
+{
+    VTAEndCommunication();
+}
+
 bool VTADelegate::IsNodeSupportedByDelegate(
         const TfLiteRegistration *registration,
         const TfLiteNode *node,
@@ -75,6 +86,10 @@ VTAOp::~VTAOp()
 
 TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
 {
+    if (commcontext == nullptr)
+    {
+        commcontext = std::make_shared<CommunicationContext>();
+    }
     // NOTE During Init, only tensors with parameters are allocated by the TensorFlow Lite.
     // This means that tensors for inputs, outputs and intermediate data are not allocated.
     // During Invoke, additionaly non-intermediate inputs and outputs are allocated (tensors
