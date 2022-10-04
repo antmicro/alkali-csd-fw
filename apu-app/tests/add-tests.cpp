@@ -10,6 +10,7 @@
 #include <regex>
 #include <tuple>
 #include <algorithm>
+#include <chrono>
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -18,6 +19,8 @@
 #include "vta-delegate.hpp"
 
 #define NUM_MODELS 11
+
+using std::chrono::milliseconds;
 
 class VTAAddTest : public ::testing::TestWithParam<int>
 {
@@ -85,7 +88,11 @@ TEST_P(VTAAddTest, AddTestTFLite)
     std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
     std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
 
+    auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time = t2 - t1;
+    std::cout << "Processing time:  " << time.count() << " ms" << std::endl;
 }
 
 TEST_P(VTAAddTest, AddTestDelegate)
@@ -127,7 +134,11 @@ TEST_P(VTAAddTest, AddTestDelegate)
     std::copy(input1.begin(), input1.end(), tfinput1);
     std::copy(input2.begin(), input2.end(), tfinput2);
 
+    auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time = t2 - t1;
+    std::cout << "Processing time:  " << time.count() << " ms" << std::endl;
 
     int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
     for (int i = 0; i < input1.size(); i++)
