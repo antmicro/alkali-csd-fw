@@ -582,5 +582,13 @@ int VTADeviceRun(VTADeviceHandle handle,
       insn_phy_addr, insn_count, wait_cycles);
 }
 
+void VTAStartCommunication()
+{
+}
+
+void VTAEndCommunication()
+{
+}
+
 void VTAProgram(const char* bitstream) {
 }
