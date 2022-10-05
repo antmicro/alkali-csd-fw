@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-FROM debian:buster
+FROM debian:bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
@@ -31,10 +31,7 @@ RUN apt update -y && apt install -y \
   unzip \
   wget \
   u-boot-tools \
-  gcc-8
-
-# Use gcc-8 by default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 9
+  gcc
 
 # Install CMake
 RUN git clone -b v3.16.7 https://gitlab.kitware.com/cmake/cmake.git cmake && \
