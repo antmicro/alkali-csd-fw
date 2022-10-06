@@ -23,6 +23,7 @@ set(UBPF_ENABLE_INSTALL ON)
 
 add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
+add_subdirectory(third-party/spdlog/)
 
 if (BUILD_TESTS)
     enable_testing()
