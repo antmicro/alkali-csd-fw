@@ -1,0 +1,33 @@
+From d12bf8db2e1138ac8551924b5535991ce81d90ca Mon Sep 17 00:00:00 2001
+From: Grzegorz Latosinski <glatosinski@antmicro.com>
+Date: Tue, 4 Oct 2022 13:43:18 +0200
+Subject: [PATCH] scripts: dtc: dtc-lexer.l: Fixed extern yylloc to support GCC
+ version 10
+
+The GCC 10 compiler was failing on multiple definitions of `yylloc`.
+This commit adds an `extern` specifier to the variable to resolve the
+issue.
+
+Internal-tag: [#37774]
+
+Signed-off-by: Grzegorz Latosinski <glatosinski@antmicro.com>
+---
+ scripts/dtc/dtc-lexer.l | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/dtc/dtc-lexer.l b/scripts/dtc/dtc-lexer.l
+index fd825ebba6..f57c9a7e83 100644
+--- a/scripts/dtc/dtc-lexer.l
++++ b/scripts/dtc/dtc-lexer.l
+@@ -38,7 +38,7 @@ LINECOMMENT	"//".*\n
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++extern YYLTYPE yylloc;
+ extern bool treesource_error;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
+-- 
+2.37.3
+

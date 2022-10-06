@@ -297,7 +297,9 @@ buildroot//%: ## Forward rule to invoke Buildroot rules directly e.g. `make buil
 # -----------------------------------------------------------------------------
 
 REGGEN_REL_DIR=$(shell realpath --relative-to $(ROOT_DIR) $(REGGEN_DIR))
-DOCKER_BUILD_PYTHON_REQS_DIR=$(DOCKER_BUILD_DIR)/$(REGGEN_REL_DIR)
+APUAPP_REL_DIR=$(shell realpath --relative-to $(ROOT_DIR) $(APUAPP_DIR))
+DOCKER_BUILD_PYTHON_REQS_REGGEN_DIR=$(DOCKER_BUILD_DIR)/$(REGGEN_REL_DIR)
+DOCKER_BUILD_PYTHON_REQS_APUAPP_DIR=$(DOCKER_BUILD_DIR)/$(APUAPP_REL_DIR)
 
 
 $(DOCKER_BUILD_DIR):
@@ -310,8 +312,10 @@ docker: $(REGGEN_DIR)/requirements.txt
 docker: | $(DOCKER_BUILD_DIR)
 	cp $(ROOT_DIR)/fw.dockerfile $(DOCKER_BUILD_DIR)/Dockerfile
 	cp $(ROOT_DIR)/requirements.txt $(DOCKER_BUILD_DIR)/requirements.txt
-	mkdir -p $(DOCKER_BUILD_PYTHON_REQS_DIR)
-	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_PYTHON_REQS_DIR)/requirements.txt
+	mkdir -p $(DOCKER_BUILD_PYTHON_REQS_APUAPP_DIR)
+	mkdir -p $(DOCKER_BUILD_PYTHON_REQS_REGGEN_DIR)
+	cp $(REGGEN_DIR)/requirements.txt $(DOCKER_BUILD_PYTHON_REQS_REGGEN_DIR)/requirements.txt
+	cp $(APUAPP_DIR)/requirements.txt $(DOCKER_BUILD_PYTHON_REQS_APUAPP_DIR)/requirements.txt
 	cd $(DOCKER_BUILD_DIR) && docker build \
 		$(DOCKER_BUILD_EXTRA_ARGS) \
 		-t $(DOCKER_TAG) .

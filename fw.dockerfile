@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-FROM debian:buster
+FROM debian:bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
@@ -31,10 +31,7 @@ RUN apt update -y && apt install -y \
   unzip \
   wget \
   u-boot-tools \
-  gcc-8
-
-# Use gcc-8 by default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 9
+  gcc
 
 # Install CMake
 RUN git clone -b v3.16.7 https://gitlab.kitware.com/cmake/cmake.git cmake && \
@@ -46,8 +43,9 @@ RUN git clone -b v3.16.7 https://gitlab.kitware.com/cmake/cmake.git cmake && \
 # Install Python dependencies
 COPY requirements.txt requirements.txt
 COPY registers-generator/requirements.txt registers-generator/requirements.txt
+COPY apu-app/requirements.txt apu-app/requirements.txt
 RUN pip3 install -r requirements.txt
-RUN rm requirements.txt registers-generator/requirements.txt
+RUN rm requirements.txt registers-generator/requirements.txt apu-app/requirements.txt
 
 # Install Zephyr
 RUN wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/zephyr-sdk-0.10.3-setup.run && \
