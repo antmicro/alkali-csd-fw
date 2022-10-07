@@ -68,6 +68,9 @@ static int rpmsg_endpoint_cb(struct rpmsg_endpoint *ept, void *data, size_t len,
 			LOG_DBG("Handling RPMSG_CMD_RETURN_DATA");
 			rpmsg_cmd_return_data(cmd, payload->buf, payload->buf_len);
 			break;
+		case RPMSG_CMD_HELLO_APU:
+			LOG_INF("APU init message received");
+			break;
 		default:
 			LOG_ERR("Unsupported payload ID! (%d) received from APU", payload->id);
 	}

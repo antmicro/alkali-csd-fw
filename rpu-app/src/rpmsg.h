@@ -26,6 +26,7 @@ typedef struct nvme_rpmsg_payload {
 
 #define RPMSG_CMD_RETURN		0x20
 #define RPMSG_CMD_RETURN_DATA		0x21
+#define RPMSG_CMD_HELLO_APU             1234
 
 
 #endif
