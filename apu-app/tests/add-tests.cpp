@@ -18,6 +18,8 @@
 
 #include "vta-delegate.hpp"
 
+#include <spdlog/spdlog.h>
+
 #define NUM_MODELS 11
 
 using std::chrono::milliseconds;
@@ -29,6 +31,7 @@ class VTAAddTest : public ::testing::TestWithParam<int>
         static std::vector<std::string> modelfiles;
         static void SetUpTestSuite()
         {
+            spdlog::set_level(spdlog::level::debug);
             srand(12345);
             std::filesystem::path modelsdir = modelspath;
             std::regex fileregex("(^.*)\\/add-(\\d+).tflite");
@@ -40,20 +43,20 @@ class VTAAddTest : public ::testing::TestWithParam<int>
                 }
             }
             std::sort(modelfiles.begin(), modelfiles.end());
-            std::cout << "VTAAddTest suite ids:" << std::endl;
+            spdlog::info("VTAAddTest suite ids:");
             for (unsigned int i = 0; i < modelfiles.size(); i++)
             {
-                std::cout << i << ":  " << modelfiles[i] << std::endl;
+                spdlog::info("{}:  {}", i, modelfiles[i]);
             }
             ASSERT_EQ(NUM_MODELS, modelfiles.size()) << "Invalid number of declared models and present models in the " << modelspath << " directory" << std::endl;
         }
         void SetUp()
         {
-            std::cout << "Running test on " << modelfiles[GetParam()] << std::endl;
+            spdlog::info("Running test on {}", modelfiles[GetParam()]);
         }
 };
 
-const std::string VTAAddTest::modelspath = "../tests/data/add";
+const std::string VTAAddTest::modelspath = "./test-models/add";
 std::vector<std::string> VTAAddTest::modelfiles;
 
 TEST_P(VTAAddTest, AddTestTFLite)
@@ -92,7 +95,7 @@ TEST_P(VTAAddTest, AddTestTFLite)
     interpreter->Invoke();
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time = t2 - t1;
-    std::cout << "Processing time:  " << time.count() << " ms" << std::endl;
+    spdlog::info("Processing time:  {} ms", time.count());
 }
 
 TEST_P(VTAAddTest, AddTestDelegate)
@@ -138,7 +141,7 @@ TEST_P(VTAAddTest, AddTestDelegate)
     interpreter->Invoke();
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time = t2 - t1;
-    std::cout << "Processing time:  " << time.count() << " ms" << std::endl;
+    spdlog::info("Processing time:  {} ms", time.count());
 
     int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
     for (int i = 0; i < input1.size(); i++)

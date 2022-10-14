@@ -11,6 +11,7 @@
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"
 #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <cmath>
@@ -145,7 +146,7 @@ TfLiteStatus VTAALUOp::aluAdd()
         NumElements(&input1) != NumElements(&output) ||
         input1.type != input2.type)
     {
-        printf("Number of elements in vectors mismatch:  input1 (%lu) + input2(%lu) = output(%lu)\n",
+        spdlog::error("Number of elements in vectors mismatch:  input1 (%lu) + input2(%lu) = output(%lu)",
             NumElements(&input1),
             NumElements(&input2),
             NumElements(&output)
@@ -210,7 +211,7 @@ TfLiteStatus VTAALUOp::aluAdd()
         inp2 = tmpinp2.data();
     }
     else {
-        printf("Unsupported tensor type:  %d\n", input1.type);
+        spdlog::error("Unsupported tensor type:  {}", input1.type);
         return kTfLiteDelegateError;
     }
 #else
@@ -218,7 +219,7 @@ TfLiteStatus VTAALUOp::aluAdd()
 #endif
     if (!inp1 || !inp2)
     {
-        printf("Could not obtain one of input tensors:  %x %x\n", inp1, inp2);
+        spdlog::error("Could not obtain one of input tensors:  {} {}", fmt::ptr(inp1), fmt::ptr(inp2));
         return kTfLiteDelegateError;
     }
 
@@ -233,7 +234,7 @@ TfLiteStatus VTAALUOp::aluAdd()
     // 2 stands for input/result and the second input
     // maxelements tells how many elements can fit at once in a single pass
     int maxelements = VTA_ACC_BUFF_DEPTH / NUM_THREADS / 2 * 16;
-    printf("VTA_ACC_BUFF_DEPTH:  %d  MAX ELEMENTS:  %d\n", VTA_ACC_BUFF_DEPTH, maxelements);
+    spdlog::debug("VTA_ACC_BUFF_DEPTH:  {}  MAX ELEMENTS:  {}", VTA_ACC_BUFF_DEPTH, maxelements);
 
     VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
     VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
@@ -258,7 +259,7 @@ TfLiteStatus VTAALUOp::aluAdd()
             int vectorshiftelem = std::ceil(static_cast<float>(vectorshift) / computevectorsize);
             int veclengthelem = std::ceil(static_cast<float>(veclength) / computevectorsize);
             int processdatalengthelem = std::ceil(static_cast<float>(processdatalength) / computevectorsize);
-            printf("Loading data [threadid=%d] [shiftelem=%d] [lengthelem=%d] [padding=%d] [processlengthelem=%d] [sramshift=%d]\n", threadid, vectorshiftelem, veclengthelem, padding, processdatalengthelem, sramshift);
+            spdlog::debug("Loading data [threadid={}] [shiftelem={}] [lengthelem={}] [padding={}] [processlengthelem={}] [sramshift={}]", threadid, vectorshiftelem, veclengthelem, padding, processdatalengthelem, sramshift);
             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
             VTALoadBuffer2D(
                 cmd,             // cmd

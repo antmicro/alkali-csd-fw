@@ -39,6 +39,7 @@ add_library(bpf-vm-utils SHARED
         src/vm/register.cpp
 )
 target_link_libraries(bpf-vm-utils
+    spdlog
     tensorflow-lite
     ubpf
 )
@@ -75,6 +76,10 @@ else()
     )
 endif()
 
+target_link_libraries(vta-driver
+    spdlog
+)
+
 # Build VTA delegate
 add_library(vta-delegate SHARED
     src/vta-delegate.cpp
@@ -84,6 +89,7 @@ add_library(vta-delegate SHARED
 target_link_libraries(vta-delegate
     tensorflow-lite
     vta-driver
+    spdlog
 )
 
 if (NOT NO_HARDWARE)
@@ -96,6 +102,7 @@ if (NOT NO_HARDWARE)
         ubpf
         Threads::Threads
         vta-delegate
+        spdlog
     )
     install(
         TARGETS
@@ -110,6 +117,7 @@ add_executable(vta-delegate-test
 )
 target_link_libraries(vta-delegate-test
     vta-delegate
+    spdlog
 )
 
 if (BUILD_TESTS)
@@ -149,6 +157,7 @@ if (BUILD_TESTS)
         gtest
         stdc++fs
         vta-delegate
+        spdlog
     )
     add_dependencies(vta-delegate-test-runner
         generate-onnx-models
@@ -162,6 +171,7 @@ install(
         vta-delegate
         bpf-vm-utils
         vta-driver
+        spdlog
     DESTINATION lib
 )
 install(

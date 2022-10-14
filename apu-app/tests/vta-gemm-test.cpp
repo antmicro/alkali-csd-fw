@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <spdlog/spdlog.h>
 
 TEST(VTAGEMM, permuteDimsTest)
 {
@@ -36,19 +37,19 @@ TEST(VTAGEMM, permuteDimsTest)
 
     op.permuteDims(inputlayout, outputlayout, input.data(), output.data(), 1);
 
-    printf("\n\n");
-    printf("inp:  ");
+    spdlog::info("\n\n");
+    spdlog::info("inp:  ");
     for (int i = 0; i < numelements; i++)
     {
-        printf("%d ", input[i]);
+        spdlog::info("{} ", input[i]);
     }
-    printf("\n\n");
-    printf("out:  ");
+    spdlog::info("\n\n");
+    spdlog::info("out:  ");
     for (int i = 0; i < numelements; i++)
     {
-        printf("%d ", output[i]);
+        spdlog::info("%d ", output[i]);
     }
-    printf("\n\n");
+    spdlog::info("\n\n");
 
     for (int No = 0; No < op.dim("No"); No++)
         for (int Ni = 0; Ni < op.dim("Ni"); Ni++)

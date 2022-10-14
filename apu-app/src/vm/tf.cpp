@@ -20,6 +20,8 @@
 
 #include <time.h>
 
+#include <spdlog/spdlog.h>
+
 #define DEBUG
 
 static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, int model_len, int input_len, int output_len, bool with_vta)
@@ -47,7 +49,7 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
         auto in = interpreter->input_tensor(i);
         if (offset + in->bytes > input_len)
         {
-            printf("Input buffer length mismatch: %d != %d\n", input_len, offset + in->bytes);
+            spdlog::warn("Input buffer length mismatch: {} != {}", input_len, offset + in->bytes);
         }
         std::copy(input_buf + offset, input_buf + offset + in->bytes, interpreter->typed_input_tensor<int8_t>(i));
         offset += in->bytes;
@@ -59,7 +61,7 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
 
 #ifdef DEBUG
     const uint64_t duration = (ts[1].tv_sec * 1000000000 + ts[1].tv_nsec) - (ts[0].tv_sec * 1000000000 + ts[0].tv_nsec);
-    printf("Model processing took %llu ns\n", duration);
+    spdlog::debug("Model processing took {} ns", duration);
 #endif
 
     offset = 0;
@@ -68,7 +70,7 @@ static void tflite_handler(char *model_buf, char *input_buf, char *output_buf, i
         auto out = interpreter->output_tensor(i);
         if (offset + out->bytes > output_len)
         {
-            printf("Output buffer length mismatch: %d != %d\n", output_len, offset + out->bytes);
+            spdlog::warn("Output buffer length mismatch: {} != {}", output_len, offset + out->bytes);
         }
         std::copy(interpreter->typed_output_tensor<int8_t>(i), interpreter->typed_output_tensor<int8_t>(i) + out->bytes, output_buf + offset);
         offset += out->bytes;

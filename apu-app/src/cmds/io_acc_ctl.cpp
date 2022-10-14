@@ -10,6 +10,7 @@
 #include "acc.h"
 
 #include <cstdio>
+#include <spdlog/spdlog.h>
 
 typedef struct cmd_sq {
 	nvme_sq_entry_base_t base;
@@ -26,11 +27,9 @@ void io_cmd_acc_ctl(payload_t *recv)
 	const uint32_t id = cmd->cdw14;
 	const uint32_t op = cmd->cdw13;
 	const uint32_t fw_id = cmd->cdw14;
-#ifdef DEBUG
-	printf("IO CTL id: %d, op: %d\n", id, op);
-#endif
+	spdlog::debug("IO CTL id: {}, op: {}", id, op);
 	if(id >= accelerators.size()) {
-		printf("Invalid accelerator ID! (%d)\n", id);
+		spdlog::error("Invalid accelerator ID! ({})", id);
 		return;
 	}
 
@@ -51,6 +50,6 @@ void io_cmd_acc_ctl(payload_t *recv)
 			a->addFirmware(fw_map[fw_id]);
 			break;
 		default:
-			printf("Unsupported operation! (%d)\n", op);
+			spdlog::warn("Unsupported operation! ({})", op);
 	}
 }

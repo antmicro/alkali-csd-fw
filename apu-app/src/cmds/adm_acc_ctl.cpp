@@ -8,6 +8,7 @@
 #include "cmd.h"
 #include "nvme.h"
 #include <stdio.h>
+#include <spdlog/spdlog.h>
 
 bool global_enable = 0;
 
@@ -15,7 +16,7 @@ typedef struct cmd_sq {
 	nvme_sq_entry_base_t base;
 	uint32_t cdw10;
 	uint32_t cdw11;
-	uint32_t cdw12;	
+	uint32_t cdw12;
 } cmd_sq_t;
 
 #define ACC_ENABLE	0x00
@@ -29,17 +30,17 @@ void adm_cmd_acc_ctl(payload_t *recv)
 		case ACC_ENABLE:
 			global_enable = true;
 #ifdef DEBUG
-			printf("Enabling accelerator subsystem\n");
+			spdlog::info("Enabling accelerator subsystem");
 #endif
 			break;
 		case ACC_DISABLE:
 			global_enable = false;
 #ifdef DEBUG
-			printf("Disabling accelerator subsystem\n");
+			spdlog::info("Disabling accelerator subsystem");
 #endif
 			break;
 		default:
-			printf("Unknown operation ID (%d)\n", cmd->cdw12);
+			spdlog::info("Unknown operation ID ({})", cmd->cdw12);
 			break;
 	}
 }

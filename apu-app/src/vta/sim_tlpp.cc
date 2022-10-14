@@ -22,6 +22,7 @@
  * \brief simulate core level pipe line parallism logic.
  */
 #include <vta/sim_tlpp.h>
+#include <spdlog/spdlog.h>
 TlppVerify::TlppVerify() {
   done_ = 0;
 }
@@ -153,7 +154,7 @@ void TlppVerify::CoreRun(CORE_TYPE core_type) {
     done_ = GetOperationCode(insn) == VTA_OPCODE_FINISH;
 
     if (debug_) {
-      printf("this is thread for %s\n", GetCoreTypeName(core_type));
+      spdlog::debug("this is thread for %s", GetCoreTypeName(core_type));
     }
     ConsumeFrontInsn(core_type);
     insn = PickFrontInsn(core_type);

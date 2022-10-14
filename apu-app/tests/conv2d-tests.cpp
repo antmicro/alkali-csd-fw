@@ -47,7 +47,7 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
         }
 };
 
-const std::string VTAConv2DTest::modelspath = "../tests/data/conv2d";
+const std::string VTAConv2DTest::modelspath = "./test-models/conv2d";
 std::vector<std::string> VTAConv2DTest::modelfiles;
 
 TEST_P(VTAConv2DTest, CPUInvoking)

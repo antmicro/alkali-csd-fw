@@ -9,6 +9,7 @@
 
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"
+#include <spdlog/spdlog.h>
 
 namespace tflite
 {
@@ -34,7 +35,7 @@ bool VTADelegate::IsNodeSupportedByDelegate(
         case kTfLiteBuiltinConv2d:
             break;
         default:
-            printf("Skipped builtin code %d\n", registration->builtin_code);
+            spdlog::warn("Skipped builtin code {}", registration->builtin_code);
             return false;
     }
     // We support only INT8-based operations
@@ -45,7 +46,7 @@ bool VTADelegate::IsNodeSupportedByDelegate(
             tensor.type != kTfLiteUInt8 &&
             tensor.type != kTfLiteInt32)
         {
-            printf("Skipped tensor type %d for %d (%s,%d)\n",
+            spdlog::warn("Skipped tensor type {} for {} ({},{})",
                 tensor.type,
                 i,
                 registration->custom_name == NULL ? "" : registration->custom_name,
@@ -96,7 +97,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
     // that go into ant out from the delegate).
 
     // TODO perform optimization passes
-    printf("Initializing delegate...\n");
+    spdlog::info("Initializing delegate...");
     // Iterate over tensors in a group that were marked as supported by the delegate
     for (int i = 0; i < params->nodes_to_replace->size; i++)
     {
@@ -150,52 +151,54 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
                 );
                 break;
             default:
-                printf("Unsupported builtin code %d\n", registerdata->builtin_code);
+                spdlog::warn("Unsupported builtin code {}", registerdata->builtin_code);
                 return TfLiteStatus::kTfLiteUnresolvedOps;
         }
     }
     // print I/O summary for the delegated nodes
-    printf("Context tensors\n");
+    spdlog::debug("Context tensors");
     for (int i = 0; i < context->tensors_size; i++)
     {
-        printf("%d:  %x\n", i, context->tensors[i].data);
+        spdlog::debug("{}:  {}", i, fmt::ptr(context->tensors[i].data.int8));
     }
     for (auto &op: ops)
     {
-        printf("Op:  %s number of inputs:  %lu number of outputs:  %lu\n", op->name.c_str(), op->inputs.size(), op->outputs.size());
+        spdlog::debug("Op:  {} number of inputs:  {} number of outputs:  {}", op->name.c_str(), op->inputs.size(), op->outputs.size());
         for (auto &inp: op->inputs)
         {
-            printf("%d:(%x)[%d", inp, context->tensors[inp].data, context->tensors[inp].dims->data[0]);
+            std::string dat = "";
+            dat += fmt::format("{}:({})[{}", inp, fmt::ptr(context->tensors[inp].data.int8), context->tensors[inp].dims->data[0]);
             for (int dim = 1; dim < context->tensors[inp].dims->size; dim++)
             {
-                printf("x%d", context->tensors[inp].dims->data[dim]);
+                dat += fmt::format("x{}", context->tensors[inp].dims->data[dim]);
             }
-            printf("]  ");
+            spdlog::debug("{}]  ", dat);
         }
-        printf("\n");
         for (auto &out: op->outputs)
         {
-            printf("%d:(%x)[%d", out, context->tensors[out].data, context->tensors[out].dims->data[0]);
+            std::string dat = "";
+            dat += fmt::format("{}:({})[{}", out, fmt::ptr(context->tensors[out].data.int8), context->tensors[out].dims->data[0]);
             for (int dim = 1; dim < context->tensors[out].dims->size; dim++)
             {
-                printf("x%d", context->tensors[out].dims->data[dim]);
+                dat += fmt::format("x{}", context->tensors[out].dims->data[dim]);
             }
-            printf("]  ");
+            spdlog::debug("{}]  ", dat);
         }
-        printf("\n");
     }
+    spdlog::info("Delegate initialized");
     return kTfLiteOk;
 }
 
 TfLiteStatus VTADelegateKernel::Prepare(TfLiteContext* context, TfLiteNode* node)
 {
     // NOTE the Prepare function also have only parameters allocated, as in Init function.
-    printf("Preparing...\n");
-    printf("Context tensors\n");
+    spdlog::debug("Preparing kernel...");
+    spdlog::debug("Context tensors");
     for (int i = 0; i < context->tensors_size; i++)
     {
-        printf("%d:  %x\n", i, context->tensors[i].data);
+        spdlog::debug("{}:  {}", i, fmt::ptr(context->tensors[i].data.int8));
     }
+    spdlog::debug("Kernel prepared");
     // TODO implement optimization steps here?
     return kTfLiteOk;
 }
@@ -211,37 +214,38 @@ TfLiteStatus VTADelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
     // It means that all inputs for "node" are all inputs for all the delegated operations (their weights, biases, other parameters and inputs coming from the outer context).
     // Also, outputs for "node" are all outputs returned outside the delegate.
 
-    printf("Invoking...\n");
-    printf("Context tensors\n");
+    spdlog::debug("Invoking...");
+    spdlog::debug("Context tensors");
     for (int i = 0; i < context->tensors_size; i++)
     {
-        printf("%d:  %x\n", i, context->tensors[i].data);
+        spdlog::debug("{}:  {}", i, fmt::ptr(context->tensors[i].data.int8));
     }
-    printf("Inputs:  ");
+    spdlog::debug("Inputs:  ");
     for (int i = 0; i < node->inputs->size; i++)
     {
         int inp = node->inputs->data[i];
-        printf("\n    %d:(%x)[%d", inp, context->tensors[inp].data, context->tensors[inp].dims->data[0]);
+        std::string dat = "";
+        dat += fmt::format("    {}:({})[{}", inp, fmt::ptr(context->tensors[inp].data.int8), context->tensors[inp].dims->data[0]);
         for (int dim = 1; dim < context->tensors[inp].dims->size; dim++)
         {
-            printf("x%d", context->tensors[inp].dims->data[dim]);
+            dat += fmt::format("x{}", context->tensors[inp].dims->data[dim]);
         }
-        printf("]  ");
+        spdlog::debug("{}]  ", dat);
     }
-    printf("\nOutputs:  ");
+    spdlog::debug("Outputs:  ");
     for (int o = 0; o < node->outputs->size; o++)
     {
         int out = node->outputs->data[o];
-        printf("\n    %d:(%x)[%d", out, context->tensors[out].data, context->tensors[out].dims->data[0]);
+        std::string dat = "";
+        dat += fmt::format("    {}:({})[{}", out, fmt::ptr(context->tensors[out].data.int8), context->tensors[out].dims->data[0]);
         for (int dim = 1; dim < context->tensors[out].dims->size; dim++)
         {
-            printf("x%d", context->tensors[out].dims->data[dim]);
+            dat += fmt::format("x{}", context->tensors[out].dims->data[dim]);
         }
-        printf("]  ");
+        spdlog::debug("{}]", dat);
     }
-    printf("\n");
 
-    printf("Inferring...\n");
+    spdlog::debug("Inferring...");
 
     this->context = context;
 
@@ -250,7 +254,7 @@ TfLiteStatus VTADelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
         TfLiteStatus ret = op->compute();
         if (ret != TfLiteStatus::kTfLiteOk)
         {
-            printf("Failed to compute operation:  %s", op->name.c_str());
+            spdlog::error("Failed to compute operation:  {}", op->name.c_str());
             return ret;
         }
     }

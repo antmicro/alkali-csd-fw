@@ -42,6 +42,8 @@
 
 #include "vta/macros.h"
 
+#include <spdlog/spdlog.h>
+
 namespace vta {
 
 // Avoid bad configurations.
@@ -325,12 +327,14 @@ class UopKernel {
   /*! \brief Dump kernel micro ops to stdout. */
   void Dump() {
     uint32_t size = seq_.size();
-    printf("There are %u uops\n", size);
+    spdlog::info("There are {} uops", size);
     for (uint32_t i = 0; i < size; ++i) {
-      printf("[%04u]\t acc=%u, inp=%u, wgt=%u\n", i, seq_[i].dst_idx, seq_[i].src_idx,
-             seq_[i].wgt_idx);
+      uint32_t dst_idx = seq_[i].dst_idx;
+      uint32_t src_idx = seq_[i].src_idx;
+      uint32_t wgt_idx = seq_[i].wgt_idx;
+      spdlog::info("{:04u}\t acc={}, inp={}, wgt={}", i, dst_idx, src_idx,
+             wgt_idx);
     }
-    printf("\n");
   }
 
  public:
@@ -748,21 +752,21 @@ class InsnQueue : public BaseQueue<VTAGenericInsn> {
     // Iterate over all instructions
     int insn_count = count();
     const VTAGenericInsn* insn = data();
-    printf("There are %u instructions\n", insn_count);
+    spdlog::info("There are {} instructions", insn_count);
     for (int i = 0; i < insn_count; ++i) {
       // Fetch instruction and decode opcode
       c.generic = insn[i];
-      printf("INSTRUCTION %u: ", i);
+      spdlog::info("INSTRUCTION {}: ", i);
       if (c.mem.opcode == VTA_OPCODE_LOAD || c.mem.opcode == VTA_OPCODE_STORE) {
         if (c.mem.x_size == 0) {
           if (c.mem.opcode == VTA_OPCODE_STORE) {
-            printf("NOP-STORE-STAGE\n");
+            spdlog::info("NOP-STORE-STAGE");
           } else if (GetMemPipelineStage(c.mem.memory_type) == kComputeStage) {
-            printf("NOP-COMPUTE-STAGE\n");
+            spdlog::info("NOP-COMPUTE-STAGE");
           } else {
-            printf("NOP-MEMORY-STAGE\n");
+            spdlog::info("NOP-MEMORY-STAGE");
           }
-          printf("\tdep - pop prev: %d, pop next: %d, push prev: %d, push next: %d\n",
+          spdlog::info("\tdep - pop prev: {}, pop next: {}, push prev: {}, push next: {}",
                  static_cast<int>(c.mem.pop_prev_dep), static_cast<int>(c.mem.pop_next_dep),
                  static_cast<int>(c.mem.push_prev_dep), static_cast<int>(c.mem.push_next_dep));
           // Count status in queues
@@ -783,62 +787,61 @@ class InsnQueue : public BaseQueue<VTAGenericInsn> {
             if (c.mem.pop_next_dep) s2g_queue--;
             if (c.mem.push_next_dep) g2s_queue++;
           }
-          printf("\tl2g_queue = %d, g2l_queue = %d\n", l2g_queue, g2l_queue);
-          printf("\ts2g_queue = %d, g2s_queue = %d\n", s2g_queue, g2s_queue);
+          spdlog::info("\tl2g_queue = {}, g2l_queue = {}", l2g_queue, g2l_queue);
+          spdlog::info("\ts2g_queue = {}, g2s_queue = {}", s2g_queue, g2s_queue);
           continue;
         }
         // Print instruction field information
         if (c.mem.opcode == VTA_OPCODE_LOAD) {
-          printf("LOAD ");
-          if (c.mem.memory_type == VTA_MEM_ID_UOP) printf("UOP\n");
-          if (c.mem.memory_type == VTA_MEM_ID_WGT) printf("WGT\n");
-          if (c.mem.memory_type == VTA_MEM_ID_INP) printf("INP\n");
-          if (c.mem.memory_type == VTA_MEM_ID_ACC) printf("ACC\n");
+          if (c.mem.memory_type == VTA_MEM_ID_UOP) spdlog::info("LOAD UOP");
+          if (c.mem.memory_type == VTA_MEM_ID_WGT) spdlog::info("LOAD WGT");
+          if (c.mem.memory_type == VTA_MEM_ID_INP) spdlog::info("LOAD INP");
+          if (c.mem.memory_type == VTA_MEM_ID_ACC) spdlog::info("LOAD ACC");
         }
         if (c.mem.opcode == VTA_OPCODE_STORE) {
-          printf("STORE:\n");
+          spdlog::info("STORE:");
         }
-        printf("\tdep - pop prev: %d, pop next: %d, push prev: %d, push next: %d\n",
+        spdlog::info("\tdep - pop prev: {}, pop next: {}, push prev: {}, push next: {}",
                static_cast<int>(c.mem.pop_prev_dep), static_cast<int>(c.mem.pop_next_dep),
                static_cast<int>(c.mem.push_prev_dep), static_cast<int>(c.mem.push_next_dep));
-        printf("\tDRAM: 0x%08x, SRAM:0x%04x\n", static_cast<int>(c.mem.dram_base),
+        spdlog::info("\tDRAM: {:08x}, SRAM:{:04x}", static_cast<int>(c.mem.dram_base),
                static_cast<int>(c.mem.sram_base));
-        printf("\ty: size=%d, pad=[%d, %d]\n", static_cast<int>(c.mem.y_size),
+        spdlog::info("\ty: size={}, pad=[{}, {}]", static_cast<int>(c.mem.y_size),
                static_cast<int>(c.mem.y_pad_0), static_cast<int>(c.mem.y_pad_1));
-        printf("\tx: size=%d, stride=%d, pad=[%d, %d]\n", static_cast<int>(c.mem.x_size),
+        spdlog::info("\tx: size={}, stride={}, pad=[{}, {}]", static_cast<int>(c.mem.x_size),
                static_cast<int>(c.mem.x_stride), static_cast<int>(c.mem.x_pad_0),
                static_cast<int>(c.mem.x_pad_1));
       } else if (c.mem.opcode == VTA_OPCODE_GEMM) {
         // Print instruction field information
-        printf("GEMM\n");
+        spdlog::info("GEMM");
 
-        printf("\tdep - pop prev: %d, pop next: %d, push prev: %d, push next: %d\n",
+        spdlog::info("\tdep - pop prev: {}, pop next: {}, push prev: {}, push next: {}",
                static_cast<int>(c.mem.pop_prev_dep), static_cast<int>(c.mem.pop_next_dep),
                static_cast<int>(c.mem.push_prev_dep), static_cast<int>(c.mem.push_next_dep));
-        printf("\treset_out: %d\n", static_cast<int>(c.gemm.reset_reg));
-        printf("\trange (%d, %d)\n", static_cast<int>(c.gemm.uop_bgn),
+        spdlog::info("\treset_out: {}", static_cast<int>(c.gemm.reset_reg));
+        spdlog::info("\trange ({}, {})", static_cast<int>(c.gemm.uop_bgn),
                static_cast<int>(c.gemm.uop_end));
-        printf("\touter loop - iter: %d, wgt: %d, inp: %d, acc: %d\n",
+        spdlog::info("\touter loop - iter: {}, wgt: {}, inp: {}, acc: {}",
                static_cast<int>(c.gemm.iter_out), static_cast<int>(c.gemm.wgt_factor_out),
                static_cast<int>(c.gemm.src_factor_out), static_cast<int>(c.gemm.dst_factor_out));
-        printf("\tinner loop - iter: %d, wgt: %d, inp: %d, acc: %d\n",
+        spdlog::info("\tinner loop - iter: {}, wgt: {}, inp: {}, acc: {}",
                static_cast<int>(c.gemm.iter_in), static_cast<int>(c.gemm.wgt_factor_in),
                static_cast<int>(c.gemm.src_factor_in), static_cast<int>(c.gemm.dst_factor_in));
       } else if (c.mem.opcode == VTA_OPCODE_ALU) {
         // Print instruction field information
-        printf("ALU - %s\n", getOpcodeString(c.alu.alu_opcode, c.alu.use_imm));
-        printf("\tdep - pop prev: %d, pop next: %d, push prev: %d, push next: %d\n",
+        spdlog::info("ALU - {}", getOpcodeString(c.alu.alu_opcode, c.alu.use_imm));
+        spdlog::info("\tdep - pop prev: {}, pop next: {}, push prev: {}, push next: {}",
                static_cast<int>(c.mem.pop_prev_dep), static_cast<int>(c.mem.pop_next_dep),
                static_cast<int>(c.mem.push_prev_dep), static_cast<int>(c.mem.push_next_dep));
-        printf("\treset_out: %d\n", static_cast<int>(c.alu.reset_reg));
-        printf("\trange (%d, %d)\n", static_cast<int>(c.alu.uop_bgn),
+        spdlog::info("\treset_out: {}", static_cast<int>(c.alu.reset_reg));
+        spdlog::info("\trange ({}, {})", static_cast<int>(c.alu.uop_bgn),
                static_cast<int>(c.alu.uop_end));
-        printf("\touter loop - iter: %d, dst: %d, src: %d\n", static_cast<int>(c.alu.iter_out),
+        spdlog::info("\touter loop - iter: {}, dst: {}, src: {}", static_cast<int>(c.alu.iter_out),
                static_cast<int>(c.alu.dst_factor_out), static_cast<int>(c.alu.src_factor_out));
-        printf("\tinner loop - iter: %d, dst: %d, src: %d\n", static_cast<int>(c.alu.iter_in),
+        spdlog::info("\tinner loop - iter: {}, dst: {}, src: {}", static_cast<int>(c.alu.iter_in),
                static_cast<int>(c.alu.dst_factor_in), static_cast<int>(c.alu.src_factor_in));
       } else if (c.mem.opcode == VTA_OPCODE_FINISH) {
-        printf("FINISH\n");
+        spdlog::info("FINISH");
       }
 
       // Count status in queues
@@ -867,8 +870,8 @@ class InsnQueue : public BaseQueue<VTAGenericInsn> {
         if (c.gemm.pop_next_dep) s2g_queue--;
         if (c.gemm.push_next_dep) g2s_queue++;
       }
-      printf("\tl2g_queue = %d, g2l_queue = %d\n", l2g_queue, g2l_queue);
-      printf("\ts2g_queue = %d, g2s_queue = %d\n", s2g_queue, g2s_queue);
+      spdlog::info("\tl2g_queue = {}, g2l_queue = {}", l2g_queue, g2l_queue);
+      spdlog::info("\ts2g_queue = {}, g2s_queue = {}", s2g_queue, g2s_queue);
     }
   }
   // Commit all pending pop of corresponding stage
