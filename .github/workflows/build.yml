@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: antmicro/alkali:latest
+      volumes:
+        - /usr/share/dotnet:/usr/share/dotnet
+        - /usr/local/lib/android:/usr/local/lib/android
+        - /opt/ghc:/opt/ghc
     strategy:
       matrix:
         board: [an300, zcu106]
@@ -15,6 +19,15 @@ jobs:
       BOARD: ${{ matrix.board }}
 
     steps:
+      - name: Increase build space
+        run: |
+          echo "Before cleanup"
+          df -H
+          rm -rf /usr/share/dotnet/*
+          rm -rf /usr/local/lib/android/*
+          rm -rf /opt/ghc/*
+          echo "After cleanup"
+          df -H
       - name: Check out the repo
         uses: actions/checkout@v3
         with:
