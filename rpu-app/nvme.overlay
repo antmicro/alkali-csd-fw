@@ -12,7 +12,7 @@
 			compatible = "nvme-dma";
 			reg = <0xa0000000 0x1000>;
 			status = "okay";
-			interrupts = <89 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
+			interrupts = <89 IRQ_DEFAULT_PRIORITY IRQ_TYPE_EDGE>;
 			interrupt-names = "dma_done";
 		};
 
