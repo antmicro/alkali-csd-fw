@@ -41,6 +41,23 @@ nvme_dma_priv_t p_dma = {0};
 
 char __aligned(16) desc_slab_buffer[sizeof(nvme_dma_xfer_def_t)*NVME_DMA_SLAB_ENTRIES];
 
+struct k_timer nvme_dma_timer; // DMA timeout timer
+
+static void nvme_dma_timeout (struct k_timer *timer) {
+
+	nvme_dma_priv_t *priv = (nvme_dma_priv_t*)k_timer_user_data_get(timer);
+	unsigned long long lock;
+
+	LOG_ERR("DMA interrupt timeout!");
+
+	lock = irq_lock();
+	priv->rx_dma_running = false;
+	// TODO: Retry transfer? Do something meaningful?
+	irq_unlock(lock);
+
+	k_timer_stop(timer);
+}
+
 static void nvme_dma_setup_xfer(nvme_dma_priv_t *priv, nvme_dma_xfer_def_t *desc, uint32_t off)
 {
 #ifdef DEBUG
@@ -60,6 +77,11 @@ static void nvme_dma_setup_xfer(nvme_dma_priv_t *priv, nvme_dma_xfer_def_t *desc
 
 	// Writing tag starts transfer
 	sys_write32(desc->tag, priv->base + off + NVME_DMA_REG_TAG);
+
+	// Start the timeout timer
+	// FIXME: Resolve the issue with incorrect CPU frequency set in Zephyr
+	// and change the delay to something meaningful.
+	k_timer_start(&nvme_dma_timer, K_SECONDS(100), K_FOREVER);
 }
 
 void nvme_dma_irq_handler(void *arg)
@@ -86,8 +108,10 @@ void nvme_dma_irq_handler(void *arg)
 		desc = k_fifo_peek_head(&priv->rx_fifo);
 		if(desc)
 			nvme_dma_setup_xfer(priv, desc, NVME_DMA_REG_READ_BASE);
-		else
+		else {
 			priv->rx_dma_running = false;
+			k_timer_stop(&nvme_dma_timer);
+		}
 
 		irq_unlock(lock);
 	}
@@ -108,8 +132,10 @@ void nvme_dma_irq_handler(void *arg)
 		desc = k_fifo_peek_head(&priv->tx_fifo);
 		if(desc)
 			nvme_dma_setup_xfer(priv, desc, NVME_DMA_REG_WRITE_BASE);
-		else
+		else {
 			priv->tx_dma_running = false;
+			k_timer_stop(&nvme_dma_timer);
+		}
 
 		irq_unlock(lock);
 	}
@@ -142,6 +168,9 @@ void *nvme_dma_init(void)
 		printk("DMA enabled\n");
 	else
 		printk("Failed to enable DMA!\n");
+
+	k_timer_init(&nvme_dma_timer, nvme_dma_timeout, NULL);
+	k_timer_user_data_set(&nvme_dma_timer, (void*)priv);
 
 	return (void*)priv;
 }
