@@ -955,7 +955,7 @@ class InsnQueue : public BaseQueue<VTAGenericInsn> {
       //        checking the memory_type to avoid an CHECK error...
       return kStoreStage;
     }
-    LOG(FATAL) << "not reached";
+    spdlog::critical("Could not get pipeline stage");
     return kNoneStage;
   }
 
@@ -1032,7 +1032,7 @@ class CommandQueue {
         elem_bytes = VTA_ACC_ELEM_BYTES / 4;
         break;
       default:
-        LOG(FATAL) << "Memory id not recognized:" << memory_id;
+        spdlog::critical("Memory id {} not recognized", memory_id);
         break;
     }
     /*
