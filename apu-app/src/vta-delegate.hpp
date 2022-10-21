@@ -17,6 +17,7 @@
 #include "tensorflow/lite/kernels/kernel_util.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/tool_params.h"
+#include <spdlog/cfg/env.h>
 
 using namespace tflite::tools;
 
@@ -62,7 +63,10 @@ public:
      *
      * @param options delegate options
      */
-    explicit VTADelegate(const SimpleDelegateInterface::Options &options) : options(options) {}
+    explicit VTADelegate(const SimpleDelegateInterface::Options &options) : options(options)
+    {
+        spdlog::cfg::load_env_levels();
+    }
 
     /**
      * Checks if a given node is supported by the delegate.
