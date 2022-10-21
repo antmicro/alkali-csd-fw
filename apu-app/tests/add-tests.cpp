@@ -19,6 +19,7 @@
 #include "vta-delegate.hpp"
 
 #include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
 
 #define NUM_MODELS 11
 
@@ -31,7 +32,7 @@ class VTAAddTest : public ::testing::TestWithParam<int>
         static std::vector<std::string> modelfiles;
         static void SetUpTestSuite()
         {
-            spdlog::set_level(spdlog::level::debug);
+            spdlog::cfg::load_env_levels();
             srand(12345);
             std::filesystem::path modelsdir = modelspath;
             std::regex fileregex("(^.*)\\/add-(\\d+).tflite");

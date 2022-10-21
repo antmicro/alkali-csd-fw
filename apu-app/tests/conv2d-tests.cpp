@@ -12,6 +12,8 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
 
 #include "vta-delegate.hpp"
 
@@ -24,6 +26,8 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
         static std::vector<std::string> modelfiles;
         static void SetUpTestSuite()
         {
+            spdlog::set_level(spdlog::level::debug);
+            srand(12345);
             std::filesystem::path modelsdir = modelspath;
             std::regex fileregex("(^.*)\\/.*\\.tflite");
             for (auto file : std::filesystem::directory_iterator(modelspath))
@@ -34,16 +38,16 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
                 }
             }
             std::sort(modelfiles.begin(), modelfiles.end());
-            std::cout << "VTAConv2DTest suite ids:" << std::endl;
+            spdlog::info("VTAConv2DTest suite ids:");
             for (unsigned int i = 0; i < modelfiles.size(); i++)
             {
-                std::cout << i << ":  " << modelfiles[i] << std::endl;
+                spdlog::info("{}:  {}", i, modelfiles[i]);
             }
             ASSERT_EQ(NUM_MODELS, modelfiles.size()) << "Invalid number of declared models and present models in the " << modelspath << " directory" << std::endl;
         }
         void SetUp()
         {
-            std::cout << "Running test on " << modelfiles[GetParam()] << std::endl;
+            spdlog::info("Running test on {}", modelfiles[GetParam()]);
         }
 };
 
@@ -52,7 +56,6 @@ std::vector<std::string> VTAConv2DTest::modelfiles;
 
 TEST_P(VTAConv2DTest, CPUInvoking)
 {
-    std::cout << "Testing  " << modelfiles[GetParam()] << std::endl;
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAConv2DTest::modelfiles[GetParam()].c_str());
 
     tflite::ops::builtin::BuiltinOpResolver resolver;
