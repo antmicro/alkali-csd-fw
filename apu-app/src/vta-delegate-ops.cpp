@@ -413,6 +413,9 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     // 1 - weights (O Hk Wk I)
     // 2 - biases (O)
 
+    // Create a command handler for VTA
+    auto cmd = VTATLSCommandHandle();
+
     // Grab tensors for the operation
     auto &inpptr = parent->context->tensors[inputs[0]]; // input tensor
     auto &wgtptr = parent->context->tensors[inputs[1]]; // weight tensor
@@ -474,9 +477,6 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
     std::vector<uint8_t> outarray(outptr.bytes);
 
-    // Create a command handler for VTA
-    auto cmd = VTATLSCommandHandle();
-
     const int inpelemsfull = tensorElements({"No", "Io", "H", "W", "Ni", "Ii"});
     const int wgtelemsfull = tensorElements({"Oo", "Io", "Hk", "Wk", "Oi", "Ii"});
     const int outelemsfull = tensorElements({"No", "Oo", "Ho", "Wo", "Ni", "Oi"});
@@ -533,7 +533,16 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     // mode (0 for GEMM, 1 for ALU), reset (1 if reset accum to 0), input memory index, weight memory index (not used here), ALU opcode, use_imm (1 if use immediate mode in ALU), imm_val (immediate value in ALU)
                     for (int w = 0; w < Wo; w++)
                     {
-                        VTAUopPush(VTA_UOP_GEMM, 1, threadid * heightstep * outstep * Wo + w, 0, 0, 0, 0, 0);
+                        VTAUopPush(
+                            VTA_UOP_GEMM,
+                            1,
+                            threadid * heightstep * outstep * Wo + w,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        );
                     }
                     // end inner loop
                     VTAUopLoopEnd();
@@ -545,7 +554,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                 // create micro-op kernel for vector addition
                 // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
                 void *map = nullptr;
-                VTAPushALUOp(
+                VTAPushGEMMOp(
                     &map,
                     lambda,
                     nullptr,
@@ -677,7 +686,16 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                         }
                         for (int w = 0; w < Wo; w++)
                         {
-                            VTAUopPush(VTA_UOP_GEMM, 1, threadid * Oi * heightstep * Wo, 0, 0, 0, 0, 0);
+                            VTAUopPush(
+                                VTA_UOP_GEMM,
+                                1,
+                                threadid * Oi * heightstep * Wo,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0
+                            );
                         }
                         // end inner loop
                         VTAUopLoopEnd();
@@ -689,7 +707,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     // create micro-op kernel for vector addition
                     // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
                     void *map = nullptr;
-                    VTAPushALUOp(
+                    VTAPushGEMMOp(
                         &map,
                         lambda,
                         nullptr,
