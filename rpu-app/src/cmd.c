@@ -65,11 +65,11 @@ static void handle_adm(nvme_cmd_priv_t *priv)
 			nvme_cmd_vendor(priv, 0);
 			break;
 		case NVME_ADM_CMD_FW_DOWNLOAD:
-			LOG_DBG("Handling NVME_ADM_CMD_GET_LOG");
+			LOG_DBG("Handling NVME_ADM_CMD_FW_DOWNLOAD");
 			nvme_cmd_vendor(priv, 1);
 			break;
 		case NVME_ADM_CMD_KEEP_ALIVE:
-			LOG_DBG("Handling NVME_ADM_CMD_FW_DOWNLOAD");
+			LOG_DBG("Handling NVME_ADM_CMD_KEEP_ALIVE");
 		default:
 			if(cmd->cdw0.opc >= NVME_ADM_CMD_VENDOR) {
 				LOG_DBG("Handling NVME_ADM_CMD_VENDOR");
