@@ -9,7 +9,10 @@
 
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"
+#include "tensorflow/lite/kernels/internal/common.h"
+#include <limits>
 #include <spdlog/spdlog.h>
+#include <algorithm>
 
 namespace tflite
 {
@@ -22,6 +25,24 @@ CommunicationContext::CommunicationContext()
 CommunicationContext::~CommunicationContext()
 {
     VTAEndCommunication();
+}
+
+int32_t simulateRealValue(int8_t val, QuantizationData qdata)
+{
+    const int32_t valoffset = qdata.offset + val;
+    const int32_t valshift = valoffset * (1 << qdata.shift);
+    const int32_t valscaled = tflite::MultiplyByQuantizedMultiplierSmallerThanOneExp(valshift, qdata.multiplier, qdata.shift);
+    return valscaled;
+}
+
+int8_t requantizeResults(int32_t val, QuantizationData qdata)
+{
+    const int32_t valscaled = MultiplyByQuantizedMultiplierSmallerThanOneExp(static_cast<int32_t>(val), qdata.multiplier, qdata.shift);
+    const int32_t valoffset = val + qdata.offset;
+    // TODO compute clamping from previous parameters?
+    using range = std::numeric_limits<int8_t>;
+    const int32_t valclamped = std::max(static_cast<int32_t>(range::min()), std::min(valoffset, static_cast<int32_t>(range::max())));
+    return static_cast<int8_t>(valclamped);
 }
 
 bool VTADelegate::IsNodeSupportedByDelegate(
@@ -74,8 +95,9 @@ std::unique_ptr<SimpleDelegateKernelInterface> VTADelegate::CreateDelegateKernel
     return std::make_unique<VTADelegateKernel>();
 }
 
-VTAOp::VTAOp(VTADelegateKernel *parent, std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+VTAOp::VTAOp(VTADelegateKernel *parent, TfLiteNode *node, std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
     parent(parent),
+    node(node),
     name(name),
     tfliteop(tfliteop),
     inputs(tfliteinputs),
@@ -87,6 +109,7 @@ VTAOp::~VTAOp()
 
 TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegateParams* params)
 {
+    this->context = context;
     if (commcontext == nullptr)
     {
         commcontext = std::make_shared<CommunicationContext>();
@@ -134,6 +157,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
                 ops.push_back(
                     std::make_shared<VTAALUOp>(
                         this,
+                        node,
                         registerdata->builtin_code,
                         inputs,
                         outputs
@@ -144,6 +168,7 @@ TfLiteStatus VTADelegateKernel::Init(TfLiteContext* context, const TfLiteDelegat
                 ops.push_back(
                     std::make_shared<VTAGEMMOp>(
                         this,
+                        node,
                         registerdata->builtin_code,
                         inputs,
                         outputs
@@ -215,6 +240,7 @@ TfLiteStatus VTADelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
     // Also, outputs for "node" are all outputs returned outside the delegate.
 
     spdlog::debug("Invoking...");
+    this->context = context;
     spdlog::debug("Context tensors");
     for (int i = 0; i < context->tensors_size; i++)
     {
@@ -246,8 +272,6 @@ TfLiteStatus VTADelegateKernel::Eval(TfLiteContext* context, TfLiteNode* node)
     }
 
     spdlog::debug("Inferring...");
-
-    this->context = context;
 
     for (auto &op: ops)
     {

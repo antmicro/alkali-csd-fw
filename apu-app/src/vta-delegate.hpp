@@ -175,9 +175,10 @@ class VTAOp
          * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
          * @param tfliteoutputs vector of indexes to tensors with output data for the operator
          */
-        VTAOp(VTADelegateKernel *parent, std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+        VTAOp(VTADelegateKernel *parent, TfLiteNode* node, std::string name, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
 
-        VTADelegateKernel *parent; ///< owning VTADelegateKernel
+        VTADelegateKernel *parent = nullptr; ///< owning VTADelegateKernel
+        TfLiteNode *node = nullptr; ///< TFLite node implemented by this VTAOp
 
         std::string name; ///< user-friendly name of the operator/subnode
         int tfliteop = 0; ///< builtin code for the TFLite operation corresponding to this op
@@ -199,6 +200,57 @@ class VTAOp
 };
 
 /**
+ * Struct for holding ALU quantizer/requantizer data.
+ *
+ * Data requires quantization/requantization after each operation.
+ * For this we need scale and zero point, as in any quantization.
+ *
+ * But, since we operate on INT8/INT32 values, those parameters are
+ * stored in a following format:
+ *
+ * * offset - zero point (negated for inputs)
+ * * multiplier and shift - the floating-point scales are represented using fixed-point multiplers in INT32 notation:
+     M = 2 ^ (-shift) * multiplier
+ */
+struct QuantizationData
+{
+    int32_t offset; ///< the negation of input's zero point
+
+    int32_t shift = 20; ///< 2**20 for INT8 values
+    int32_t multiplier;
+};
+
+/**
+ * Performs conversion of quantized value to "real" value.
+ *
+ * Even in integer arithmetic, some of the operations are
+ * done in 32-bit integers, "simulating" the real values
+ * using fixed-point representation.
+ *
+ * This function converts INT8 values to INT32 values by
+ * applying offset, and scaling the value using the
+ * multiplier and shift stored in the QuantizationData.
+ *
+ * @param val single value to convert
+ * @param qdata QuantizationData used to properly scale the values
+ * @return 32-bit "real" value
+ */
+int32_t simulateRealValue(int8_t val, QuantizationData qdata);
+
+/**
+ * Requantizes the data after operation back to INT8 representation.
+ *
+ * The intermediate op results may not be able to fit into INT8 type,
+ * most often they are stored int 32-bit variables.
+ * They need to be quantized back to INT8 after the computations finish.
+ *
+ * @param val 32-bit data, i.e. from accumulator
+ * @param qdata quantization data used for converting value to INT8
+ * @return 8-bit requantized value
+ */
+int8_t requantizeResults(int32_t val, QuantizationData qdata);
+
+/**
  * Wrapper for ALU operations on VTA.
  */
 class VTAALUOp : public VTAOp
@@ -212,7 +264,7 @@ class VTAALUOp : public VTAOp
          * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
          * @param tfliteoutputs vector of indexes to tensors with output data for the operator
          */
-        VTAALUOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+        VTAALUOp(VTADelegateKernel *parent, TfLiteNode* node, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
 
         int opcode = VTA_ALU_OPCODE_ADD; ///< VTA opcode, used in ALU instruction
         TfLiteStatus compute() override;
@@ -223,6 +275,10 @@ class VTAALUOp : public VTAOp
          * Performs ALU ADD operation
          */
         TfLiteStatus aluAdd();
+
+        QuantizationData input1quant; ///< input 1 quantization parameters
+        QuantizationData input2quant; ///< input 2 quantization parameters
+        QuantizationData outputquant; ///< output quantization parameters
 };
 
 /**
@@ -239,7 +295,7 @@ class VTAGEMMOp : public VTAOp
          * @param tfliteinputs vector of indexes to tensors with input data for the operator (tensors are in TfLiteContext)
          * @param tfliteoutputs vector of indexes to tensors with output data for the operator
          */
-        VTAGEMMOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
+        VTAGEMMOp(VTADelegateKernel *parent, TfLiteNode* node, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs);
         TfLiteStatus compute() override;
         ~VTAGEMMOp();
 

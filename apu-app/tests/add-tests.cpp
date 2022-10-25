@@ -30,8 +30,11 @@ class VTAAddTest : public ::testing::TestWithParam<int>
     public:
         static const std::string modelspath;
         static std::vector<std::string> modelfiles;
+        static std::unordered_map<std::string, std::vector<int8_t>> tfliteresults;
+        static std::unordered_map<std::string, std::vector<int8_t>> vtaresults;
         static void SetUpTestSuite()
         {
+            // spdlog::set_level(spdlog::level::debug);
             spdlog::cfg::load_env_levels();
             srand(12345);
             std::filesystem::path modelsdir = modelspath;
@@ -59,6 +62,8 @@ class VTAAddTest : public ::testing::TestWithParam<int>
 
 const std::string VTAAddTest::modelspath = "./test-models/add";
 std::vector<std::string> VTAAddTest::modelfiles;
+std::unordered_map<std::string, std::vector<int8_t>> VTAAddTest::tfliteresults;
+std::unordered_map<std::string, std::vector<int8_t>> VTAAddTest::vtaresults;
 
 TEST_P(VTAAddTest, AddTestTFLite)
 {
@@ -71,8 +76,8 @@ TEST_P(VTAAddTest, AddTestTFLite)
 
     interpreter->AllocateTensors();
 
-    // int8_t *input1 = interpreter->typed_input_tensor<int8_t>(0);
-    // int8_t *input2 = interpreter->typed_input_tensor<int8_t>(1);
+    int8_t *tfinput1 = interpreter->typed_input_tensor<int8_t>(0);
+    int8_t *tfinput2 = interpreter->typed_input_tensor<int8_t>(1);
 
     ASSERT_EQ(interpreter->input_tensor(0)->dims->size, interpreter->input_tensor(1)->dims->size) << "Input tensors differ in dimensionality";
 
@@ -88,15 +93,23 @@ TEST_P(VTAAddTest, AddTestTFLite)
 
     std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
     std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
+    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 5; });
+    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 8; });
 
-    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::copy(input1.begin(), input1.end(), tfinput1);
+    std::copy(input2.begin(), input2.end(), tfinput2);
 
     auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time = t2 - t1;
     spdlog::info("Processing time:  {} ms", time.count());
+
+    int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
+    tfliteresults[modelfiles[GetParam()]].resize(input1.size(), 0);
+    std::copy(&out[0], &out[input1.size()], tfliteresults[modelfiles[GetParam()]].begin());
 }
 
 TEST_P(VTAAddTest, AddTestDelegate)
@@ -131,9 +144,10 @@ TEST_P(VTAAddTest, AddTestDelegate)
 
     std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
     std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-
-    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 5; });
+    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 8; });
 
     std::copy(input1.begin(), input1.end(), tfinput1);
     std::copy(input2.begin(), input2.end(), tfinput2);
@@ -145,13 +159,27 @@ TEST_P(VTAAddTest, AddTestDelegate)
     spdlog::info("Processing time:  {} ms", time.count());
 
     int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
-    for (int i = 0; i < input1.size(); i++)
+    vtaresults[modelfiles[GetParam()]].resize(input1.size(), 0);
+    std::copy(&out[0], &out[input1.size()], vtaresults[modelfiles[GetParam()]].begin());
+}
+
+TEST_P(VTAAddTest, DelegateCPUComparison)
+{
+    std::string modelpath = modelfiles[GetParam()];
+    spdlog::debug("Comparing native and delegate results for {}", modelpath);
+
+    ASSERT_NE(tfliteresults.find(modelpath), tfliteresults.end()) << "Missing native results for:  " << modelpath << std::endl;
+    ASSERT_NE(vtaresults.find(modelpath), vtaresults.end()) << "Missing delegate results for:  " << modelpath << std::endl;
+    for (int i = 0; i < tfliteresults[modelpath].size(); i++)
     {
-        int8_t val = input1[i] + input2[i];
-        EXPECT_EQ(out[i], val)
-            << "Elem:  " << i << ":  " << static_cast<int>(input1[i]) << " + " << static_cast<int>(input2[i])
-            << " = " << static_cast<int>(val)
-            << " (not " << static_cast<int>(out[i]) << ")";
+        int8_t tfliteval = tfliteresults[modelpath][i];
+        int8_t vtaval = vtaresults[modelpath][i];
+        EXPECT_EQ(tfliteval, vtaval)
+            << "  File=" << modelpath
+            << "  Elem=" << i
+            << "  TFLITE=" << static_cast<int>(tfliteval)
+            << "  VTA=" << static_cast<int>(vtaval)
+            << " are not equal" << std::endl;
     }
 }
 

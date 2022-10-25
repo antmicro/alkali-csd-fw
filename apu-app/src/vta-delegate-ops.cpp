@@ -11,6 +11,7 @@
 #include "vta/vta_runtime.h"
 #include "vta/hw_spec_const.h"
 #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
+#include "tensorflow/lite/kernels/internal/quantization_util.h"
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -85,8 +86,8 @@ VTAALUOp::~VTAALUOp()
 VTAGEMMOp::~VTAGEMMOp()
 {}
 
-VTAALUOp::VTAALUOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
-    VTAOp(parent, "ALU", tfliteop, tfliteinputs, tfliteoutputs)
+VTAALUOp::VTAALUOp(VTADelegateKernel *parent, TfLiteNode *node, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    VTAOp(parent, node, "ALU", tfliteop, tfliteinputs, tfliteoutputs)
 {
     switch (tfliteop)
     {
@@ -96,10 +97,28 @@ VTAALUOp::VTAALUOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfl
         default:
             name = "unknown";
     }
+    auto &in1 = parent->context->tensors[inputs[0]];
+    auto &in2 = parent->context->tensors[inputs[1]];
+    auto &out = parent->context->tensors[outputs[0]];
+
+    input1quant.offset = -in1.params.zero_point;
+    input2quant.offset = -in2.params.zero_point;
+    outputquant.offset = out.params.zero_point;
+
+    const double twice_max_input_scale = 2 * std::max(in1.params.scale, in2.params.scale);
+    // const double real_in1_multiplier = in1.params.scale / twice_max_input_scale;
+    // const double real_in2_multiplier = in2.params.scale / twice_max_input_scale;
+    const double real_in1_multiplier = in1.params.scale / out.params.scale;
+    const double real_in2_multiplier = in2.params.scale / out.params.scale;
+    // const double real_out_multiplier = twice_max_input_scale / ((1 << input1quant.shift) * out.params.scale);
+
+    tflite::QuantizeMultiplierSmallerThanOneExp(real_in1_multiplier, &input1quant.multiplier, &input1quant.shift);
+    tflite::QuantizeMultiplierSmallerThanOneExp(real_in2_multiplier, &input2quant.multiplier, &input2quant.shift);
+    // tflite::QuantizeMultiplierSmallerThanOneExp(real_out_multiplier, &outputquant.multiplier, &outputquant.shift);
 }
 
-VTAGEMMOp::VTAGEMMOp(VTADelegateKernel *parent, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
-    VTAOp(parent, "GEMM", tfliteop, tfliteinputs, tfliteoutputs)
+VTAGEMMOp::VTAGEMMOp(VTADelegateKernel *parent, TfLiteNode *node, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
+    VTAOp(parent, node, "GEMM", tfliteop, tfliteinputs, tfliteoutputs)
 {
     switch (tfliteop)
     {
@@ -205,9 +224,27 @@ TfLiteStatus VTAALUOp::aluAdd()
     else if (input1.type == kTfLiteInt8)
     {
         // if input vectors are 8-bit integers - convert them to 32-bit
-        std::transform(GetTensorData<int8_t>(&input1), GetTensorData<int8_t>(&input1) + numelements, tmpinp1.begin(), [](const int8_t &inp) -> int32_t { return static_cast<int32_t>(inp);});
+        std::transform(
+            GetTensorData<int8_t>(&input1),
+            GetTensorData<int8_t>(&input1) + numelements,
+            tmpinp1.begin(),
+            std::bind(
+                tflite::simulateRealValue,
+                std::placeholders::_1,
+                input1quant
+            )
+        );
         inp1 = tmpinp1.data();
-        std::transform(GetTensorData<int8_t>(&input2), GetTensorData<int8_t>(&input2) + numelements, tmpinp2.begin(), [](const int8_t &inp) -> int32_t { return static_cast<int32_t>(inp);});
+        std::transform(
+            GetTensorData<int8_t>(&input2),
+            GetTensorData<int8_t>(&input2) + numelements,
+            tmpinp2.begin(),
+            std::bind(
+                tflite::simulateRealValue,
+                std::placeholders::_1,
+                input2quant
+            )
+        );
         inp2 = tmpinp2.data();
     }
     else {
@@ -292,28 +329,109 @@ TfLiteStatus VTAALUOp::aluAdd()
             VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
-            auto lambda = [threadid, processdatalengthelem, sramshift](void *signature) -> int {
-                VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
-                VTAUopPush(
-                    VTA_UOP_ALU,           // mode
-                    0,                     // reset_out
-                    sramshift,                     // dst_index
-                    sramshift + processdatalengthelem, // src_index
-                    0,                     // wgt_index
-                    VTA_ALU_OPCODE_ADD,    // opcode
-                    0,                     // use_imm
-                    0                      // imm_val
+            {
+                auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+                    VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+                    // perform add
+                    VTAUopPush(
+                        VTA_UOP_ALU,           // mode
+                        0,                     // reset_out
+                        sramshift,                     // dst_index
+                        sramshift + processdatalengthelem, // src_index
+                        0,                     // wgt_index
+                        VTA_ALU_OPCODE_ADD,    // opcode
+                        0,                     // use_imm
+                        0                      // imm_val
+                    );
+                    VTAUopLoopEnd();
+                    return 0;
+                };
+                void *map = nullptr;
+                VTAPushALUOp(
+                    &map,
+                    lambda,
+                    nullptr,
+                    0
                 );
-                VTAUopLoopEnd();
-                return 0;
-            };
-            void *map = nullptr;
-            VTAPushALUOp(
-                &map,
-                lambda,
-                nullptr,
-                0
-            );
+            }
+            // // The following operations apply scaling of the input and addition of offset
+            // // multiply by scale-derived multipler
+            // {
+            //     auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+            //         VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+            //         VTAUopPush(
+            //             VTA_UOP_ALU,           // mode
+            //             0,                     // reset_out
+            //             sramshift,                     // dst_index
+            //             0, // src_index
+            //             0,                     // wgt_index
+            //             VTA_ALU_OPCODE_MUL,    // opcode
+            //             1,                     // use_imm
+            //             outputquant.multiplier // imm_val
+            //         );
+            //         VTAUopLoopEnd();
+            //         return 0;
+            //     };
+            //     void *map = nullptr;
+            //     VTAPushALUOp(
+            //         &map,
+            //         lambda,
+            //         nullptr,
+            //         0
+            //     );
+            // }
+            // // shift back to INT8
+            // {
+            //     auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+            //         VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+            //         VTAUopPush(
+            //             VTA_UOP_ALU,           // mode
+            //             0,                     // reset_out
+            //             sramshift,                     // dst_index
+            //             sramshift + processdatalengthelem, // src_index
+            //             0,                     // wgt_index
+            //             VTA_ALU_OPCODE_SHR,    // opcode
+            //             1,                     // use_imm
+            //             31 - outputquant.shift                      // imm_val
+            //         );
+            //         VTAUopLoopEnd();
+            //         return 0;
+            //     };
+            //     void *map = nullptr;
+            //     VTAPushALUOp(
+            //         &map,
+            //         lambda,
+            //         nullptr,
+            //         0
+            //     );
+            // }
+            // add offset
+            {
+                auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+                    VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+                    VTAUopPush(
+                        VTA_UOP_ALU,                       // mode
+                        0,                                 // reset_out
+                        sramshift,                         // dst_index
+                        sramshift + processdatalengthelem, // src_index
+                        0,                                 // wgt_index
+                        VTA_ALU_OPCODE_ADD,                // opcode
+                        0,                                 // use_imm
+                        outputquant.offset                                  // imm_val
+                    );
+                    VTAUopLoopEnd();
+                    return 0;
+                };
+                void *map = nullptr;
+                VTAPushALUOp(
+                    &map,
+                    lambda,
+                    nullptr,
+                    0
+                );
+            }
+            // TODO add clamping?
+
             VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
             VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
             VTAStoreBuffer2D(
@@ -350,7 +468,16 @@ TfLiteStatus VTAALUOp::aluAdd()
     }
     else if (output.type == kTfLiteInt8)
     {
-        std::transform(outdata.begin(), outdata.end(), GetTensorData<int8_t>(&output), [](const int32_t &inp) -> int8_t { return static_cast<int8_t>(inp);});
+        std::transform(
+            outdata.begin(),
+            outdata.end(),
+            GetTensorData<int8_t>(&output),
+            std::bind(
+                tflite::requantizeResults,
+                std::placeholders::_1,
+                outputquant
+            )
+        );
     }
 #elif VTA_OUT_WIDTH == 8
     if (output.type == kTfLiteInt8)

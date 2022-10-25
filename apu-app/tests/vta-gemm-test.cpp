@@ -14,7 +14,7 @@
 
 TEST(VTAGEMM, permuteDimsTest)
 {
-    tflite::VTAGEMMOp op(nullptr, kTfLiteBuiltinConv2d, {0, 1, 2}, {3});
+    tflite::VTAGEMMOp op(nullptr, nullptr, kTfLiteBuiltinConv2d, {0, 1, 2}, {3});
     op.setDim("No", 1);
     op.setDim("Ni", 4);
     op.setDim("Io", 4);
