@@ -6,9 +6,13 @@
  */
 
 #include "cmd.h"
+#include "main.h"
 
 #include <zephyr.h>
 #include <sys/printk.h>
+
+#include <logging/log.h>
+LOG_MODULE_DECLARE(NVME_LOGGER_NAME, NVME_LOGGER_LEVEL);
 
 typedef struct cmd_cdw10 {
 	uint16_t qid : 16;
@@ -36,7 +40,7 @@ void nvme_cmd_adm_create_sq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		printk("Invalid Create SQ QID(%d)!\n", qid);
+		LOG_ERR("Invalid Create SQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
@@ -63,7 +67,7 @@ void nvme_cmd_adm_delete_sq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		printk("Invalid Create SQ QID(%d)!\n", qid);
+		LOG_ERR("Invalid Create SQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
@@ -82,7 +86,7 @@ void nvme_cmd_adm_create_cq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		printk("Invalid Create CQ QID(%d)!\n", qid);
+		LOG_ERR("Invalid Create CQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
@@ -112,7 +116,7 @@ void nvme_cmd_adm_delete_cq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		printk("Invalid Create CQ QID(%d)!\n", qid);
+		LOG_ERR("Invalid Create CQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
