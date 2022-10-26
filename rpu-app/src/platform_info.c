@@ -170,18 +170,15 @@ int platform_poll(void *priv)
 	struct remoteproc *rproc = priv;
 	struct remoteproc_priv *prproc;
 	unsigned int flags;
+	int result;
 
 	prproc = rproc->priv;
-	while (1) {
-		flags = metal_irq_save_disable();
-		if (!(atomic_flag_test_and_set(&prproc->ipi_nokick))) {
-			metal_irq_restore_enable(flags);
-			remoteproc_get_notification(rproc, RSC_NOTIFY_ID_ANY);
-			break;
-		}
-		_rproc_wait(); /* wait for interrupt */
-		metal_irq_restore_enable(flags);
-	}
+	flags = metal_irq_save_disable();
+	result = atomic_flag_test_and_set(&prproc->ipi_nokick);
+	metal_irq_restore_enable(flags);
+	if (!result)
+		remoteproc_get_notification(rproc, RSC_NOTIFY_ID_ANY);
+
 	return 0;
 }
 

@@ -62,5 +62,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	cma_clean();
 	return 0;
 }

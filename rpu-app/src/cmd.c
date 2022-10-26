@@ -221,6 +221,8 @@ static void transfer_data_with_prps(nvme_cmd_priv_t *priv)
 
 	transfer_chunk(priv, host_addr, priv->xfer_buf, xfer_len);
 
+    printk("transfer_data_with_prps()\n"); // FIXME: This is a temporary workaround for a race condition.
+
 	if(priv->xfer_len == 0) {
 		return;
 	}
