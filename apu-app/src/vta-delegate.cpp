@@ -8,6 +8,7 @@
 #include "vta-delegate.hpp"
 
 #include "vta/vta_runtime.h"
+#include <cassert>
 #include "vta/hw_spec_const.h"
 #include "tensorflow/lite/kernels/internal/common.h"
 #include <limits>
@@ -29,20 +30,55 @@ CommunicationContext::~CommunicationContext()
 
 int32_t simulateRealValue(int8_t val, QuantizationData qdata)
 {
-    const int32_t valoffset = qdata.offset + val;
-    const int32_t valshift = valoffset * (1 << qdata.shift);
-    const int32_t valscaled = tflite::MultiplyByQuantizedMultiplierSmallerThanOneExp(valshift, qdata.multiplier, qdata.shift);
-    return valscaled;
+    const int16_t valoffset = static_cast<int16_t>(qdata.offset) + static_cast<int16_t>(val); // max 7 bits required
+    const int16_t valshift = valoffset * (static_cast<int16_t>(1) << qdata.left_shift); // ~15 bits required?
+    bool overflow = valshift == qdata.multiplier && valshift == std::numeric_limits<int16_t>::min();
+    const int32_t valscaledraw32 = valshift * qdata.multiplier;
+    const int32_t nudge = valscaledraw32 >= 0 ? (1 << 14) : (1 - (1 << 14));
+    const int32_t valscaled = (valscaledraw32 + nudge) >> 15;
+    const int16_t valsaturated = overflow ? std::numeric_limits<int16_t>::max() : valscaled;
+    // TODO introduce rounding?
+    const int16_t finval = valsaturated >> -qdata.shift;
+    return finval;
 }
 
 int8_t requantizeResults(int32_t val, QuantizationData qdata)
 {
-    const int32_t valscaled = MultiplyByQuantizedMultiplierSmallerThanOneExp(static_cast<int32_t>(val), qdata.multiplier, qdata.shift);
-    const int32_t valoffset = val + qdata.offset;
+    const int32_t valscaled = static_cast<int32_t>(val) * qdata.multiplier;
+    const int32_t valshifted = valscaled >> (15 - qdata.shift);
+    const int32_t valoffset = valshifted + qdata.offset;
     // TODO compute clamping from previous parameters?
     using range = std::numeric_limits<int8_t>;
     const int32_t valclamped = std::max(static_cast<int32_t>(range::min()), std::min(valoffset, static_cast<int32_t>(range::max())));
     return static_cast<int8_t>(valclamped);
+}
+
+void computeQuantizationParameters(double scale, int16_t &multiplier, int16_t &shift)
+{
+    multiplier = 0;
+    shift = 0;
+    if (scale < 1e-6)
+    {
+        // TODO should this value be updated?
+        return;
+    }
+    int32_t shift32;
+    const double q = frexp(scale, &shift32);
+    auto q_fixed = static_cast<int64_t>(round(q * (1 << 15)));
+    assert(q_fixed <= (1 << 15));
+    if (q_fixed == (1 << 15)) {
+        q_fixed /= 2;
+        ++shift32;
+    }
+    assert(q_fixed <= std::numeric_limits<int16_t>::max());
+    if (shift32 < -15)
+    {
+        shift32 = 0;
+        q_fixed = 0;
+    }
+    assert(abs(shift) <= std::numeric_limits<int16_t>::max());
+    multiplier = static_cast<int16_t>(q_fixed);
+    shift = static_cast<int16_t>(shift32);
 }
 
 bool VTADelegate::IsNodeSupportedByDelegate(

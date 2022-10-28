@@ -200,6 +200,22 @@ class VTAOp
 };
 
 /**
+ * Computes multiplier and shift from double-precision value.
+ *
+ * The value is represented in format:
+ *
+ *    scale = multiplier * 2 ^ (-shift)
+ *
+ * where multiplier is value from range [0.5;1.0), multiplied by 2**15
+ * so it can be expressed as integer.
+ *
+ * @param scale the original, double-precision scale
+ * @param multiplier 16-bit signed integer representing multiplier (values ranging 0.5-1.0 * 2 ** 15)
+ * @param shift shift of fixed-point representation
+ */
+void computeQuantizationParameters(double scale, int16_t &multiplier, int16_t &shift);
+
+/**
  * Struct for holding ALU quantizer/requantizer data.
  *
  * Data requires quantization/requantization after each operation.
@@ -216,8 +232,11 @@ struct QuantizationData
 {
     int32_t offset; ///< the negation of input's zero point
 
-    int32_t shift = 20; ///< 2**20 for INT8 values
-    int32_t multiplier;
+    /// 2**20 for INT8 values for 32-64 bit requantization,
+    /// experimentally here is 7, which should fit into 16-bit
+    static const int16_t left_shift = 7;
+    int16_t shift;
+    int16_t multiplier;
 };
 
 /**
