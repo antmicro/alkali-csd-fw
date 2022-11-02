@@ -91,15 +91,17 @@ TEST_P(VTAAddTest, AddTestTFLite)
         inputsize *= interpreter->input_tensor(0)->dims->data[i];
     }
 
-    std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-    std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 45; });
-    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 64; });
+    std::vector<int8_t> input1(inputsize);
+    std::vector<int8_t> input2(inputsize);
+    srand(GetParam());
+    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    // good for testing purposes
+    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 45; });
+    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 64; });
 
-    std::copy(input1.begin(), input1.end(), tfinput1);
-    std::copy(input2.begin(), input2.end(), tfinput2);
+    std::copy(input1.cbegin(), input1.cend(), tfinput1);
+    std::copy(input2.cbegin(), input2.cend(), tfinput2);
 
     auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
@@ -142,15 +144,17 @@ TEST_P(VTAAddTest, AddTestDelegate)
         inputsize *= interpreter->input_tensor(0)->dims->data[i];
     }
 
-    std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-    std::vector<int8_t> input2(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
-    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
-    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 45; });
-    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 64; });
+    std::vector<int8_t> input1(inputsize);
+    std::vector<int8_t> input2(inputsize);
+    srand(GetParam());
+    std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
+    // good for testing purposes
+    // std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return 45; });
+    // std::transform(input2.cbegin(), input2.cend(), input2.begin(), [](int8_t val) { return 64; });
 
-    std::copy(input1.begin(), input1.end(), tfinput1);
-    std::copy(input2.begin(), input2.end(), tfinput2);
+    std::copy(input1.cbegin(), input1.cend(), tfinput1);
+    std::copy(input2.cbegin(), input2.cend(), tfinput2);
 
     auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
