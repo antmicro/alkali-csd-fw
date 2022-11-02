@@ -432,6 +432,56 @@ TfLiteStatus VTAALUOp::aluAdd()
                     0
                 );
             }
+            // CLAMPING MAX
+            {
+                auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+                    VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+                    VTAUopPush(
+                        VTA_UOP_ALU,                       // mode
+                        0,                                 // reset_out
+                        sramshift,                         // dst_index
+                        sramshift + processdatalengthelem, // src_index
+                        0,                                 // wgt_index
+                        VTA_ALU_OPCODE_MIN,                // opcode
+                        1,                                 // use_imm
+                        std::numeric_limits<int8_t>::max() // imm_val
+                    );
+                    VTAUopLoopEnd();
+                    return 0;
+                };
+                void *map = nullptr;
+                VTAPushALUOp(
+                    &map,
+                    lambda,
+                    nullptr,
+                    0
+                );
+            }
+            // CLAMPING MIN
+            {
+                auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
+                    VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
+                    VTAUopPush(
+                        VTA_UOP_ALU,                       // mode
+                        0,                                 // reset_out
+                        sramshift,                         // dst_index
+                        sramshift + processdatalengthelem, // src_index
+                        0,                                 // wgt_index
+                        VTA_ALU_OPCODE_MAX,                // opcode
+                        1,                                 // use_imm
+                        std::numeric_limits<int8_t>::min() // imm_val
+                    );
+                    VTAUopLoopEnd();
+                    return 0;
+                };
+                void *map = nullptr;
+                VTAPushALUOp(
+                    &map,
+                    lambda,
+                    nullptr,
+                    0
+                );
+            }
             // TODO add clamping?
 
             VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
