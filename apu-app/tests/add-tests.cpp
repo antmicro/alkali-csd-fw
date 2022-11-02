@@ -174,7 +174,7 @@ TEST_P(VTAAddTest, DelegateCPUComparison)
     {
         int8_t tfliteval = tfliteresults[modelpath][i];
         int8_t vtaval = vtaresults[modelpath][i];
-        EXPECT_EQ(tfliteval, vtaval)
+        EXPECT_NEAR(tfliteval, vtaval, 1)
             << "  File=" << modelpath
             << "  Elem=" << i
             << "  TFLITE=" << static_cast<int>(tfliteval)
