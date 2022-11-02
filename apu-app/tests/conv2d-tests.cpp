@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <regex>
+#include <chrono>
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -24,6 +25,8 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
     public:
         static const std::string modelspath;
         static std::vector<std::string> modelfiles;
+        static std::unordered_map<std::string, std::vector<int8_t>> tfliteresults;
+        static std::unordered_map<std::string, std::vector<int8_t>> vtaresults;
         static void SetUpTestSuite()
         {
             spdlog::set_level(spdlog::level::debug);
@@ -53,8 +56,10 @@ class VTAConv2DTest : public ::testing::TestWithParam<int>
 
 const std::string VTAConv2DTest::modelspath = "./test-models/conv2d";
 std::vector<std::string> VTAConv2DTest::modelfiles;
+std::unordered_map<std::string, std::vector<int8_t>> VTAConv2DTest::tfliteresults;
+std::unordered_map<std::string, std::vector<int8_t>> VTAConv2DTest::vtaresults;
 
-TEST_P(VTAConv2DTest, CPUInvoking)
+TEST_P(VTAConv2DTest, Conv2DTestTFLite)
 {
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAConv2DTest::modelfiles[GetParam()].c_str());
 
@@ -73,14 +78,32 @@ TEST_P(VTAConv2DTest, CPUInvoking)
         inputsize *= interpreter->input_tensor(0)->dims->data[i];
     }
 
-    std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
+    std::vector<int8_t> input1(inputsize);
 
+    srand(GetParam());
     std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
 
+    int8_t *tfinput1 = interpreter->typed_input_tensor<int8_t>(0);
+
+    std::copy(input1.cbegin(), input1.cend(), tfinput1);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time = t2 - t1;
+    spdlog::info("Processing time:  {} ms", time.count());
+
+    int outputsize = 1;
+    for (int i = 0; i < interpreter->output_tensor(0)->dims->size; i++)
+    {
+        outputsize *= interpreter->output_tensor(0)->dims->data[i];
+    }
+    int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
+    tfliteresults[modelfiles[GetParam()]].resize(outputsize, 0);
+    std::copy(&out[0], &out[outputsize], tfliteresults[modelfiles[GetParam()]].begin());
 }
 
-TEST_P(VTAConv2DTest, VTAInvoking)
+TEST_P(VTAConv2DTest, Conv2DTestDelegate)
 {
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile(VTAConv2DTest::modelfiles[GetParam()].c_str());
 
@@ -104,11 +127,49 @@ TEST_P(VTAConv2DTest, VTAInvoking)
         inputsize *= interpreter->input_tensor(0)->dims->data[i];
     }
 
-    std::vector<int8_t> input1(interpreter->typed_input_tensor<int8_t>(0), interpreter->typed_input_tensor<int8_t>(0) + inputsize);
+    std::vector<int8_t> input1(inputsize);
 
+    srand(GetParam());
     std::transform(input1.cbegin(), input1.cend(), input1.begin(), [](int8_t val) { return static_cast<int8_t>(rand() % 256 - 128); });
 
+    int8_t *tfinput1 = interpreter->typed_input_tensor<int8_t>(0);
+
+    std::copy(input1.cbegin(), input1.cend(), tfinput1);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
     interpreter->Invoke();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time = t2 - t1;
+    spdlog::info("Processing time:  {} ms", time.count());
+
+    int outputsize = 1;
+    for (int i = 0; i < interpreter->output_tensor(0)->dims->size; i++)
+    {
+        outputsize *= interpreter->output_tensor(0)->dims->data[i];
+    }
+    int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
+    vtaresults[modelfiles[GetParam()]].resize(outputsize, 0);
+    std::copy(&out[0], &out[outputsize], vtaresults[modelfiles[GetParam()]].begin());
+}
+
+TEST_P(VTAConv2DTest, DelegateCPUComparison)
+{
+    std::string modelpath = modelfiles[GetParam()];
+    spdlog::debug("Comparing native and delegate results for {}", modelpath);
+
+    ASSERT_NE(tfliteresults.find(modelpath), tfliteresults.end()) << "Missing native results for:  " << modelpath << std::endl;
+    ASSERT_NE(vtaresults.find(modelpath), vtaresults.end()) << "Missing delegate results for:  " << modelpath << std::endl;
+    for (int i = 0; i < tfliteresults[modelpath].size(); i++)
+    {
+        int8_t tfliteval = tfliteresults[modelpath][i];
+        int8_t vtaval = vtaresults[modelpath][i];
+        EXPECT_NEAR(tfliteval, vtaval, 1)
+            << "  File=" << modelpath
+            << "  Elem=" << i
+            << "  TFLITE=" << static_cast<int>(tfliteval)
+            << "  VTA=" << static_cast<int>(vtaval)
+            << " are not equal" << std::endl;
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
