@@ -299,6 +299,7 @@ TfLiteStatus VTAALUOp::aluAdd()
             int veclengthelem = std::ceil(static_cast<float>(veclength) / computevectorsize);
             int processdatalengthelem = std::ceil(static_cast<float>(processdatalength) / computevectorsize);
             spdlog::debug("Loading data [threadid={}] [shiftelem={}] [lengthelem={}] [padding={}] [processlengthelem={}] [sramshift={}]", threadid, vectorshiftelem, veclengthelem, padding, processdatalengthelem, sramshift);
+            // Load vectors to SRAM memory
             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
             VTALoadBuffer2D(
                 cmd,             // cmd
@@ -311,39 +312,40 @@ TfLiteStatus VTAALUOp::aluAdd()
                 0,               // y_pad_before
                 padding,         // x_pad_after
                 0,               // y_pad_after
-                sramshift,               // dst_sram_index
+                sramshift,       // dst_sram_index
                 VTA_MEM_ID_ACC   // dst_memory_type
             );
             VTALoadBuffer2D(
-                cmd,             // cmd
-                vtainput2,       // src_dram_addr
-                vectorshiftelem, // src_elem_offset (no of unit elements)
-                veclengthelem,   // x_size (no of unit elements)
-                1,               // y_size (no of unit elements)
-                1,               // x_stride
-                0,               // x_pad_before
-                0,               // y_pad_before
-                padding,         // x_pad_after
-                0,               // y_pad_after
-                sramshift + processdatalengthelem,   // dst_sram_index
-                VTA_MEM_ID_ACC   // dst_memory_type
+                cmd,                               // cmd
+                vtainput2,                         // src_dram_addr
+                vectorshiftelem,                   // src_elem_offset (no of unit elements)
+                veclengthelem,                     // x_size (no of unit elements)
+                1,                                 // y_size (no of unit elements)
+                1,                                 // x_stride
+                0,                                 // x_pad_before
+                0,                                 // y_pad_before
+                padding,                           // x_pad_after
+                0,                                 // y_pad_after
+                sramshift + processdatalengthelem, // dst_sram_index
+                VTA_MEM_ID_ACC                     // dst_memory_type
             );
             VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
             VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
+            // Perform element-wise ADD operation on two vectors
             {
                 auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
                     VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
                     // perform add
                     VTAUopPush(
-                        VTA_UOP_ALU,           // mode
-                        0,                     // reset_out
-                        sramshift,                     // dst_index
+                        VTA_UOP_ALU,                       // mode
+                        0,                                 // reset_out
+                        sramshift,                         // dst_index
                         sramshift + processdatalengthelem, // src_index
-                        0,                     // wgt_index
-                        VTA_ALU_OPCODE_ADD,    // opcode
-                        0,                     // use_imm
-                        0                      // imm_val
+                        0,                                 // wgt_index
+                        VTA_ALU_OPCODE_ADD,                // opcode
+                        0,                                 // use_imm
+                        0                                  // imm_val
                     );
                     VTAUopLoopEnd();
                     return 0;
@@ -364,8 +366,8 @@ TfLiteStatus VTAALUOp::aluAdd()
                     VTAUopPush(
                         VTA_UOP_ALU,           // mode
                         0,                     // reset_out
-                        sramshift,                     // dst_index
-                        0, // src_index
+                        sramshift,             // dst_index
+                        0,                     // src_index
                         0,                     // wgt_index
                         VTA_ALU_OPCODE_MUL,    // opcode
                         1,                     // use_imm
@@ -387,14 +389,14 @@ TfLiteStatus VTAALUOp::aluAdd()
                 auto lambda = [threadid, processdatalengthelem, sramshift, outputquant=this->outputquant](void *signature) -> int {
                     VTAUopLoopBegin(processdatalengthelem, 1, 1, 0);
                     VTAUopPush(
-                        VTA_UOP_ALU,           // mode
-                        0,                     // reset_out
-                        sramshift,                     // dst_index
+                        VTA_UOP_ALU,                       // mode
+                        0,                                 // reset_out
+                        sramshift,                         // dst_index
                         sramshift + processdatalengthelem, // src_index
-                        0,                     // wgt_index
-                        VTA_ALU_OPCODE_SHR,    // opcode
-                        1,                     // use_imm
-                        15 - outputquant.shift                      // imm_val
+                        0,                                 // wgt_index
+                        VTA_ALU_OPCODE_SHR,                // opcode
+                        1,                                 // use_imm
+                        15 - outputquant.shift             // imm_val
                     );
                     VTAUopLoopEnd();
                     return 0;
@@ -419,7 +421,7 @@ TfLiteStatus VTAALUOp::aluAdd()
                         0,                                 // wgt_index
                         VTA_ALU_OPCODE_ADD,                // opcode
                         1,                                 // use_imm
-                        outputquant.offset                                  // imm_val
+                        outputquant.offset                 // imm_val
                     );
                     VTAUopLoopEnd();
                     return 0;
@@ -482,8 +484,7 @@ TfLiteStatus VTAALUOp::aluAdd()
                     0
                 );
             }
-            // TODO add clamping?
-
+            // Store quantized results back in DRAM
             VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
             VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
             VTAStoreBuffer2D(
