@@ -1,10 +1,8 @@
 # Alkali Firmware
 
-This repository contains firmware sources of the Alkali project, which can be
-used to generate the bitstream for the Western Digital NVMe accelerator test
-platform (AN300 board). The project includes Linux built with Buildroot that
-contains application for APU and there is a separate Zephyrproject application
-for RPU.
+This repository contains firmware sources of the Alkali project.
+The project includes Linux built with Buildroot that contains application
+for APU and a separate Zephyr application for RPU.
 
 The register description headers are auto-generated from the NVMe documentation.
 It is used by RPU application to communicate with NVMe control registers.
