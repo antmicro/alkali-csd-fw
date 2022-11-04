@@ -97,26 +97,30 @@ VTAALUOp::VTAALUOp(VTADelegateKernel *parent, TfLiteNode *node, int tfliteop, st
         default:
             name = "unknown";
     }
-    auto &in1 = parent->context->tensors[inputs[0]];
-    auto &in2 = parent->context->tensors[inputs[1]];
-    auto &out = parent->context->tensors[outputs[0]];
+    // This is for testing purposes, when block is executed outside of TFLite
+    if (parent)
+    {
+        auto &in1 = parent->context->tensors[inputs[0]];
+        auto &in2 = parent->context->tensors[inputs[1]];
+        auto &out = parent->context->tensors[outputs[0]];
 
-    input1quant.offset = -in1.params.zero_point;
-    input2quant.offset = -in2.params.zero_point;
-    outputquant.offset = out.params.zero_point;
+        input1quant.offset = -in1.params.zero_point;
+        input2quant.offset = -in2.params.zero_point;
+        outputquant.offset = out.params.zero_point;
 
-    const double twice_max_input_scale = 2 * std::max(in1.params.scale, in2.params.scale);
-    const double real_in1_multiplier = in1.params.scale / twice_max_input_scale;
-    const double real_in2_multiplier = in2.params.scale / twice_max_input_scale;
-    const double real_out_multiplier = twice_max_input_scale / ((1 << QuantizationData::left_shift) * out.params.scale);
+        const double twice_max_input_scale = 2 * std::max(in1.params.scale, in2.params.scale);
+        const double real_in1_multiplier = in1.params.scale / twice_max_input_scale;
+        const double real_in2_multiplier = in2.params.scale / twice_max_input_scale;
+        const double real_out_multiplier = twice_max_input_scale / ((1 << QuantizationData::left_shift) * out.params.scale);
 
-    computeQuantizationParameters(real_in1_multiplier, input1quant.multiplier, input1quant.shift);
-    computeQuantizationParameters(real_in2_multiplier, input2quant.multiplier, input2quant.shift);
-    computeQuantizationParameters(real_out_multiplier, outputquant.multiplier, outputquant.shift);
+        computeQuantizationParameters(real_in1_multiplier, input1quant.multiplier, input1quant.shift);
+        computeQuantizationParameters(real_in2_multiplier, input2quant.multiplier, input2quant.shift);
+        computeQuantizationParameters(real_out_multiplier, outputquant.multiplier, outputquant.shift);
 
-    spdlog::debug("input1: offset=[{}]  multiplier=[{}]  shift=[{}]", input1quant.offset, input1quant.multiplier, input1quant.shift);
-    spdlog::debug("input2: offset=[{}]  multiplier=[{}]  shift=[{}]", input2quant.offset, input2quant.multiplier, input2quant.shift);
-    spdlog::debug("output: offset=[{}]  multiplier=[{}]  shift=[{}]", outputquant.offset, outputquant.multiplier, outputquant.shift);
+        spdlog::debug("input1: offset=[{}]  multiplier=[{}]  shift=[{}]", input1quant.offset, input1quant.multiplier, input1quant.shift);
+        spdlog::debug("input2: offset=[{}]  multiplier=[{}]  shift=[{}]", input2quant.offset, input2quant.multiplier, input2quant.shift);
+        spdlog::debug("output: offset=[{}]  multiplier=[{}]  shift=[{}]", outputquant.offset, outputquant.multiplier, outputquant.shift);
+    }
 }
 
 VTAGEMMOp::VTAGEMMOp(VTADelegateKernel *parent, TfLiteNode *node, int tfliteop, std::vector<int> tfliteinputs, std::vector<int> tfliteoutputs) :
