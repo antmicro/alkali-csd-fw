@@ -364,6 +364,11 @@ class VTAGEMMOp : public VTAOp
         );
 
         /**
+         * Prints configured dimensions.
+         */
+        void printDims();
+
+        /**
          * Returns number of elements for tensor with given layout.
          * @param layout layout of the tensor
          * @return size of the tensor in elements

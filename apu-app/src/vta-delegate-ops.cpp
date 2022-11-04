@@ -1025,6 +1025,15 @@ void VTAGEMMOp::permuteDims(
     }
 }
 
+void VTAGEMMOp::printDims()
+{
+    spdlog::debug("GEMM operating dimensions:");
+    for (auto &elem : dims)
+    {
+        spdlog::debug("    {} = {}", elem.first, elem.second);
+    }
+}
+
 int VTAGEMMOp::tensorElements(const std::vector<std::string> &layout)
 {
     int size = 1;
