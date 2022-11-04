@@ -1007,21 +1007,45 @@ void VTAGEMMOp::permuteDims(
     const std::vector<std::string> &outlayout,
     uint8_t *inparray,
     uint8_t *outarray,
-    size_t elemsize)
+    size_t elemsize,
+    const std::vector<std::string> *actualdims)
 {
+    TFLITE_CHECK_EQ(inplayout.size(), outlayout.size());
     TFLITE_CHECK_EQ(tensorElements(inplayout), tensorElements(outlayout));
+    if (actualdims)
+    {
+        TFLITE_CHECK_EQ(inplayout.size(), actualdims->size());
+    }
+    // fill outarray with zeros (zero-padding)
+    memset(outarray, 0, tensorElements(outlayout));
+
     for (int i = 0; i < tensorElements(inplayout); i++)
     {
         int inpremaining = i;
         int outindex = 0;
+        int axisid = 0;
         for (auto &axis : inplayout)
         {
             int step = getDimStep(inplayout, axis);
             int axisindex = inpremaining / step;
+            if (actualdims)
+            {
+                if (axisindex >= dim(actualdims->at(axisid)))
+                {
+                    // we exceeded the actual dimension size,
+                    // we skip assignment (zero-padding)
+                    outindex = -1;
+                    break;
+                }
+            }
             outindex += axisindex * getDimStep(outlayout, axis);
             inpremaining %= step;
+            axisid++;
         }
-        std::copy(&inparray[i * elemsize], &inparray[(i + 1) * elemsize], &outarray[outindex * elemsize]);
+        if (outindex > -1)
+        {
+            std::copy(&inparray[i * elemsize], &inparray[(i + 1) * elemsize], &outarray[outindex * elemsize]);
+        }
     }
 }
 

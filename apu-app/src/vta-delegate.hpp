@@ -349,18 +349,28 @@ class VTAGEMMOp : public VTAOp
         /**
          * Permutes dimensions based on given layouts.
          *
+         * It maps the data in inplayout to be stored
+         * as in outlayout.
+         *
+         * If actualdims are provided, the dimensions
+         * where the actual dimension size is smaller
+         * than required in outlayout, the data is
+         * zero-padded.
+         *
          * @param inplayout input layout
          * @param outlayout output layout
          * @param inparray input array
          * @param outarray output array
          * @param elemsize size of a single element in array
+         * @param actualdims array containing actual dimensions of inparray
          */
         void permuteDims(
             const std::vector<std::string> &inplayout,
             const std::vector<std::string> &outlayout,
             uint8_t *inparray,
             uint8_t *outarray,
-            const size_t elemsize
+            const size_t elemsize,
+            const std::vector<std::string> *actualdims = nullptr
         );
 
         /**
