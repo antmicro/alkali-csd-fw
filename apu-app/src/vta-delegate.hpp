@@ -230,13 +230,13 @@ void computeQuantizationParameters(double scale, int16_t &multiplier, int16_t &s
  */
 struct QuantizationData
 {
-    int32_t offset; ///< the negation of input's zero point
+    int32_t offset = 0; ///< quantization offset
 
     /// 2**20 for INT8 values for 32-64 bit requantization,
     /// experimentally here is 7, which should fit into 16-bit
     static const int16_t left_shift = 7;
-    int16_t shift;
-    int16_t multiplier;
+    int16_t shift = 0; ///< scale's shift (fixed-point representation)
+    int16_t multiplier = 0; ///< scale's 32-bit multiplier (fixed-point representation)
 };
 
 /**
