@@ -134,6 +134,41 @@ VTAGEMMOp::VTAGEMMOp(VTADelegateKernel *parent, TfLiteNode *node, int tfliteop, 
         default:
             name = "unknown";
     }
+    // parent is checked here in case the block is tested outside of TFLite context
+    if (parent)
+    {
+        auto &inp = parent->context->tensors[inputs[0]];
+        auto &wgt = parent->context->tensors[inputs[1]];
+        auto &bs = parent->context->tensors[inputs[2]];
+        auto &out = parent->context->tensors[outputs[0]];
+
+        inputquant.offset = -inp.params.zero_point;
+        outputquant.offset = out.params.zero_point;
+
+        const auto *affine_quantization = reinterpret_cast<TfLiteAffineQuantization *>(wgt.quantization.params);
+        assert(affine_quantization);
+        assert(affine_quantization->scale);
+
+        const bool is_per_channel = affine_quantization->scale->size > 1;
+
+        const double input_scale = static_cast<double>(inp.params.scale);
+        const double output_scale = static_cast<double>(out.params.scale);
+        spdlog::debug("input: offset=[{}]", inputquant.offset);
+        const float *filter_scales = affine_quantization->scale->data;
+        int num_channels = out.dims->data[3];
+        filtersquant.resize(num_channels, {offset: 0, shift: 0, multiplier: 0});
+        for (int chan = 0; chan < num_channels; chan++)
+        {
+            const double wgtscale = static_cast<double>(is_per_channel ? filter_scales[chan] : filter_scales[0]);
+            const double effective_output_scale = input_scale * wgtscale / output_scale;
+            computeQuantizationParameters(
+                effective_output_scale,
+                filtersquant[chan].multiplier,
+                filtersquant[chan].shift
+            );
+            spdlog::debug("wgt chan{}:  multiplier=[{}]  shift=[{}]", chan, filtersquant[chan].multiplier, filtersquant[chan].shift);
+        }
+    }
 }
 
 TfLiteStatus VTAALUOp::compute()

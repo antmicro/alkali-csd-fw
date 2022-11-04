@@ -401,6 +401,10 @@ class VTAGEMMOp : public VTAOp
          *         strideW - stride along width axis
          */
         std::unordered_map<std::string, int> dims;
+
+        QuantizationData inputquant; ///< stores input quantization data, here only offset
+        std::vector<QuantizationData> filtersquant; ///< stores multipliers per output channel
+        QuantizationData outputquant; ///< stores output quantization data, here only offset
 };
 
 /**
