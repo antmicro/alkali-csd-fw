@@ -632,9 +632,6 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     // 1 - weights (O Hk Wk I)
     // 2 - biases (O)
 
-    // Create a command handler for VTA
-    auto cmd = VTATLSCommandHandle();
-
     // Grab tensors for the operation
     auto &inpptr = parent->context->tensors[inputs[0]]; // input tensor
     auto &wgtptr = parent->context->tensors[inputs[1]]; // weight tensor
@@ -668,9 +665,9 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
     // Compute working dimensions for VTA
     // TODO consider dimensions not divisible by below dimensions (TVM adds padding)
-    setDim("No", dim("N") / VTA_BATCH);
-    setDim("Io", dim("I") / VTA_BLOCK_IN);
-    setDim("Oo", dim("O") / VTA_BLOCK_OUT);
+    setDim("No", (dim("N") + VTA_BATCH - 1) / VTA_BATCH);
+    setDim("Io", (dim("I") + VTA_BLOCK_IN - 1) / VTA_BLOCK_IN);
+    setDim("Oo", (dim("O") + VTA_BLOCK_OUT - 1) / VTA_BLOCK_OUT);
 
     // Reshape inputs for tensorization
     std::vector<uint8_t> inparray(inpptr.bytes);
@@ -694,11 +691,17 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
         1 // TODO make size of input configurable
     );
 
+    // print the dimensions of CONV2D operation
+    printDims();
+
     std::vector<uint8_t> outarray(outptr.bytes);
 
     const int inpelemsfull = tensorElements({"No", "Io", "H", "W", "Ni", "Ii"});
     const int wgtelemsfull = tensorElements({"Oo", "Io", "Hk", "Wk", "Oi", "Ii"});
     const int outelemsfull = tensorElements({"No", "Oo", "Ho", "Wo", "Ni", "Oi"});
+
+    // Create a command handler for VTA
+    auto cmd = VTATLSCommandHandle();
 
     // Create DRAM buffers for inputs, weights and outputs
     auto *inpbuf = VTABufferAlloc(sizeof(int8_t) * inpelemsfull);
@@ -714,9 +717,6 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
 
     // Sync for fetching the data
     VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
-
-    // TODO implement tests for dimension permutations
-    // TODO finish implementation of CONV2D operation
 
     // The looping below does not perform computations, only creates commands that
     // are executed asynchronously
