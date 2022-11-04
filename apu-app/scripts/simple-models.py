@@ -259,6 +259,20 @@ if __name__ == '__main__':
 
     # inputsize, inpchannels, outchannels, kernelsize, stride, padding
 
+    name = args.output_dir / 'conv2d' / Path('conv2d-is4_ic1_oc1_ks3_s1_p0.onnx')  # noqa: E501
+    if not (args.skip_existing and name.exists()):
+        simple_conv2d(
+            name,
+            4,
+            1,
+            1,
+            3,
+            1,
+            0
+        )
+    else:
+        print(f'Skipping creating {name}')
+
     inpsizes = [10, 224]
     inpchannels = [1, 3, 32]
     outchannels = [32, 256]
@@ -282,7 +296,7 @@ if __name__ == '__main__':
             continue
         name = args.output_dir / 'conv2d' / Path(f'conv2d-is{isize}_ic{ichan}_oc{ochan}_ks{ksize}_s{stride}_p{padding}.onnx')  # noqa: E501
         if args.skip_existing and name.exists():
-            print(f'Skipping creating {modelpath}')
+            print(f'Skipping creating {name}')
             continue
         simple_conv2d(
             name,
