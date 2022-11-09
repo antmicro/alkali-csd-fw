@@ -362,16 +362,31 @@ class VTAGEMMOp : public VTAOp
          * @param inparray input array
          * @param outarray output array
          * @param elemsize size of a single element in array
-         * @param actualdims array containing actual dimensions of inparray
          */
         void permuteDims(
             const std::vector<std::string> &inplayout,
             const std::vector<std::string> &outlayout,
             uint8_t *inparray,
             uint8_t *outarray,
-            const size_t elemsize,
-            const std::vector<std::string> *actualdims = nullptr
+            const size_t elemsize
         );
+
+        /**
+         * Zero-pads the tensor based on given layouts.
+         *
+         * @param srclayout input layout
+         * @param dstlayout output layout
+         * @param inparray input array
+         * @param outarray output array
+         * @param elemsize size of a single element
+         */
+         void padData(
+             const std::vector<std::string> &srclayout,
+             const std::vector<std::string> &dstlayout,
+             uint8_t *inparray,
+             uint8_t *outarray,
+             const size_t elemsize
+         );
 
         /**
          * Prints configured dimensions.

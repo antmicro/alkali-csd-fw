@@ -641,54 +641,91 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     resetDims();
 
     // Get input, weights and bias dimensions
-    setDim("N", inpptr.dims->data[0]);
-    setDim("H", inpptr.dims->data[1]);
-    setDim("W", inpptr.dims->data[2]);
-    setDim("I", inpptr.dims->data[3]);
+    setDim("N", inpptr.dims->data[0]); // batch size
+    setDim("H", inpptr.dims->data[1]); // input height
+    setDim("W", inpptr.dims->data[2]); // input width
+    setDim("I", inpptr.dims->data[3]); // input channels
 
-    setDim("Ho", outptr.dims->data[1]);
-    setDim("Wo", outptr.dims->data[2]);
-    setDim("O", outptr.dims->data[3]);
+    setDim("Ho", outptr.dims->data[1]); // output height
+    setDim("Wo", outptr.dims->data[2]); // output width
+    setDim("O", outptr.dims->data[3]); // output channels
 
-    setDim("Hk", wgtptr.dims->data[1]);
-    setDim("Wk", wgtptr.dims->data[2]);
+    setDim("Hk", wgtptr.dims->data[1]); // kernel height
+    setDim("Wk", wgtptr.dims->data[2]); // kernel width
 
-    setDim("Ni", VTA_BATCH);
-    setDim("Ii", VTA_BLOCK_IN);
-    setDim("Oi", VTA_BLOCK_OUT);
+    setDim("Ni", VTA_BATCH); // batch size inner loop
+    setDim("Ii", VTA_BLOCK_IN); // input channel inner loop
+    setDim("Oi", VTA_BLOCK_OUT); // output channel inner loop
 
     // FIXME set padding and stride according to TFLite model
-    setDim("paddingH", 0);
-    setDim("paddingW", 0);
-    setDim("strideH", 1);
-    setDim("strideW", 1);
+    setDim("paddingH", 0); // height padding
+    setDim("paddingW", 0); // width padding
+    setDim("strideH", 1); // height stride
+    setDim("strideW", 1); // width stride
 
     // Compute working dimensions for VTA
     // TODO consider dimensions not divisible by below dimensions (TVM adds padding)
-    setDim("No", (dim("N") + VTA_BATCH - 1) / VTA_BATCH);
-    setDim("Io", (dim("I") + VTA_BLOCK_IN - 1) / VTA_BLOCK_IN);
-    setDim("Oo", (dim("O") + VTA_BLOCK_OUT - 1) / VTA_BLOCK_OUT);
+    setDim("No", (dim("N") + VTA_BATCH - 1) / VTA_BATCH); // batch size outer loop
+    setDim("Io", (dim("I") + VTA_BLOCK_IN - 1) / VTA_BLOCK_IN); // input channel outer loop
+    setDim("Oo", (dim("O") + VTA_BLOCK_OUT - 1) / VTA_BLOCK_OUT); // output channel outer loop
+
+    setDim("Naligned", dim("No") * dim("Ni"));
+    setDim("Ialigned", dim("Io") * dim("Ii"));
+    setDim("Oaligned", dim("Oo") * dim("Oi"));
+
+    std::vector<uint8_t> tmparray(tensorElements({"Naligned", "Ialigned", "H", "W"}));
+
+    // pad input data
+    padData(
+        {"N", "I", "H", "W"},
+        {"Naligned", "Ialigned", "H", "W"},
+        GetTensorData<uint8_t>(&inpptr),
+        tmparray.data(),
+        sizeof(int8_t)
+    );
 
     // Reshape inputs for tensorization
     std::vector<uint8_t> inparray(inpptr.bytes);
     permuteDims(
         {"No", "Ni", "Io", "Ii", "H", "W"},
         {"No", "Io", "H", "W", "Ni", "Ii"},
-        GetTensorData<uint8_t>(&inpptr),
+        tmparray.data(),
         inparray.data(),
-        1 // TODO configure size of input
+        sizeof(int8_t)
     );
 
     // TODO move weights' permutting to Init or Prepare
+
+    tmparray.resize(tensorElements({"Oaligned", "Ialigned", "H", "W"}));
+    // pad weights' data
+    padData(
+        {"O", "I", "Hk", "Wk"},
+        {"Oaligned", "Ialigned", "Hk", "Wk"},
+        GetTensorData<uint8_t>(&wgtptr),
+        tmparray.data(),
+        sizeof(int8_t)
+    );
 
     // Reshape weights for tensorization
     std::vector<uint8_t> wgtarray(wgtptr.bytes);
     permuteDims(
         {"Oo", "Oi", "Io", "Ii", "H", "W"},
         {"Oo", "Io", "H", "W", "Oi", "Ii"},
-        GetTensorData<uint8_t>(&wgtptr),
+        tmparray.data(),
         wgtarray.data(),
-        1 // TODO make size of input configurable
+        sizeof(int8_t) // TODO make size of input configurable
+    );
+
+    tmparray.clear();
+
+    // pad bias data
+    std::vector<int32_t> biasarray(tensorElements({"Oaligned"}));
+    padData(
+        {"O"},
+        {"Oaligned"},
+        GetTensorData<uint8_t>(&wgtptr),
+        tmparray.data(),
+        sizeof(int32_t)
     );
 
     // print the dimensions of CONV2D operation
@@ -1002,20 +1039,54 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     return kTfLiteOk;
 }
 
+void VTAGEMMOp::padData(
+    const std::vector<std::string> &srclayout,
+    const std::vector<std::string> &dstlayout,
+    uint8_t *inparray,
+    uint8_t *outarray,
+    const size_t elemsize)
+{
+    // fill outarray with zeros
+    memset(outarray, 0, tensorElements(dstlayout));
+    TFLITE_CHECK_EQ(srclayout.size(), dstlayout.size());
+    for (int i = 0; i < srclayout.size(); i++)
+    {
+        TFLITE_CHECK_GE(dstlayout[i], srclayout[i]);
+    }
+    for (int outid = 0; outid < tensorElements(dstlayout); outid++)
+    {
+        int dstremaining = outid;
+        int inpindex = 0;
+        bool outofscope = false;
+        for (unsigned int inpaxis = 0; inpaxis < srclayout.size(); inpaxis++)
+        {
+            int step = getDimStep(dstlayout, dstlayout[inpaxis]);
+            int axisindex = dstremaining / step;
+            if (axisindex >= dim(srclayout[inpaxis]))
+            {
+                // padding applies
+                outofscope = true;
+                break;
+            }
+            inpindex += axisindex * getDimStep(srclayout, srclayout[inpaxis]);
+            dstremaining %= step;
+        }
+        if (!outofscope)
+        {
+            std::copy(&inparray[inpindex * elemsize], &inparray[(inpindex + 1) * elemsize], &outarray[outid * elemsize]);
+        }
+    }
+}
+
 void VTAGEMMOp::permuteDims(
     const std::vector<std::string> &inplayout,
     const std::vector<std::string> &outlayout,
     uint8_t *inparray,
     uint8_t *outarray,
-    size_t elemsize,
-    const std::vector<std::string> *actualdims)
+    size_t elemsize)
 {
     TFLITE_CHECK_EQ(inplayout.size(), outlayout.size());
     TFLITE_CHECK_EQ(tensorElements(inplayout), tensorElements(outlayout));
-    if (actualdims)
-    {
-        TFLITE_CHECK_EQ(inplayout.size(), actualdims->size());
-    }
     // fill outarray with zeros (zero-padding)
     memset(outarray, 0, tensorElements(outlayout));
 
@@ -1028,16 +1099,6 @@ void VTAGEMMOp::permuteDims(
         {
             int step = getDimStep(inplayout, axis);
             int axisindex = inpremaining / step;
-            if (actualdims)
-            {
-                if (axisindex >= dim(actualdims->at(axisid)))
-                {
-                    // we exceeded the actual dimension size,
-                    // we skip assignment (zero-padding)
-                    outindex = -1;
-                    break;
-                }
-            }
             outindex += axisindex * getDimStep(outlayout, axis);
             inpremaining %= step;
             axisid++;
