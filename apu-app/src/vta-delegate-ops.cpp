@@ -737,32 +737,232 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     const int wgtelemsfull = tensorElements({"Oo", "Io", "Hk", "Wk", "Oi", "Ii"});
     const int outelemsfull = tensorElements({"No", "Oo", "Ho", "Wo", "Ni", "Oi"});
 
+    // We need to match certain constraints of
+    // - inputs' SRAM (input tensors go here)
+    // - weights' SRAM (weights go here)
+    // - accumulator SRAM (outputs and bias go here)
+    //
+    // Currently, we will split:
+    // * input tensors along height
+    // * weight tensors along number of kernels / no. output channels
+    // * output tensors along height
+    // * biases along number of kernels / no. output channels
+
+    // compute maximum number of rows that can be fitted at once in SRAM
+    // For now, we should be able to load at least W x Hk x I elements into memory (times NUM_THREADS for latency hiding)
+    // TODO add splitting along width?
+    const int maxinprows = static_cast<int>(std::floor(static_cast<float>(VTA_INP_BUFF_DEPTH) / static_cast<float>(dim("Io") * (dim("W") + 2 * dim("paddingW")))));
+    // maximum number of output channels depends on how many Wk x Hk x Io kernels we can fit in the WGT buffer
+    // TODO introduce more granularity
+    const int maxoutchannels = static_cast<int>(std::floor(static_cast<float>(VTA_WGT_BUFF_DEPTH) / static_cast<float>(dim("Io") * dim("Wk") * dim("Hk"))));
+    // The ACC SRAM needs to fit two things in it - intermediate outputs, and the bias. This also multiplied by two, since we do latency hiding
+    // NOTE For now we assume that we want to store whole output row, later it may require more "sophisticated" approach
+    const int maxoutrows = static_cast<int>(std::floor(static_cast<float>(VTA_ACC_BUFF_DEPTH) / static_cast<float>(dim("Oo") * dim("Wo") + dim("O"))));
+    bool storefailure = false;
+    if (maxinprows == 0)
+    {
+        spdlog::critical("Cannot fit a single input row:  VTA_INP_BUFF_DEPTH={}, tensor to store=[{}x({}+2*{})x{}]", VTA_INP_BUFF_DEPTH, dim("Io"), dim("W"), dim("paddingW"), dim("Ii"));
+        storefailure = true;
+    }
+    if (maxoutchannels == 0)
+    {
+        spdlog::critical("Cannot fit a single convolution kernel:  VTA_WGT_BUFF_DEPTH={}, tensor to store=[{}x{}x{}x{}]", VTA_WGT_BUFF_DEPTH, dim("Hk"), dim("Wk"), dim("Oi"), dim("Ii"));
+        storefailure = true;
+    }
+    if (maxoutrows == 0)
+    {
+        spdlog::critical("Cannot fit a single output row:  VTA_ACC_BUFF_DEPTH={}, tensor to store=[{}x{}x{}+{}]", VTA_ACC_BUFF_DEPTH, dim("Oo"), dim("Wo"), dim("Oi"), dim("O"));
+        storefailure = true;
+    }
+    if (storefailure)
+    {
+        return TfLiteStatus::kTfLiteDelegateError;
+    }
+
     // Create a command handler for VTA
     auto cmd = VTATLSCommandHandle();
 
     // Create DRAM buffers for inputs, weights and outputs
     auto *inpbuf = VTABufferAlloc(sizeof(int8_t) * inpelemsfull);
     auto *wgtbuf = VTABufferAlloc(sizeof(int8_t) * wgtelemsfull);
-    auto *outbuf = VTABufferAlloc(sizeof(int32_t) * outelemsfull); // TODO int32
+    auto *biasbuf = VTABufferAlloc(sizeof(int32_t) * dim("Oaligned"));
+    auto *outbuf = VTABufferAlloc(sizeof(int8_t) * outelemsfull);
 
-    // TODO consider tiling here?
     VTABufferCopy(inparray.data(), 0, inpbuf, 0, sizeof(int8_t) * inpelemsfull, VTA_MEMCPY_H2D);
-    VTABufferCopy(wgtarray.data(), 0, wgtbuf, 0, sizeof(int8_t) * wgtelemsfull, VTA_MEMCPY_H2D);
+    VTABufferCopy(wgtarray.data(), 0, wgtbuf, 0, sizeof(int8_t) * dim("Oaligned"), VTA_MEMCPY_H2D);
+    VTABufferCopy(biasarray.data(), 0, biasbuf, 0, sizeof(int32_t) * wgtelemsfull, VTA_MEMCPY_H2D);
 
-    // Sync for finishing the processing
+    VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
     VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
+    // Sync for finishing the processing
+    // VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
 
     // Sync for fetching the data
-    VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
+    // VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
 
     // The looping below does not perform computations, only creates commands that
     // are executed asynchronously
 
-    // Splitting along height
-    // TODO improve splitting height dimension
-    const int hthreads = NUM_THREADS;
     // Virtual threads for latency hiding
-    const int vthreads = NUM_THREADS;
+    // const int vthreads = NUM_THREADS;
+
+    // Maximum number of rows that can be processed is limited by either INP or ACC SRAM
+    const int maxnumrows = std::min(maxinprows, maxoutrows);
+
+    const int numthreads = maxnumrows / NUM_THREADS > 0 ? NUM_THREADS : 1;
+
+    const int rowsperthread = maxnumrows / numthreads;
+
+    const int numrows = dim("H");
+
+    int ochanid = 0;
+    const int numoutputchannels = dim("Oo");
+
+    // let's iterate over samples
+    for (int No = 0; No < dim("No"); No++)
+    {
+        while (ochanid < numoutputchannels)
+        {
+            // compute number of output kernels that will be loaded to WGT SRAM
+            int curroutchannels = std::min(numoutputchannels - ochanid, maxoutchannels);
+            // pop kernel dependency TODO
+            // copy weights to WGT SRAM
+            VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
+            VTALoadBuffer2D(
+                cmd, // cmd
+                wgtbuf, // src_dram_addr
+                ochanid, // src_elem_offset
+                curroutchannels * tensorElements({"Hk", "Wk"}), // x_size
+                dim("Io"), // y_size
+                tensorElements({"Hk", "Wk", "Io"}), // x_stride
+                0, // x_pad_before
+                0, // y_pad_before
+                0, // x_pad_after
+                0, // y_pad_after
+                0, //dst_sram_index
+                VTA_MEM_ID_WGT // dst_memory_type
+            );
+            // copy bias to ACC SRAM (we store it in 0-index of ACC)
+            VTALoadBuffer2D(
+                cmd, // cmd
+                biasbuf, // src_dram_addr
+                ochanid, // src_elem_offset
+                curroutchannels, // x_size
+                1, // y_size
+                1, // x_stride
+                0, // x_pad_before
+                0, // y_pad_before
+                0, // x_pad_after
+                0, // y_pad_after
+                0, //dst_sram_index
+                VTA_MEM_ID_ACC // dst_memory_type
+            );
+
+            // start iterating over rows
+            int rowid = 0;
+            while (rowid < numrows)
+            {
+                for (int threadid = 0; threadid < numthreads; threadid++)
+                {
+                    if (rowid >= numrows)
+                    {
+                        continue;
+                    }
+                    int ypadbefore = std::max(0, dim("paddingH") - rowid);
+                    int ypadafter = std::max(0, std::min(dim("paddingH"), rowid + maxnumrows - numrows));
+                    // TODO verify the end
+                    int rowstoprocess = std::min(numrows - rowid, maxnumrows - ypadbefore - ypadafter);
+                    // pop input dependency TODO add push
+                    VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
+                    VTALoadBuffer2D(
+                        cmd, // cmd
+                        inpbuf + No * tensorElements({"H", "W", "I"}), // src_dram_addr
+                        threadid * rowsperthread, // src_elem_offset
+                        dim("Wi"), // x_size
+                        rowstoprocess, // y_size
+                        dim("Wi"), // x_stride
+                        dim("paddingW"), // x_pad_before
+                        ypadbefore, // y_pad_before
+                        dim("paddingW"), // x_pad_after
+                        ypadafter, // x_pad_after
+                        0, // dst_sram_index
+                        VTA_MEM_ID_INP // dst_memory_type
+                    );
+                    // We now have:
+                    // * kernels and biases for output channels (as much as we could fit into SRAM)
+                    // * as much input rows as fit in SRAM
+                    // We will compute now as much output tensor rows as possible
+
+                    // reset the ACC for CONV2D operation TODO add push
+                    VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
+                    // wrap micro-op schedule functions in lambda function
+                    auto gemmreset = [rowstoprocess, curroutchannels, Wo=dim("Wo"), rowid, ochanid](void *signature) -> int {
+                        VTAUopLoopBegin(curroutchannels, rowstoprocess * Wo, 0, 0);
+                        VTAUopLoopBegin(rowstoprocess, Wo, 0, 0);
+                        for (int w = 0; w < Wo; w++)
+                        {
+                            VTAUopPush(
+                                VTA_UOP_GEMM,                      // mode
+                                1,                                 // reset_out
+                                // till curroutchannels we have bias
+                                curroutchannels + w,               // dst_index
+                                0, // src_index
+                                0,                                 // wgt_index
+                                0,                // opcode
+                                0,                                 // use_imm
+                                0 // imm_val
+                            );
+                        }
+                        VTAUopLoopEnd();
+                        VTAUopLoopEnd();
+                    };
+                    void *map = nullptr;
+                    VTAPushGEMMOp(
+                        &map,
+                        gemmreset,
+                        nullptr,
+                        0
+                    );
+                    // Now, let's move to computations
+                    auto gemmcomp = [rowstoprocess, curroutchannels, Wo=dim("Wo"), rowid, ochanid, Wk=dim("Wk"), Hk=dim("Hk"), Wi=dim("Wi"), paddingW=dim("paddingW"), Io=dim("Io")](void *signature) -> int {
+                        // Using micro-op loops
+                        // extent, dst_factor, src_factor, wgt_factor
+                        VTAUopLoopBegin(curroutchannels, rowstoprocess * Wo, 0, Wk * Hk * Io);
+                        VTAUopLoopBegin(rowstoprocess, Wo, Wi + paddingW * 2, 0);
+                        for (int hk = 0; hk < Hk; hk++)
+                        {
+                            for (int wk = 0; wk < Wk; wk++)
+                            {
+                                for (int wo = 0; wo < Wo; wo++)
+                                {
+                                    VTAUopPush(
+                                        VTA_UOP_GEMM,                      // mode
+                                        0,                                 // reset_out
+                                        curroutchannels + wo,               // dst_index
+                                        rowid * (Wi + paddingW * 2) + hk * (Wi + paddingW * 2) + wo + wk, // src_index
+                                        hk * Wk + wk,                                 // wgt_index
+                                        0,                // opcode
+                                        0,                                 // use_imm
+                                        0 // imm_val
+                                    );
+                                }
+                            }
+                        }
+                    };
+                    map = nullptr;
+                    VTAPushGEMMOp(
+                        &map,
+                        gemmcomp,
+                        nullptr,
+                        0
+                    );
+                    rowid += rowstoprocess;
+                }
+            }
+            ochanid += curroutchannels;
+        }
+    }
+
 
     // output: No HOo COoo WOo COoi HOi WOi Ni COi
     for (int No = 0; No < dim("No"); No++)
