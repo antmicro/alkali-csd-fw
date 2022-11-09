@@ -311,7 +311,7 @@ TfLiteStatus VTAALUOp::aluAdd()
     // NUM_THREADS is used for latency hiding
     // 2 stands for input/result and the second input
     // maxelements tells how many elements can fit at once in a single pass
-    int maxelements = VTA_ACC_BUFF_DEPTH / NUM_THREADS / 2 * 16;
+    int maxelements = VTA_ACC_BUFF_DEPTH / NUM_THREADS / 2 * VTA_BLOCK_OUT;
     spdlog::debug("VTA_ACC_BUFF_DEPTH:  {}  MAX ELEMENTS:  {}", VTA_ACC_BUFF_DEPTH, maxelements);
 
     VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
