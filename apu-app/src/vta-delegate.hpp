@@ -434,6 +434,8 @@ class VTAGEMMOp : public VTAOp
 
         QuantizationData inputquant; ///< stores input quantization data, here only offset
         std::vector<QuantizationData> filtersquant; ///< stores multipliers per output channel
+        std::vector<int32_t> shifts; ///< stores shifts from filtersquant
+        std::vector<int32_t> multipliers; ///< stores multipliers from filtersquant
         QuantizationData outputquant; ///< stores output quantization data, here only offset
 };
 
