@@ -341,6 +341,7 @@ docker/clean:
 enter: ## enter the development docker image
 	docker run \
 		--rm \
+		--privileged \
 		-v $(PWD):$(PWD) \
 		-v /etc/passwd:/etc/passwd \
 		-v /etc/group:/etc/group \
