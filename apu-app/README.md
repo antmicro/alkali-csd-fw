@@ -39,6 +39,14 @@ It is not a hardware-accurate simulation, it is only a C++ implementation of VTA
 ## Building tests for VTA delegate
 
 Tests are implemented with Google Test framework.
+In addition to this, TensorFlow Lite models are generated in the build directory using `scripts/simple-models.py` and `scripts/convert-to-tflite.py` scripts.
+
+Firstly, requirements need to be installed with:
+
+```
+python3 -m pip install -r requirements.txt
+```
+
 To build tests for VTA-accelerated operations in VTA delegate, run CMake with the `-DBUILD_TESTS=ON` flag:
 
 ```bash
