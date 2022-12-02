@@ -38,6 +38,7 @@ static int send_cmd(nvme_cmd_priv_t *priv)
 	int ret = rpmsg_send(&priv->tc->lept, msg, msg_size);
 	if(ret != msg_size) {
 		LOG_ERR("Failed to send rpmsg message: %d", ret);
+		k_free(msg);
 		return -1;
 	}
 
