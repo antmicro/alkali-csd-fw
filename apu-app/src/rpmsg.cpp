@@ -44,6 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <string.h>
 #include <linux/rpmsg.h>
+#include <spdlog/spdlog.h>
 
 #define DEV_NAME "virtio0.rpmsg-openamp-nvme-channel.-1.0"
 #define EPT_NAME "rpmsg-openamp-nvme-channel"
@@ -55,7 +56,7 @@ static int rpmsg_create_ept(int rpfd, struct rpmsg_endpoint_info *eptinfo)
 
 	ret = ioctl(rpfd, RPMSG_CREATE_EPT_IOCTL, eptinfo);
 	if (ret)
-		perror("Failed to create endpoint.\n");
+		spdlog::error("Failed to create endpoint.");
 	return ret;
 }
 
@@ -73,17 +74,17 @@ static char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 	for (i = 0; i < 128; i++) {
 		sprintf(sys_rpmsg_ept_name_path, "%s/%s/rpmsg%d/name",
 			sys_rpmsg_path, rpmsg_char_name, i);
-		printf("checking %s\n", sys_rpmsg_ept_name_path);
+		spdlog::info("checking {}", sys_rpmsg_ept_name_path);
 		if (access(sys_rpmsg_ept_name_path, F_OK) < 0)
 			continue;
 		fp = fopen(sys_rpmsg_ept_name_path, "r");
 		if (!fp) {
-			printf("failed to open %s\n", sys_rpmsg_ept_name_path);
+			spdlog::error("failed to open {}", sys_rpmsg_ept_name_path);
 			break;
 		}
 		fgets(svc_name, sizeof(svc_name), fp);
 		fclose(fp);
-		printf("svc_name: %s.\n",svc_name);
+		spdlog::debug("svc_name: {}.",svc_name);
 		ept_name_len = strlen(ept_name);
 		if (ept_name_len > (int)sizeof(svc_name))
 			ept_name_len = sizeof(svc_name);
@@ -93,7 +94,7 @@ static char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 		}
 	}
 
-	printf("not able to rpmsg endpoint file for %s:%s.\n",
+	spdlog::warn("not able to rpmsg endpoint file for {}:{}.",
 	       rpmsg_char_name, ept_name);
 	return NULL;
 }
@@ -160,7 +161,7 @@ static int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name,
 	while ((ent = readdir(dir)) != NULL) {
 		if (!strncmp(ent->d_name, rpmsg_ctrl_prefix,
 			    strlen(rpmsg_ctrl_prefix))) {
-			printf("Opening file %s.\n", ent->d_name);
+			spdlog::debug("Opening file {}.", ent->d_name);
 			sprintf(fpath, "/dev/%s", ent->d_name);
 			fd = open(fpath, O_RDWR | O_NONBLOCK);
 			if (fd < 0) {
@@ -189,7 +190,7 @@ int rpmsg_init()
 	int ret;
 	int fd;
 
-	printf("rpmsg initialization start\n");
+	spdlog::debug("rpmsg initialization start");
 
 	sprintf(fpath, "%s/devices/%s", RPMSG_BUS_SYS, DEV_NAME);
 	if (access(fpath, F_OK)) {
@@ -212,7 +213,7 @@ int rpmsg_init()
 	eptinfo.dst = 1;
 	ret = rpmsg_create_ept(charfd, &eptinfo);
 	if (ret) {
-		printf("failed to create RPMsg endpoint.\n");
+		spdlog::error("failed to create RPMsg endpoint.");
 		return -EINVAL;
 	}
 	if (!get_rpmsg_ept_dev_name(rpmsg_char_name, eptinfo.name,

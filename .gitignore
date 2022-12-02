@@ -5,3 +5,7 @@ build/
 
 # Ignore generated files
 rpu-app/src/nvme_*
+
+tags
+
+**/compile_commands.json

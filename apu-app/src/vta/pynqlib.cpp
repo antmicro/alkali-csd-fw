@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <spdlog/spdlog.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,24 +59,27 @@ typedef struct cma_mem {
 
 unsigned long xlnkGetBufPhyAddr(void*);
 
-static int xlnkfd;
+static int xlnkfd = 0;
 
 std::vector<cma_mem_t*> maps;
 
 void cma_init(void) {
+    spdlog::info("Running cma_init");
     xlnkfd = open(XLNK_PATH, O_RDWR | O_CLOEXEC);
     if (xlnkfd < 0) {
-        printf("Reset failed - could not open device: %s(%d)\n", XLNK_PATH, xlnkfd);
+        spdlog::error("Reset failed - could not open device: {}({})", XLNK_PATH, xlnkfd);
         return;
     }
     if (ioctl(xlnkfd, RESET_IOCTL, 0) < 0) {
-        printf("Reset failed - IOCTL failed: %d\n", errno);
+        spdlog::error("Reset failed - IOCTL failed: {}", errno);
     }
-    printf("Succesfully opened XLNK device (%s, %d)\n", XLNK_PATH, xlnkfd);
+    spdlog::info("Succesfully opened XLNK device ({}, {})", XLNK_PATH, xlnkfd);
 }
 
 void cma_clean(void) {
+    spdlog::info("Running cma_clean");
     close(xlnkfd);
+    spdlog::info("Successfully cleaned CMA");
 }
 
 static void *cma_mmap(int32_t id, uint32_t len) {
@@ -89,7 +93,7 @@ void *cma_alloc(uint32_t len, uint32_t cacheable) {
     arg.allocbuf.cacheable = cacheable ? 1 : 0;
 
     if (ioctl(xlnkfd, ALLOC_IOCTL, &arg) < 0) {
-        printf("Alloc failed - IOCTL failed: %d\n", errno);
+        spdlog::error("Alloc failed - IOCTL failed: {} (xlnkfd = {})", errno, xlnkfd);
 	return NULL;
     }
 
@@ -123,7 +127,7 @@ void cma_free(void *buf) {
             munmap((*it)->virt, (*it)->len);
 
             if (ioctl(xlnkfd, FREE_IOCTL, &arg) < 0) {
-                printf("Free failed - IOCTL failed: %d\n", errno);
+                spdlog::error("Free failed - IOCTL failed: {}", errno);
             }
 
             maps.erase(it);

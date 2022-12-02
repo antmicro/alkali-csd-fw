@@ -30,6 +30,7 @@
 #include <unordered_map>
 #include <cstring>
 #include <sstream>
+#include <spdlog/spdlog.h>
 
 #include "vta/virtual_memory.h"
 
@@ -350,7 +351,7 @@ class Device {
       case VTA_OPCODE_ALU: device->RunALU(alu); break;
       case VTA_OPCODE_FINISH: ++(device->finish_counter_); break;
       default: {
-        LOG(FATAL) << "Unknown op_code" << mem->opcode;
+        spdlog::critical("Unknown op_code:  {}", mem->opcode);
       }
     }
   }
@@ -379,7 +380,7 @@ class Device {
     } else if (op->memory_type == VTA_MEM_ID_ACC_8BIT) {
       acc_.Load_int8(op, dram_, &(prof_->acc_load_nbytes), prof_->SkipExec());
     } else {
-      LOG(FATAL) << "Unknown memory_type=" << op->memory_type;
+      spdlog::critical("Unknown memory_type:  {}", op->memory_type);
     }
   }
 
@@ -392,8 +393,7 @@ class Device {
         acc_.TruncStore<VTA_OUT_WIDTH>(op, dram_);
       }
     } else {
-      LOG(FATAL) << "Store do not support memory_type="
-                 << op->memory_type;
+      spdlog::critical("Store do not support memory_type:  {}", op->memory_type);
     }
   }
 
@@ -493,7 +493,7 @@ class Device {
           });
       }
       default: {
-        LOG(FATAL) << "Unknown ALU code " << op->alu_opcode;
+        spdlog::critical("Unknown ALU code:  {}", op->alu_opcode);
       }
     }
   }
@@ -580,6 +580,14 @@ int VTADeviceRun(VTADeviceHandle handle,
                  uint32_t wait_cycles) {
   return static_cast<vta::sim::Device*>(handle)->Run(
       insn_phy_addr, insn_count, wait_cycles);
+}
+
+void VTAStartCommunication()
+{
+}
+
+void VTAEndCommunication()
+{
 }
 
 void VTAProgram(const char* bitstream) {

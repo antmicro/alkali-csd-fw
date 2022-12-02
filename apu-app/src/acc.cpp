@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <algorithm>
 
+#include <spdlog/spdlog.h>
+
 std::vector<Acc *> accelerators;
 
 Acc::Acc(unsigned int id)
@@ -32,14 +34,14 @@ void Acc::runBPF(void)
 	char *errmsg;
 	int ret;
 
-	printf("[ACC#%d] Starting\n", id);
+	spdlog::info("[ACC#{}] Starting", id);
 
 	state = AccState::running;
 
 	struct ubpf_vm *vm = ubpf_create();
 
 	if(!vm) {
-		printf("[ACC#%d] Failed to create VM!\n", id);
+		spdlog::error("[ACC#{}] Failed to create VM!", id);
 		state = AccState::fail;
 		return;
 	}
@@ -49,7 +51,7 @@ void Acc::runBPF(void)
 	ret = ubpf_load_elf(vm, firmware.data(), firmware.size(), &errmsg);
 
 	if(ret) {
-		printf("[ACC#%d] Failed to load code: %s\n", id, errmsg);
+		spdlog::error("[ACC#{}] Failed to load code: {}\n", id, errmsg);
 		state = AccState::fail;
 		free(errmsg);
 		return;
@@ -73,7 +75,7 @@ void Acc::runBPF(void)
 
 	state = AccState::done;
 
-	printf("[ACC#%d] Finished: %d\n", id, ret);
+	spdlog::info("[ACC#{}] Finished: {}\n", id, ret);
 
 }
 

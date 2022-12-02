@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include "acc.h"
+#include <spdlog/spdlog.h>
 #define DEBUG
 
 std::map<unsigned int, std::vector<unsigned char>> fw_map;
@@ -19,8 +20,8 @@ typedef struct cmd_sq {
 	nvme_sq_entry_base_t base;
 	uint32_t cdw10;
 	uint32_t cdw11;
-	uint32_t cdw12;	
-	uint32_t cdw13;	
+	uint32_t cdw12;
+	uint32_t cdw13;
 } cmd_sq_t;
 
 void io_cmd_send_fw(payload_t *recv, unsigned char *buf)
@@ -29,22 +30,28 @@ void io_cmd_send_fw(payload_t *recv, unsigned char *buf)
 	const uint32_t len = cmd->cdw10*4;
 	const uint32_t id = cmd->cdw13;
 	assert(len == recv->buf_len); // For now we support only transfers that fit in a single buffer
-#ifdef DEBUG
-	printf("Received firmware (len: %d, id: %d)\n", len, id);
+	spdlog::debug("Received firmware (len: {}, id: {})", len, id);
+	std::string logbuf = "";
 	for(uint32_t i = 0; i < recv->buf_len; i++) {
-		printf("%02x ", buf[i]);
+		logbuf += fmt::format("{:02x} ", buf[i]);
 		if((i % 16) == 15)
-			printf("\n");
+		{
+			spdlog::debug(logbuf);
+			logbuf = "";
+		}
 	}
-	printf("\n");
+	if (!logbuf.empty())
+	{
+		spdlog::debug(logbuf);
+	}
 
-	printf("Map keys: ");
+	spdlog::debug("Map keys: ");
+	logbuf = "";
 	for(auto it = fw_map.begin(); it != fw_map.end(); it++) {
-		printf("%d ", it->first);
+		logbuf += fmt::format("{} ", it->first);
 	}
 
-	printf("\n");
-#endif
+	spdlog::debug(logbuf);
 	std::vector<unsigned char> fw(buf, buf+recv->buf_len);
 	fw_map[id] = std::move(fw);
 }

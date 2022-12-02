@@ -23,9 +23,12 @@ set(UBPF_ENABLE_INSTALL ON)
 
 add_subdirectory(third-party/tensorflow/tensorflow/lite/)
 add_subdirectory(third-party/ubpf/)
+add_subdirectory(third-party/spdlog/)
 
 if (BUILD_TESTS)
+    enable_testing()
     add_subdirectory(third-party/googletest/)
+    message(STATUS "Added testing")
 endif()
 
 include_directories(src third-party/tensorflow third-party/ubpf/vm/inc)
@@ -36,6 +39,7 @@ add_library(bpf-vm-utils SHARED
         src/vm/register.cpp
 )
 target_link_libraries(bpf-vm-utils
+    spdlog
     tensorflow-lite
     ubpf
 )
@@ -72,14 +76,20 @@ else()
     )
 endif()
 
+target_link_libraries(vta-driver
+    spdlog
+)
+
 # Build VTA delegate
 add_library(vta-delegate SHARED
-    src/tflite-delegate.cpp
+    src/vta-delegate.cpp
+    src/vta-delegate-ops.cpp
     third-party/tensorflow/tensorflow/lite/delegates/utils/simple_delegate.cc
 )
 target_link_libraries(vta-delegate
     tensorflow-lite
     vta-driver
+    spdlog
 )
 
 if (NOT NO_HARDWARE)
@@ -92,6 +102,7 @@ if (NOT NO_HARDWARE)
         ubpf
         Threads::Threads
         vta-delegate
+        spdlog
     )
     install(
         TARGETS
@@ -101,22 +112,70 @@ if (NOT NO_HARDWARE)
 endif()
 
 # Build TFLite delegate test app
-add_executable(tflite-delegate-test
-    src/tflite-test.cpp
+add_executable(vta-delegate-test
+    src/tflite-vta-test.cpp
 )
-target_link_libraries(tflite-delegate-test
+target_link_libraries(vta-delegate-test
     vta-delegate
+    spdlog
 )
+
+if (BUILD_TESTS)
+    add_custom_target(
+        generate-onnx-models
+        COMMAND
+            ${PROJECT_SOURCE_DIR}/scripts/simple-models.py ${CMAKE_BINARY_DIR}/test-models --skip-existing
+        SOURCES
+            ${PROJECT_SOURCE_DIR}/scripts/simple-models.py
+        COMMENT "Generating ONNX models"
+        BYPRODUCTS
+            "${CMAKE_BINARY_DIR}/test-models"
+            "${CMAKE_BINARY_DIR}/test-models"
+    )
+    add_custom_target(
+        generate-tflite-models
+        COMMAND
+            ${PROJECT_SOURCE_DIR}/scripts/convert-to-tflite.py ${CMAKE_BINARY_DIR}/test-models ${CMAKE_BINARY_DIR}/test-models --skip-existing
+        SOURCES
+            ${PROJECT_SOURCE_DIR}/scripts/convert-to-tflite.py
+        COMMENT "Converting ONNX models to TFLite"
+        BYPRODUCTS
+            "${CMAKE_BINARY_DIR}/test-models"
+            "${CMAKE_BINARY_DIR}/test-models"
+        DEPENDS
+            generate-onnx-models
+    )
+    add_executable(vta-delegate-test-runner
+        tests/basic-vta-delegate-tests.cpp
+        tests/add-tests.cpp
+        tests/conv2d-tests.cpp
+        tests/tests-main.cpp
+        tests/vta-gemm-test.cpp
+    )
+    target_link_libraries(vta-delegate-test-runner
+        gmock
+        gtest
+        stdc++fs
+        vta-delegate
+        spdlog
+    )
+    add_dependencies(vta-delegate-test-runner
+        generate-onnx-models
+        generate-tflite-models
+    )
+    add_test(vta-delegate-test vta-delegate-test-runner)
+endif()
 
 install(
     TARGETS
-        vta-driver
         vta-delegate
         bpf-vm-utils
+        vta-driver
+        spdlog
     DESTINATION lib
 )
 install(
     TARGETS
-        tflite-delegate-test
+        vta-delegate-test
     DESTINATION bin
 )

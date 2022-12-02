@@ -19,6 +19,8 @@
 #include <sys/ioctl.h>
 #include <mtd/mtd-user.h>
 
+#include <spdlog/spdlog.h>
+
 const char mtd_path[] = "/dev/mtd0";
 
 std::vector<unsigned char> fw_buffer;
@@ -42,12 +44,12 @@ static void flash_fw(const char *dev, std::vector<unsigned char> *buf)
 	int fd = open(dev, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
 
 	if(fd == -1) {
-		printf("Failed to open '%s'!\n", dev);
+		spdlog::error("Failed to open '{}'!", dev);
 		return;
 	}
 
 	if(ioctl(fd, MEMGETINFO, &mtd) < 0) {
-		printf("Failed to retrieve MTD device information!\n");
+		spdlog::error("Failed to retrieve MTD device information!");
 		return;
 	}
 
@@ -55,20 +57,20 @@ static void flash_fw(const char *dev, std::vector<unsigned char> *buf)
 	erase.length = mtd.size;
 
 	if(ioctl(fd, MEMERASE, &erase) < 0) {
-		printf("Failed to erase MTD device!\n");
+		spdlog::error("Failed to erase MTD device!");
 		return;
 	}
 
-	printf("Writing %d bytes of firmware to %s\n", tgt_len, dev);
+	spdlog::info("Writing %d bytes of firmware to {}", tgt_len, dev);
 
 	int len = write(fd, buf->data(), tgt_len);
 
 	close(fd);
 
 	if(tgt_len != len) {
-		printf("Failed to write %d bytes, ret: %d\n", tgt_len, len);
+		spdlog::error("Failed to write {} bytes, ret: {}", tgt_len, len);
 	} else {
-		printf("%d bytes written\n", len);
+		spdlog::info("{} bytes written", len);
 	}
 
 	delete buf;
@@ -97,8 +99,6 @@ void adm_cmd_fw_download(payload_t *recv, unsigned char *buf)
 		fw_buffer.resize((off+ndw)*4);
 	}
 
-#ifdef DEBUG
-	printf("FW download len: %d, off: %08x\n", ndw*4, off*4);
-#endif
+	spdlog::debug("FW download len: {}, off: {:08x}", ndw*4, off*4);
 	std::copy(buf, buf + ndw*4, fw_buffer.data()+off*4);
 }

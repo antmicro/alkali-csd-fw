@@ -65,6 +65,16 @@ typedef uint32_t vta_phy_addr_t;
 VTADeviceHandle VTADeviceAlloc();
 
 /*!
+ * \brief Prepares the communication with the VTA device
+ */
+void VTAStartCommunication();
+
+/*!
+ * \brief Cleans the communication after the VTA device
+ */
+void VTAEndCommunication();
+
+/*!
  * \brief Free a device handle
  * \param handle The device handle to be freed.
  */

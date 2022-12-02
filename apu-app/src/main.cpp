@@ -15,6 +15,8 @@
 #include "acc.h"
 #include "vta/tf_driver.h"
 
+#include <spdlog/spdlog.h>
+
 int rpmsg_init(void);
 
 static void setup_acc(void)
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
 					handle_io_cmd(fd, recv);
 					break;
 				default:
-					printf("Unsupported command received! (id: %d, len: %d, priv: %08x)\n", recv->id, recv->len, recv->priv);
+					spdlog::warn("Unsupported command received! (id: {}, len: {}, priv: {:08x})", recv->id, recv->len, recv->priv);
 			}
 		}
 	}

@@ -10,6 +10,7 @@
 #include "acc.h"
 
 #include <cstdio>
+#include <spdlog/spdlog.h>
 
 void io_cmd_read_lba(payload_t *recv)
 {
@@ -19,19 +20,26 @@ void io_cmd_read_lba(payload_t *recv)
 	const uint64_t addr = (lba * RAMDISK_PAGE) + RAMDISK_BASE;
 	const uint32_t id = cmd->cdw15;
 #ifdef DEBUG
-	printf("Read LBA: %lu, addr: 0x%lx, len: %d, id: %d\n", lba, addr, len, id);
+	spdlog::debug("Read LBA: {}, addr: {:02x}, len: {}, id: {}", lba, addr, len, id);
 
 #ifdef BUFFER_TEST
 	unsigned char *buf;
 	int fd = -1;
 
 	if(!mmap_buffer(addr, len*RAMDISK_PAGE, &fd, &buf)) {
+		std::string logbuf = "";
 		for(uint32_t i = 0; i < len*RAMDISK_PAGE; i++) {
-			printf("%02x ", buf[i]);
+			logbuf += fmt::format("{:02x} ", buf[i]);
 			if((i % 16) == 15)
-				printf("\n");
+			{
+				spdlog::debug(logbuf);
+				logbuf = "";
+			}
 		}
-		printf("\n");
+		if (!logbuf.empty())
+		{
+			spdlog::debug(logbuf);
+		}
 		mmap_cleanup(len*RAMDISK_PAGE, fd, buf);
 	}
 #endif
@@ -40,7 +48,7 @@ void io_cmd_read_lba(payload_t *recv)
 	if(accelerators.size() > id)
 		accelerators[id]->addRamdiskIn(addr, len*RAMDISK_PAGE);
 	else
-		printf("Invalid Accelerator ID! (%d)\n", id);
+		spdlog::error("Invalid Accelerator ID! ({})", id);
 }
 
 void io_cmd_write_lba(payload_t *recv)
@@ -51,20 +59,27 @@ void io_cmd_write_lba(payload_t *recv)
 	const uint64_t addr = (lba * RAMDISK_PAGE) + RAMDISK_BASE;
 	const uint32_t id = cmd->cdw15;
 #ifdef DEBUG
-	printf("Write LBA: %lu, addr: 0x%lx, len: %d, id: %d\n", lba, addr, len, id);
+	spdlog::debug("Write LBA: {}, addr: {:lx}, len: {}, id: {}", lba, addr, len, id);
 
 #ifdef BUFFER_TEST
 	unsigned char *buf;
 	int fd = -1;
 
 	if(!mmap_buffer(addr, len*RAMDISK_PAGE, &fd, &buf)) {
+	    	std::string logbuf = "";
 		for(uint32_t i = 0; i < len*RAMDISK_PAGE; i++) {
-			printf("%02x ", buf[i]);
+			logbuf += format::fmt("{:02x} ", buf[i]);
 			buf[i] = i;
 			if((i % 16) == 15)
-				printf("\n");
+			{
+				spdlog::debug(logbuf);
+				logbuf = "";
+			}
 		}
-		printf("\n");
+		if (!logbuf.empty())
+		{
+			spdlog::debug(logbuf);
+		}
 		mmap_cleanup(len*RAMDISK_PAGE, fd, buf);
 	}
 #endif
@@ -73,5 +88,5 @@ void io_cmd_write_lba(payload_t *recv)
 	if(accelerators.size() > id)
 		accelerators[id]->addRamdiskOut(addr, len*RAMDISK_PAGE);
 	else
-		printf("Invalid Accelerator ID! (%d)\n", id);
+		spdlog::error("Invalid Accelerator ID! ({})", id);
 }

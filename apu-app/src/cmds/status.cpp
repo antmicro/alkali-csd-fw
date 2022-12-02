@@ -8,6 +8,7 @@
 #include "cmd.h"
 #include "nvme.h"
 #include "acc.h"
+#include <spdlog/spdlog.h>
 
 #include <cstdio>
 #include <cstring>
@@ -54,17 +55,15 @@ void adm_cmd_status(payload_t *recv, unsigned char *buf)
 	cmd_sq_t *cmd = (cmd_sq_t*)recv->data;
 	const uint32_t id = cmd->cdw12.id;
 	const bool rae = cmd->cdw12.rae;
-#ifdef DEBUG
-	printf("Status requested, id: %d, rae: %d\n", id, rae);
-#endif
+	spdlog::debug("Status requested, id: {}, rae: {}", id, rae);
 	if(id >= accelerators.size()) {
-		printf("Invalid Accelerator ID! (%u)\n", id);
+		spdlog::error("Invalid Accelerator ID! ({})", id);
 		return;
 	}
 
 	if(!rae)
 		calculate_status(id);
 
-	if(recv->buf_len <= sizeof(heads[0])) 
+	if(recv->buf_len <= sizeof(heads[0]))
 		memcpy(buf, &heads[id], recv->buf_len);
 }

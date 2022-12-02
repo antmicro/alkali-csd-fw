@@ -40,6 +40,13 @@
 
 #define ALLOC_ALIGNMENT 64
 
+namespace vta
+{
+
+enum PipelineStage : int { kNoneStage = 0, kLoadStage = 1, kComputeStage = 2, kStoreStage = 3 };
+
+};
+
 /*!
  * \brief Allocate data buffer.
  * \param size Buffer size.
@@ -130,11 +137,20 @@ void VTASetDebugMode(VTACommandHandle cmd, int debug_flag);
  * \param dst_sram_index Destination SRAM index.
  * \param dst_memory_type Destination memory type.
  */
-void VTALoadBuffer2D(VTACommandHandle cmd, void* src_dram_addr, uint32_t src_elem_offset,
-                             uint32_t x_size, uint32_t y_size, uint32_t x_stride,
-                             uint32_t x_pad_before, uint32_t y_pad_before, uint32_t x_pad_after,
-                             uint32_t y_pad_after, uint32_t dst_sram_index,
-                             uint32_t dst_memory_type);
+void VTALoadBuffer2D(
+    VTACommandHandle cmd,
+    void* src_dram_addr,
+    uint32_t src_elem_offset,
+    uint32_t x_size,
+    uint32_t y_size,
+    uint32_t x_stride,
+    uint32_t x_pad_before,
+    uint32_t y_pad_before,
+    uint32_t x_pad_after,
+    uint32_t y_pad_after,
+    uint32_t dst_sram_index,
+    uint32_t dst_memory_type
+);
 
 /*!
  * \brief Perform a 2D data store into DRAM

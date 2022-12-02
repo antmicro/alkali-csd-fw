@@ -11,9 +11,11 @@
 
 #include "vta/tf_driver.h"
 
-#include "tflite-delegate.hpp"
+#include "vta-delegate.hpp"
 
 #include <memory>
+
+#include <spdlog/spdlog.h>
 
 static const char model_path[] = "/bin/model.tflite";
 
@@ -26,7 +28,7 @@ int main(int argc, char *argv[])
 
     tflite::InterpreterBuilder(*model, resolver)(&interpreter);
 
-    std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteCustomDelegateDelete)> delegate(tflite::TfLiteCustomDelegateCreate(NULL), &tflite::TfLiteCustomDelegateDelete);
+    std::unique_ptr<TfLiteDelegate, decltype(&tflite::TfLiteVTADelegateDelete)> delegate(tflite::TfLiteVTADelegateCreate(NULL), &tflite::TfLiteVTADelegateDelete);
 
     interpreter->ModifyGraphWithDelegate(std::move(delegate));
 
@@ -43,7 +45,7 @@ int main(int argc, char *argv[])
 
     int8_t *out = interpreter->typed_output_tensor<int8_t>(0);
 
-    printf("output: %d %d\n", out[0], out[1]);
+    spdlog::info("output: {} {}", out[0], out[1]);
 
     return 0;
 }

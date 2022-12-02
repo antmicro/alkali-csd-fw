@@ -153,12 +153,20 @@ class VTADevice {
 };
 
 VTADeviceHandle VTADeviceAlloc() {
-  //cma_init();
-  return new VTADevice();
+    return new VTADevice();
+}
+
+void VTAStartCommunication()
+{
+    cma_init();
+}
+
+void VTAEndCommunication()
+{
+    cma_clean();
 }
 
 void VTADeviceFree(VTADeviceHandle handle) {
-  //cma_clean();
   delete static_cast<VTADevice*>(handle);
 }
 
