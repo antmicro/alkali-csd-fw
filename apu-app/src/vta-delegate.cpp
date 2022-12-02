@@ -89,7 +89,7 @@ bool VTADelegate::IsNodeSupportedByDelegate(
     switch (registration->builtin_code)
     {
         case kTfLiteBuiltinAdd:
-        case kTfLiteBuiltinConv2d:
+        // case kTfLiteBuiltinConv2d: // FIXME uncomment once the CONV2D implementation is ready
             break;
         default:
             spdlog::warn("Skipped builtin code {}", registration->builtin_code);
