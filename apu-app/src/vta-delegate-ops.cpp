@@ -865,61 +865,61 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
             // copy weights to WGT SRAM
             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
             VTALoadBuffer2D(
-                cmd, // cmd
-                wgtbuf, // src_dram_addr
+                cmd,                                    // cmd
+                wgtbuf,                                 // src_dram_addr
                 ochanid * kernelparamsperoutputchannel, // src_elem_offset
-                curroutchannels * kernelsize, // x_size
-                dim("Io"), // y_size
-                1, // x_stride
-                0, // x_pad_before
-                0, // y_pad_before
-                0, // x_pad_after
-                0, // y_pad_after
-                biasmultiplieraccshift, //dst_sram_index
-                VTA_MEM_ID_WGT // dst_memory_type
+                curroutchannels * kernelsize,           // x_size
+                dim("Io"),                              // y_size
+                1,                                      // x_stride
+                0,                                      // x_pad_before
+                0,                                      // y_pad_before
+                0,                                      // x_pad_after
+                0,                                      // y_pad_after
+                biasmultiplieraccshift,                 //dst_sram_index
+                VTA_MEM_ID_WGT                          // dst_memory_type
             );
             // copy bias, multiplier and shift to ACC SRAM (we store it in 0-index of ACC)
             VTALoadBuffer2D(
-                cmd, // cmd
-                biasbuf, // src_dram_addr
-                ochanid, // src_elem_offset
+                cmd,             // cmd
+                biasbuf,         // src_dram_addr
+                ochanid,         // src_elem_offset
                 curroutchannels, // x_size
-                1, // y_size
-                1, // x_stride
-                0, // x_pad_before
-                0, // y_pad_before
-                0, // x_pad_after
-                0, // y_pad_after
-                0, //dst_sram_index
-                VTA_MEM_ID_ACC // dst_memory_type
+                1,               // y_size
+                1,               // x_stride
+                0,               // x_pad_before
+                0,               // y_pad_before
+                0,               // x_pad_after
+                0,               // y_pad_after
+                0,               //dst_sram_index
+                VTA_MEM_ID_ACC   // dst_memory_type
             );
             VTALoadBuffer2D(
-                cmd, // cmd
-                multiplierbuf, // src_dram_addr
-                ochanid, // src_elem_offset
+                cmd,             // cmd
+                multiplierbuf,   // src_dram_addr
+                ochanid,         // src_elem_offset
                 curroutchannels, // x_size
-                1, // y_size
-                1, // x_stride
-                0, // x_pad_before
-                0, // y_pad_before
-                0, // x_pad_after
-                0, // y_pad_after
-                maxoutchannels, //dst_sram_index
-                VTA_MEM_ID_ACC // dst_memory_type
+                1,               // y_size
+                1,               // x_stride
+                0,               // x_pad_before
+                0,               // y_pad_before
+                0,               // x_pad_after
+                0,               // y_pad_after
+                maxoutchannels,  //dst_sram_index
+                VTA_MEM_ID_ACC   // dst_memory_type
             );
             VTALoadBuffer2D(
-                cmd, // cmd
-                shiftbuf, // src_dram_addr
-                ochanid, // src_elem_offset
-                curroutchannels, // x_size
-                1, // y_size
-                1, // x_stride
-                0, // x_pad_before
-                0, // y_pad_before
-                0, // x_pad_after
-                0, // y_pad_after
+                cmd,                // cmd
+                shiftbuf,           // src_dram_addr
+                ochanid,            // src_elem_offset
+                curroutchannels,    // x_size
+                1,                  // y_size
+                1,                  // x_stride
+                0,                  // x_pad_before
+                0,                  // y_pad_before
+                0,                  // x_pad_after
+                0,                  // y_pad_after
                 maxoutchannels * 2, //dst_sram_index
-                VTA_MEM_ID_ACC // dst_memory_type
+                VTA_MEM_ID_ACC      // dst_memory_type
             );
             for (int rowid = 0; rowid < numrows; rowid += rowsperthread)
             {
@@ -938,15 +938,15 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     for (int wo = 0; wo < Wo; wo++)
                     {
                         VTAUopPush(
-                            VTA_UOP_GEMM,                      // mode
-                            1,                                 // reset_out
+                            VTA_UOP_GEMM,                // mode
+                            1,                           // reset_out
                             // till curroutchannels we have bias
-                            biasmultiplieraccshift + wo,               // dst_index
-                            0, // src_index
-                            0,                                 // wgt_index
-                            0,                // opcode
-                            0,                                 // use_imm
-                            0 // imm_val
+                            biasmultiplieraccshift + wo, // dst_index
+                            0,                           // src_index
+                            0,                           // wgt_index
+                            0,                           // opcode
+                            0,                           // use_imm
+                            0                            // imm_val
                         );
                     }
                     VTAUopLoopEnd();
@@ -965,18 +965,18 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
                     VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
                     VTALoadBuffer2D(
-                        cmd, // cmd
-                        inpbuf, // src_dram_addr
+                        cmd,                                                                        // cmd
+                        inpbuf,                                                                     // src_dram_addr
                         No * singleinputsize + ichanid * singleinputchannelsize + rowid * dim("W"), // src_elem_offset
-                        dim("W"), // x_size
-                        rowstoprocess, // y_size
-                        1, // x_stride TODO configure stride
-                        dim("paddingW"), // x_pad_before
-                        ypadbefore, // y_pad_before
-                        dim("paddingW"), // x_pad_after
-                        ypadafter, // x_pad_after
-                        0, // dst_sram_index
-                        VTA_MEM_ID_INP // dst_memory_type
+                        dim("W"),                                                                   // x_size
+                        rowstoprocess,                                                              // y_size
+                        dim("strideW"),                                                             // x_stride
+                        dim("paddingW"),                                                            // x_pad_before
+                        ypadbefore,                                                                 // y_pad_before
+                        dim("paddingW"),                                                            // x_pad_after
+                        ypadafter,                                                                  // x_pad_after
+                        0,                                                                          // dst_sram_index
+                        VTA_MEM_ID_INP                                                              // dst_memory_type
                     );
                     VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
                     // compute CONV2D on a given input channels for all available output channels on given rows
@@ -991,14 +991,14 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                                 for (int wo; wo < Wo; wo++)
                                 {
                                     VTAUopPush(
-                                        VTA_UOP_GEMM,                      // mode
-                                        0,                                 // reset_out
-                                        biasmultiplieraccshift + wo,               // dst_index
-                                        hk * Wpadded + wo + wk, // src_index
-                                        hk * Wk + wk,                                 // wgt_index
-                                        0,                // opcode
-                                        0,                                 // use_imm
-                                        0 // imm_val
+                                        VTA_UOP_GEMM,                // mode
+                                        0,                           // reset_out
+                                        biasmultiplieraccshift + wo, // dst_index
+                                        hk * Wpadded + wo + wk,      // src_index
+                                        hk * Wk + wk,                // wgt_index
+                                        0,                           // opcode
+                                        0,                           // use_imm
+                                        0                            // imm_val
                                     );
                                 }
                             }
@@ -1022,14 +1022,14 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     for (int wo = 0; wo < Wo; wo++)
                     {
                         VTAUopPush(
-                            VTA_UOP_ALU,                      // mode
-                            0,                                 // reset_out
-                            biasmultiplieraccshift + wo,               // dst_index
-                            0, // src_index
-                            0,                                 // wgt_index
-                            VTA_ALU_OPCODE_ADD,                // opcode
-                            0,                                 // use_imm
-                            0 // imm_val
+                            VTA_UOP_ALU,                 // mode
+                            0,                           // reset_out
+                            biasmultiplieraccshift + wo, // dst_index
+                            0,                           // src_index
+                            0,                           // wgt_index
+                            VTA_ALU_OPCODE_ADD,          // opcode
+                            0,                           // use_imm
+                            0                            // imm_val
                         );
                     }
                     VTAUopLoopEnd();
@@ -1049,14 +1049,14 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     for (int wo = 0; wo < Wo; wo++)
                     {
                         VTAUopPush(
-                            VTA_UOP_ALU,                      // mode
-                            0,                                 // reset_out
-                            biasmultiplieraccshift + wo,               // dst_index
-                            Oo, // src_index
-                            0,                                 // wgt_index
-                            VTA_ALU_OPCODE_MUL,                // opcode
-                            0,                                 // use_imm
-                            0 // imm_val
+                            VTA_UOP_ALU,                 // mode
+                            0,                           // reset_out
+                            biasmultiplieraccshift + wo, // dst_index
+                            Oo,                          // src_index
+                            0,                           // wgt_index
+                            VTA_ALU_OPCODE_MUL,          // opcode
+                            0,                           // use_imm
+                            0                            // imm_val
                         );
                     }
                     VTAUopLoopEnd();
@@ -1076,14 +1076,14 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                     for (int wo = 0; wo < Wo; wo++)
                     {
                         VTAUopPush(
-                            VTA_UOP_ALU,                      // mode
-                            0,                                 // reset_out
-                            biasmultiplieraccshift + wo,               // dst_index
-                            Oo * 2, // src_index
-                            0,                                 // wgt_index
-                            VTA_ALU_OPCODE_SHR,                // opcode
-                            0,                                 // use_imm
-                            0 // imm_val
+                            VTA_UOP_ALU,                 // mode
+                            0,                           // reset_out
+                            biasmultiplieraccshift + wo, // dst_index
+                            Oo * 2,                      // src_index
+                            0,                           // wgt_index
+                            VTA_ALU_OPCODE_SHR,          // opcode
+                            0,                           // use_imm
+                            0                            // imm_val
                         );
                     }
                     VTAUopLoopEnd();
@@ -1101,14 +1101,14 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                 // store the current results in DRAM
                 VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
                 VTAStoreBuffer2D(
-                    cmd, // command handle
-                    biasmultiplieraccshift, // src_sram_index
-                    VTA_MEM_ID_OUT, // src_memory_type
-                    outbuf, // dst_dram_addr
+                    cmd,                                                                           // command handle
+                    biasmultiplieraccshift,                                                        // src_sram_index
+                    VTA_MEM_ID_OUT,                                                                // src_memory_type
+                    outbuf,                                                                        // dst_dram_addr
                     No * singleoutputsize + ochanid * singleoutputchannelsize + rowid * dim("Wo"), // dst_elem_offset
-                    curroutchannels * rowstoprocess * dim("Wo"), // FIXME x_size?
-                    1, // y_size
-                    1  // x_stride
+                    curroutchannels * rowstoprocess * dim("Wo"),                                   // FIXME x_size?
+                    1,                                                                             // y_size
+                    1                                                                              // x_stride
                 );
             }
         }
@@ -1133,280 +1133,6 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     );
 
     return kTfLiteOk;
-
-    // // output: No HOo COoo WOo COoi HOi WOi Ni COi
-    // for (int No = 0; No < dim("No"); No++)
-    // {
-    //     // We split the computations along height
-    //     // FIXME consider height == 1
-    //     for (int Hoo = 0; Hoo < hthreads; Hoo++)
-    //     {
-    //         int heightstep = dim("Ho") / hthreads;
-    //         // Let's start off with resetting the accumulator
-    //         // To hide latency, do it in two virtual threads, splitted along inner output channels
-    //         for (int threadid = 0; threadid < vthreads; threadid++)
-    //         {
-    //             VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
-    //             // wrap micro-op schedule functions in lambda function
-    //             auto lambda = [threadid, heightstep, Wo=dim("Wo"), Oi=dim("Oi")](void *signature) -> int {
-    //                 // the outer loop
-    //                 // TODO Oi may need to be replaced with tiled version
-    //                 int outstep = Oi / 2;
-    //                 VTAUopLoopBegin(outstep, heightstep * Wo, 0, 0);
-    //                 // the inner loop
-    //                 VTAUopLoopBegin(heightstep, Wo, 0, 0);
-    //                 // run vector operation
-    //                 // mode (0 for GEMM, 1 for ALU), reset (1 if reset accum to 0), input memory index, weight memory index (not used here), ALU opcode, use_imm (1 if use immediate mode in ALU), imm_val (immediate value in ALU)
-    //                 for (int w = 0; w < Wo; w++)
-    //                 {
-    //                     VTAUopPush(
-    //                         VTA_UOP_GEMM,
-    //                         1,
-    //                         threadid * heightstep * outstep * Wo + w,
-    //                         0,
-    //                         0,
-    //                         0,
-    //                         0,
-    //                         0
-    //                     );
-    //                 }
-    //                 // end inner loop
-    //                 VTAUopLoopEnd();
-    //                 // end outer loop
-    //                 VTAUopLoopEnd();
-    //                 return 0;
-    //             };
-
-    //             // create micro-op kernel for vector addition
-    //             // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
-    //             void *map = nullptr;
-    //             VTAPushGEMMOp(
-    //                 &map,
-    //                 lambda,
-    //                 nullptr,
-    //                 0
-    //             );
-    //             VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
-    //         }
-
-    //         // perform CONV2D
-    //         for (int Io = 0; Io < dim("Io"); Io++)
-    //         {
-    //             int outheightshift = Hoo * heightstep;
-    //             int wgtheightshift = Io * tensorElements({"Hk", "Wk"});
-    //             // TODO check paddings
-    //             int paddingheighttop = std::max(dim("paddingH") - outheightshift, 0);
-    //             int paddingheightbottom = std::max(outheightshift - (heightstep * (hthreads - 1) - dim("paddingH")), 0);
-    //             int inp_y_size = heightstep + dim("Hk") - 1 - paddingheighttop - paddingheightbottom;
-    //             int inpshift = Io * hthreads * heightstep * dim("Wi") + Hoo * heightstep * dim("Wi") + paddingheighttop * dim("Wi") - dim("paddingH") * dim("Wi");
-    //             // Data loading thread 1
-    //             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
-    //             // Load input data
-    //             VTALoadBuffer2D(
-    //                 cmd, // cmd
-    //                 inpbuf, // src_dram_addr
-    //                 inpshift, // src_elem_offset
-    //                 dim("Wi"), // x_size
-    //                 inp_y_size, // y_size
-    //                 dim("Wi"), // x_stride
-    //                 dim("paddingW"), // x_pad_before
-    //                 paddingheighttop, // y_pad_before
-    //                 dim("paddingW"), // x_pad_after
-    //                 paddingheightbottom, // y_pad_after
-    //                 0, //dst_sram_index
-    //                 VTA_MEM_ID_INP // dst_memory_type
-    //             );
-    //             // Load weights data
-    //             VTALoadBuffer2D(
-    //                 cmd, // cmd
-    //                 wgtbuf, // src_dram_addr
-    //                 wgtheightshift, // src_elem_offset
-    //                 tensorElements({"Hk", "Wk"}), // x_size
-    //                 dim("Ii") / 2, // y_size
-    //                 tensorElements({"Hk", "Wk", "Io"}), // x_stride
-    //                 0, // x_pad_before
-    //                 0, // y_pad_before
-    //                 0, // x_pad_after
-    //                 0, // y_pad_after
-    //                 0, //dst_sram_index
-    //                 VTA_MEM_ID_WGT // dst_memory_type
-    //             );
-    //             VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
-    //             VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
-    //             // Data loading thread 2
-    //             VTALoadBuffer2D(
-    //                 cmd, // cmd
-    //                 inpbuf, // src_dram_addr
-    //                 inpshift, // src_elem_offset
-    //                 dim("Wi"), // x_size
-    //                 inp_y_size, // y_size
-    //                 dim("Wi"), // x_stride
-    //                 dim("paddingW"), // x_pad_before
-    //                 paddingheighttop, // y_pad_before
-    //                 dim("paddingW"), // x_pad_after
-    //                 paddingheightbottom, // y_pad_after
-    //                 (dim("Wi") + 2 * dim("paddingW")) * (heightstep + dim("Hk") - 1), //dst_sram_index
-    //                 VTA_MEM_ID_INP // dst_memory_type
-    //             );
-    //             VTALoadBuffer2D(
-    //                 cmd, // cmd
-    //                 inpbuf, // src_dram_addr
-    //                 inpshift, // src_elem_offset
-    //                 dim("Wi"), // x_size
-    //                 inp_y_size, // y_size
-    //                 dim("Wi"), // x_stride
-    //                 dim("paddingW"), // x_pad_before
-    //                 paddingheighttop, // y_pad_before
-    //                 dim("paddingH"), // x_pad_after
-    //                 paddingheightbottom, // y_pad_after
-    //                 heightstep * dim("Wi"), // dst_sram_index
-    //                 VTA_MEM_ID_INP // dst_memory_type
-    //             );
-    //             // Load weights data
-    //             VTALoadBuffer2D(
-    //                 cmd, // cmd
-    //                 wgtbuf, // src_dram_addr
-    //                 wgtheightshift + tensorElements({"Hk", "Wk", "Io"}) * (dim("Ii") / 2), // src_elem_offset
-    //                 tensorElements({"Hk", "Wk"}), // x_size
-    //                 dim("Ii") / 2, // y_size
-    //                 tensorElements({"Hk", "Wk", "Io"}), // x_stride
-    //                 0, // x_pad_before
-    //                 0, // y_pad_before
-    //                 0, // x_pad_after
-    //                 0, // y_pad_after
-    //                 tensorElements({"Hk", "Wk"}) * (dim("Ii") / 2), //dst_sram_index
-    //                 VTA_MEM_ID_WGT // dst_memory_type
-    //             );
-    //             VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
-    //             for (int threadid = 0; threadid < vthreads; threadid++)
-    //             {
-    //                 VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
-    //                 auto lambda = [threadid, Wi=dim("Wi"), paddingW=dim("paddingW"), Oi=dim("Oi"), Wo=dim("Wo"), Hk=dim("Hk"), Wk=dim("Wk"), heightstep](void *signature) -> int {
-    //                     // the outer loop
-    //                     // TODO Oi may need to be replaced with tiled version
-    //                     VTAUopLoopBegin(Oi, heightstep * Wo, 0, Hk * Wk);
-    //                     // the inner loop
-    //                     VTAUopLoopBegin(heightstep, Wo, Wi + paddingW * 2, 0);
-    //                     // iterate over kernel height
-    //                     for (int hk = 0; hk < Hk; hk++)
-    //                     {
-    //                         // iterate over kernel width
-    //                         for (int wk = 0; wk < Wk; wk++)
-    //                         {
-    //                             // iterate over output width
-    //                             for (int wo = 0; wo < Wo; wo++)
-    //                             {
-    //                                 // TODO
-    //                                 VTAUopPush(
-    //                                     VTA_UOP_GEMM, // mode
-    //                                     0, // reset_out
-    //                                     threadid * Oi * heightstep * Wo + wo, //accum memory index
-    //                                     threadid * Oi * (Wi + paddingW * 2) + hk * (Wi + paddingW * 2) + wo + wk, // input memory index
-    //                                     threadid * heightstep *  + hk * Wk + wk, // weight memory index
-    //                                     0, // opcode, unused
-    //                                     0, // use_imm, unused
-    //                                     0  // imm_val, unused
-    //                                 );
-    //                             }
-    //                         }
-    //                     }
-    //                     for (int w = 0; w < Wo; w++)
-    //                     {
-    //                         VTAUopPush(
-    //                             VTA_UOP_GEMM,
-    //                             1,
-    //                             threadid * Oi * heightstep * Wo,
-    //                             0,
-    //                             0,
-    //                             0,
-    //                             0,
-    //                             0
-    //                         );
-    //                     }
-    //                     // end inner loop
-    //                     VTAUopLoopEnd();
-    //                     // end outer loop
-    //                     VTAUopLoopEnd();
-    //                     return 0;
-    //                 };
-
-    //                 // create micro-op kernel for vector addition
-    //                 // UopKernelMap object (can be nullptr), op definition, text signature, length of signature
-    //                 void *map = nullptr;
-    //                 VTAPushGEMMOp(
-    //                     &map,
-    //                     lambda,
-    //                     nullptr,
-    //                     0
-    //                 );
-    //                 VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
-    //             }
-    //         }
-    //         VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
-    //         VTADepPush(cmd, vta::kComputeStage, vta::kStoreStage);
-    //         VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
-    //         VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
-    //         // store results
-    //         const int outchanstep = dim("Oo") / vthreads;
-    //         for (int threadid = 0; threadid < vthreads; threadid++)
-    //         {
-    //             VTADepPop(cmd, vta::kComputeStage, vta::kStoreStage);
-    //             for (int o = 0; o < outchanstep; o++)
-    //             {
-    //                 for (int y = 0; y < heightstep; y++)
-    //                 {
-    //                     for (int x = 0; x < dim("Wo"); x++)
-    //                     {
-    //                         int widthshift = y * dim("Wo");
-    //                         VTAStoreBuffer2D(
-    //                             cmd, // command handle
-    //                             threadid * outchanstep * heightstep * dim("Wo")  + o * heightstep * dim("Wo") + widthshift + x, // src_sram_index
-    //                             VTA_MEM_ID_OUT, // src_memory_type
-    //                             outbuf, // dst_dram_addr
-    //                             threadid * outchanstep * dim("Ho") * dim("Wo") + o * dim("Ho") * dim("Wo") + y * heightstep * dim("Wo") + widthshift + x, // dst_elem_offset
-    //                             1, // FIXME x_size?
-    //                             1, // FIXME y_size?
-    //                             1  // FIXME x_stride?
-    //                         );
-    //                     }
-    //                 }
-    //             }
-    //             VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
-    //         }
-    //     }
-    // }
-
-    // // Sync for finishing the processing
-    // VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
-
-    // // Sync for fetching the data
-    // VTADepPop(cmd, vta::kStoreStage, vta::kComputeStage);
-
-    // // synchronize with VTA
-    // VTASynchronize(cmd, 1000);
-
-    // // TODO Handle this better
-    // std::vector<int32_t> outarraypreq(outelemsfull);
-    // VTABufferCopy(outbuf, 0, outarraypreq.data(), 0, sizeof(int32_t) * outelemsfull, VTA_MEMCPY_D2H);
-
-    // // requantize the outputs
-    // auto params = TfLiteTensorQuantizationParams(&outptr);
-    // // TODO handle this in VTA?
-    // for (int i = 0; i < outelemsfull; i++)
-    // {
-    //     // TODO make type configurable
-    //     outarray[outelemsfull] = static_cast<int8_t>((static_cast<float>(outarraypreq[i]) - params.zero_point) * params.scale);
-    // }
-
-    // permuteDims(
-    //     {"No", "Oo", "Ho", "Wo", "Ni", "Oi"},
-    //     {"No", "Ni", "Oo", "Oi", "Ho", "Wo"},
-    //     outarray.data(),
-    //     GetTensorData<uint8_t>(&outptr),
-    //     1 // TODO make size of input configurable
-    // );
-
-    // return kTfLiteOk;
 }
 
 void VTAGEMMOp::padData(
