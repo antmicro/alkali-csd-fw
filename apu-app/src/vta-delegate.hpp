@@ -152,10 +152,10 @@ public:
      */
     TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) override;
 
-    TfLiteContext *context = nullptr;
+    TfLiteContext *context = nullptr; ///< TFLite context for the delegate
 private:
-    std::vector<std::shared_ptr<VTAOp>> ops;
-    inline static std::shared_ptr<CommunicationContext> commcontext = nullptr;
+    std::vector<std::shared_ptr<VTAOp>> ops; ///< operations executed in the delegate
+    inline static std::shared_ptr<CommunicationContext> commcontext = nullptr; ///< communication context with the VTA hardware
 };
 
 /**
