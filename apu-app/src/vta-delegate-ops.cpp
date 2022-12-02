@@ -854,6 +854,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
     // let's iterate over samples
     for (int No = 0; No < dim("No"); No++)
     {
+        VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
         int outdatashift = 0;
         // let's compute output channel per output channel
         for (int ochanid = 0; ochanid < numoutputchannels; ochanid++) // += maxoutchannels
@@ -922,6 +923,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
             );
             for (int rowid = 0; rowid < numrows; rowid += rowsperthread)
             {
+                VTADepPush(cmd, vta::kStoreStage, vta::kComputeStage);
                 // compute input loading parameters
                 // padding parameters
                 int ypadbefore = std::max(0, dim("paddingH") - rowid);
@@ -960,7 +962,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                 );
                 for (int ichanid = 0; ichanid < dim("Io"); ichanid++)
                 {
-                    // pop input dependency TODO add push
+                    VTADepPush(cmd, vta::kComputeStage, vta::kLoadStage);
                     VTADepPop(cmd, vta::kComputeStage, vta::kLoadStage);
                     VTALoadBuffer2D(
                         cmd, // cmd
@@ -976,6 +978,7 @@ TfLiteStatus VTAGEMMOp::gemmConv2D()
                         0, // dst_sram_index
                         VTA_MEM_ID_INP // dst_memory_type
                     );
+                    VTADepPush(cmd, vta::kLoadStage, vta::kComputeStage);
                     // compute CONV2D on a given input channels for all available output channels on given rows
                     VTADepPop(cmd, vta::kLoadStage, vta::kComputeStage);
                     auto gemmcomp = [biasmultiplieraccshift, curroutchannels, rowstoprocess, Oo=dim("Oo"), Wo=dim("Wo"), rowid, Hk=dim("Hk"), Wk=dim("Wk"), Wpadded=dim("Wpadded")](void *signature) -> int {
