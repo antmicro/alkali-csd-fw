@@ -39,18 +39,20 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 		NVME_TC_SET_FIELD(csts, NVME_TC_SHUTDOWN_COMPLETE, CSTS_SHST);
 	}
 
-	if(NVME_TC_GET_FIELD(cc, CC_AMS))
+	if(NVME_TC_GET_FIELD(cc, CC_AMS)) {
 		LOG_WRN("Unsupported arbitration method selected!");
 		LOG_WRN("We only support Round Robin (000b)");
+	}
 
 	priv->memory_page_size = pow(2, NVME_TC_GET_FIELD(cc, CC_MPS) + 12);
 
 	if(priv->memory_page_size != NVME_PRP_LIST_SIZE)
 		LOG_WRN("Unsupported page size selected!");
 
-	if(NVME_TC_GET_FIELD(cc, CC_CSS))
+	if(NVME_TC_GET_FIELD(cc, CC_CSS)) {
 		LOG_WRN("Unsupported command set selected!");
 		LOG_WRN("We only support NVM command set (000b)");
+	}
 
 	if(cc && NVME_TC_REG_CC_EN) {
 		priv->enabled = true;
