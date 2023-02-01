@@ -54,7 +54,7 @@ static void nvme_tc_cc_handler(nvme_tc_priv_t *priv)
 		LOG_WRN("We only support NVM command set (000b)");
 	}
 
-	if(cc && NVME_TC_REG_CC_EN) {
+	if(cc & NVME_TC_REG_CC_EN) {
 		priv->enabled = true;
 		LOG_INF("Controller enabled");
 		csts |= NVME_TC_REG_CSTS_RDY;
