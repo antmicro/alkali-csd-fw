@@ -67,7 +67,7 @@ void nvme_cmd_adm_delete_sq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		LOG_ERR("Invalid Create SQ QID(%d)!", qid);
+		LOG_ERR("Invalid Delete SQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
@@ -116,7 +116,7 @@ void nvme_cmd_adm_delete_cq(nvme_cmd_priv_t *priv)
 	uint16_t qid = cmd->cdw10.qid;
 
 	if(qid == 0 || qid > QUEUES) {
-		LOG_ERR("Invalid Create CQ QID(%d)!", qid);
+		LOG_ERR("Invalid Delete CQ QID(%d)!", qid);
 		//cq_buf->sct = 1;
 		//cq_buf->sc = 1;
 		return nvme_cmd_return(priv);
